@@ -102,6 +102,24 @@ ecommerce-browser-gym/
 
 ## What changed recently (May 2026)
 
+**Universal failure taxonomy — the core differentiator.** Every
+trajectory carries one label from a fixed **38-class** taxonomy of agent
+failure modes (`picked_distractor_product`, `subscription_wrong_params`,
+`budget_exceeded`, `wrong_payment_method`, …). Crucially the labels are
+**task-agnostic** — they apply to the 12 tasks shipped here AND to any
+new task, with no code changes, via a rule-based classifier (free) plus
+an optional LLM judge fallback (`--llm-judge`). No other browser-agent
+benchmark has a universal, queryable failure taxonomy. The trajectory
+store becomes a queryable failure-mode catalogue:
+`python -m scripts.query_trajectories --failure picked_distractor_product`.
+See [`FAILURE_TAXONOMY.md`](./FAILURE_TAXONOMY.md).
+
+**Natural-language task briefs.** Briefs read like a real shopper's
+request — *"I need a basic wireless mouse for my office desk"* — with no
+"(NOT the gaming one, NOT the ergonomic one)" hand-holding. The agent
+must infer which product/option each description points to and reason
+past the adversarial look-alikes on its own.
+
 **UI overhaul — realistic e-commerce surfaces.** The gym used to be a
 toy 4-page site. It now ships the navigation and merchandising patterns
 production agents must handle:
