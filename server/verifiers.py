@@ -861,7 +861,7 @@ def _suite_c4() -> TaskSuite:
                       check=_tshirt_home_giftwrap_message),
             Milestone("mouse_home_no_giftwrap", weight=0.10,
                       check=_mouse_home_no_giftwrap),
-            Milestone("tech20_applied_to_laptop_only", weight=0.15,
+            Milestone("tech20_discount_on_all_electronics", weight=0.15,
                       check=_tech20_applied_correctly,
                       required_for_success=True),
             Milestone("paid_with_visa", weight=0.05,

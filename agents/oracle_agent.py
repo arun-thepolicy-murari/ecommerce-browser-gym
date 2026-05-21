@@ -182,10 +182,9 @@ async def solve_c2_split_shipping(ctx: BrowserCtx) -> None:
 
 async def solve_c3_subscription(ctx: BrowserCtx) -> None:
     await ctx.goto("/product/p_pet_food")
-    # Open subscription form (it's hidden initially)
-    await ctx.page.evaluate(
-        "document.getElementById('subscribe-form').classList.remove('hidden')"
-    )
+    # The Subscribe & Save panel is collapsed behind an Alpine.js toggle
+    # (x-show="open"). Click the toggle to reveal the form before filling.
+    await ctx.click("button[data-test-id='btn-toggle-subscribe']")
     await ctx.select("select[data-test-id='select-cadence']", "weekly")
     await ctx.fill("input[data-test-id='input-deliveries']", "4")
     await ctx.select("select[data-test-id='select-sub-address']", "addr_home")

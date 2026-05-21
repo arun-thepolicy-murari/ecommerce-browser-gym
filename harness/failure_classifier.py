@@ -230,9 +230,19 @@ def classify_agent_failure(
     if had_repeated_actions:
         return "repeated_failed_actions"
 
-    purchase_intent = any(w in brief_l for w in
-                          ("buy", "order", "purchase", "place the order",
-                           "checkout", "check out", "add to cart"))
+    # Purchase intent: detect both explicit verbs AND natural shopping
+    # language ("get me", "grab", "I need a/four ..."), and treat a
+    # non-empty cart as strong evidence the agent was mid-purchase. The
+    # cart signal makes this robust to brief phrasings we didn't enumerate.
+    cart_items = list(getattr(getattr(state, "cart", None), "items", []) or [])
+    purchase_intent = bool(cart_items) or any(w in brief_l for w in (
+        "buy", "buying", "order", "purchase", "place the order", "checkout",
+        "check out", "add to cart", "get me", "grab", "pick up", "pick me up",
+        "shopping for", "shop for", "i need a", "i need an", "i need one",
+        "i need two", "i need three", "i need four", "need four things",
+        "need a ", "need an ", "ship it", "ship the", "ship everything",
+        "send it", "send them",
+    ))
     order = _newest_order(state)
 
     # ── Subscription intents ────────────────────────────────────────
