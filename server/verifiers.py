@@ -182,6 +182,22 @@ def _newest_order(probe: Probe):
                key=lambda o: o.placed_at)
 
 
+def _log_has(probe: Probe, kind: str, **fields: Any) -> bool:
+    """True if the action_log contains an event of `kind` whose fields
+    all match. Used by taxonomy-navigation verifiers to confirm the
+    agent browsed categories/subcategories rather than searching."""
+    for e in probe.state.action_log:
+        if e.get("kind") != kind:
+            continue
+        if all(e.get(k) == v for k, v in fields.items()):
+            return True
+    return False
+
+
+def _log_count(probe: Probe, kind: str) -> int:
+    return sum(1 for e in probe.state.action_log if e.get("kind") == kind)
+
+
 # --------------------------------------------------------------------------- #
 # Per-task suite builders
 # --------------------------------------------------------------------------- #
@@ -873,6 +889,86 @@ def _suite_c4() -> TaskSuite:
 
 
 # --------------------------------------------------------------------------- #
+# Category D: taxonomy navigation
+# --------------------------------------------------------------------------- #
+
+# --- D1: browse_audio_no_search ---
+
+def _suite_d1() -> TaskSuite:
+    """Browse Audio -> headphones, pick a 4.5+ pair, WITHOUT the search bar."""
+    QUALIFYING_HP = {"p_hp_premium", "p_hp_studio", "p_hp_studio_pro"}  # rating >= 4.5
+
+    def _ordered_qualifying_hp(p: Probe) -> bool:
+        o = _newest_order(p)
+        if o is None:
+            return False
+        return any(
+            (it.product_id in QUALIFYING_HP
+             and p.state.products[it.product_id].rating >= 4.5)
+            for it in o.items
+        )
+
+    return TaskSuite(
+        task_id="D1/browse_audio_no_search",
+        milestones=[
+            Milestone("visited_audio_category", weight=0.20,
+                      check=lambda p: _log_has(p, "view_category", category="audio"),
+                      required_for_success=True),
+            Milestone("browsed_headphones_subcategory", weight=0.20,
+                      check=lambda p: _log_has(p, "view_subcategory",
+                                               category="audio", sub="headphones")),
+            Milestone("avoided_search_bar", weight=0.15,
+                      check=lambda p: _log_count(p, "search") == 0),
+            Milestone("ordered_qualifying_headphone", weight=0.35,
+                      check=_ordered_qualifying_hp,
+                      required_for_success=True),
+            Milestone("on_confirmation_page", weight=0.10,
+                      check=lambda p: _on_url(p, "/order/")),
+        ],
+    )
+
+
+# --- D2: drill_electronics_keyboards ---
+
+def _suite_d2() -> TaskSuite:
+    """Drill Electronics -> keyboards subcategory, buy the mechanical one
+    (p_kb_mech), avoiding the membrane keyboard. Browse, don't search."""
+
+    def _ordered_mechanical(p: Probe) -> bool:
+        return _order_with(p, product_ids=("p_kb_mech",))
+
+    def _avoided_membrane(p: Probe) -> bool:
+        o = _newest_order(p)
+        if o is None:
+            return True  # nothing ordered yet → hasn't picked the wrong one
+        return not any(it.product_id == "p_kb_membrane" for it in o.items)
+
+    return TaskSuite(
+        task_id="D2/drill_electronics_keyboards",
+        milestones=[
+            Milestone("visited_electronics_category", weight=0.15,
+                      check=lambda p: _log_has(p, "view_category",
+                                               category="electronics"),
+                      required_for_success=True),
+            Milestone("drilled_keyboards_subcategory", weight=0.25,
+                      check=lambda p: _log_has(p, "view_subcategory",
+                                               category="electronics",
+                                               sub="keyboards"),
+                      required_for_success=True),
+            Milestone("avoided_search_bar", weight=0.15,
+                      check=lambda p: _log_count(p, "search") == 0),
+            Milestone("ordered_mechanical_keyboard", weight=0.30,
+                      check=_ordered_mechanical,
+                      required_for_success=True),
+            Milestone("avoided_membrane_keyboard", weight=0.05,
+                      check=_avoided_membrane),
+            Milestone("on_confirmation_page", weight=0.10,
+                      check=lambda p: _on_url(p, "/order/")),
+        ],
+    )
+
+
+# --------------------------------------------------------------------------- #
 # Registry
 # --------------------------------------------------------------------------- #
 
@@ -889,6 +985,8 @@ SUITE_FACTORIES = {
     "C2/split_shipping_gift":    _suite_c2,
     "C3/subscription_loyalty":   _suite_c3,
     "C4/mega_checkout":          _suite_c4,
+    "D1/browse_audio_no_search":     _suite_d1,
+    "D2/drill_electronics_keyboards": _suite_d2,
 }
 
 

@@ -250,6 +250,7 @@ def test_c3_subscription_loyalty():
     "C1/promo_partial", "C2/split_shipping_gift",
     "C3/subscription_loyalty",
     "C4/mega_checkout",
+    "D1/browse_audio_no_search", "D2/drill_electronics_keyboards",
 ])
 def test_no_milestones_no_score(task_id):
     """Touching nothing should give score 0 and success=False."""
@@ -258,6 +259,43 @@ def test_no_milestones_no_score(task_id):
     # Most tasks will have score 0 here; allow tiny credit from URL-only
     # milestones that happen to match "/".
     assert result["success"] is False
+
+
+def test_tasks_and_suites_aligned():
+    """Every task must have a verifier suite and vice versa. (Pure-logic;
+    no browser needed.)"""
+    from server.tasks import TASKS
+    from server.verifiers import SUITE_FACTORIES
+    assert set(TASKS) == set(SUITE_FACTORIES), (
+        "TASKS vs SUITE_FACTORIES mismatch: "
+        f"{set(TASKS) ^ set(SUITE_FACTORIES)}"
+    )
+
+
+def test_oracle_solvers_aligned():
+    """Every task must have an oracle solver. Skipped if Playwright isn't
+    installed (oracle_agent imports BrowserCtx which needs Playwright)."""
+    import pytest
+    pytest.importorskip("playwright")
+    from server.tasks import TASKS
+    from agents.oracle_agent import SOLVERS
+    assert set(TASKS) == set(SOLVERS), (
+        "TASKS vs SOLVERS mismatch: "
+        f"{set(TASKS) ^ set(SOLVERS)}"
+    )
+
+
+def test_all_suite_weights_sum_to_one():
+    """Every task suite's milestone weights must sum to 1.0 so scores
+    are comparable across tasks."""
+    from server.tasks import TASKS
+    from server.verifiers import build_suite
+    for task_id in TASKS:
+        suite = build_suite(task_id)
+        total = sum(m.weight for m in suite.milestones)
+        assert abs(total - 1.0) < 1e-6, (
+            f"{task_id}: milestone weights sum to {total}, not 1.0"
+        )
 
 
 # --------------------------------------------------------------------------- #

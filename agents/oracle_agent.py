@@ -341,6 +341,39 @@ async def solve_c4_mega_checkout(ctx: BrowserCtx) -> None:
     await ctx.click("button[data-test-id='btn-place-order']")
 
 
+async def solve_d1_browse_audio(ctx: BrowserCtx) -> None:
+    # Browse the taxonomy (NO search bar): Audio category -> headphones
+    # subcategory -> a 4.5+ pair. Each goto logs view_category /
+    # view_subcategory, which the verifier requires.
+    await ctx.goto("/category/audio",
+                   reasoning="Browse the Audio department instead of searching.")
+    await ctx.goto("/category/audio?sub=headphones",
+                   reasoning="Drill into the headphones subcategory.")
+    await ctx.click("a[data-test-id='card-product-p_hp_premium']")
+    await ctx.click("button[data-test-id='btn-add-to-cart']")
+    await ctx.click("a[data-test-id='link-cart']")
+    await ctx.click("a[data-test-id='btn-proceed-checkout']")
+    await ctx.click("a[data-test-id='btn-continue-payment']")
+    await ctx.click("a[data-test-id='btn-continue-review']")
+    await ctx.click("button[data-test-id='btn-place-order']")
+
+
+async def solve_d2_drill_keyboards(ctx: BrowserCtx) -> None:
+    # Electronics -> keyboards subcategory -> the mechanical one (not the
+    # membrane). Browse, don't search.
+    await ctx.goto("/category/electronics",
+                   reasoning="Browse the Electronics department.")
+    await ctx.goto("/category/electronics?sub=keyboards",
+                   reasoning="Drill into the keyboards subcategory.")
+    await ctx.click("a[data-test-id='card-product-p_kb_mech']")
+    await ctx.click("button[data-test-id='btn-add-to-cart']")
+    await ctx.click("a[data-test-id='link-cart']")
+    await ctx.click("a[data-test-id='btn-proceed-checkout']")
+    await ctx.click("a[data-test-id='btn-continue-payment']")
+    await ctx.click("a[data-test-id='btn-continue-review']")
+    await ctx.click("button[data-test-id='btn-place-order']")
+
+
 SOLVERS = {
     "A1/buy_wireless_mouse":     solve_a1_buy_wireless_mouse,
     "A2/filter_laptop":          solve_a2_filter_laptop,
@@ -354,4 +387,6 @@ SOLVERS = {
     "C2/split_shipping_gift":    solve_c2_split_shipping,
     "C3/subscription_loyalty":   solve_c3_subscription,
     "C4/mega_checkout":          solve_c4_mega_checkout,
+    "D1/browse_audio_no_search":     solve_d1_browse_audio,
+    "D2/drill_electronics_keyboards": solve_d2_drill_keyboards,
 }

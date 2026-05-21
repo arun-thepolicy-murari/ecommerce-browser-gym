@@ -245,20 +245,72 @@ async def search(
     )
 
 
+# Subcategory taxonomy — a product belongs to a subcategory if any of its
+# tags intersect the subcategory's tag set. Lets the agent drill
+# category -> subcategory -> product, the way a real shopper browses,
+# instead of jumping straight to the search bar.
+SUBCATEGORIES: dict[str, dict[str, set[str]]] = {
+    "electronics": {
+        "laptops":     {"laptop"},
+        "mice":        {"mouse"},
+        "keyboards":   {"keyboard"},
+        "monitors":    {"monitor"},
+        "accessories": {"charger", "usb-c", "watch", "fitness", "trackpad"},
+    },
+    "audio": {
+        "headphones": {"headphones"},
+        "speakers":   {"speaker"},
+    },
+    "books": {
+        "fiction":    {"fiction", "sci-fi"},
+        "nonfiction": {"nonfiction", "history", "biography", "cookbook"},
+    },
+    "clothing": {
+        "tops":      {"tshirt", "polo", "tank"},
+        "outerwear": {"hoodie", "jacket"},
+    },
+    "home": {
+        "lighting": {"lamp"},
+        "kitchen":  {"mug"},
+        "decor":    {"candle"},
+    },
+    "pet": {
+        "food":   {"dog"},
+        "treats": {"treats"},
+    },
+    "office": {
+        "displays":  {"display"},
+        "furniture": {"chair"},
+    },
+}
+
+
+def _in_subcategory(product: Any, cat: str, sub: str) -> bool:
+    tagset = SUBCATEGORIES.get(cat, {}).get(sub, set())
+    if not tagset:
+        return False
+    return bool(set(product.tags) & tagset)
+
+
 @app.get("/category/{cat}", response_class=HTMLResponse)
 async def category_page(
     request: Request, cat: str,
+    sub: str = "",
     max_price: Optional[float] = None,
     min_rating: Optional[float] = None,
     in_stock: bool = False,
     sort: str = "featured",
 ):
     """Category landing page — same backend as /search but with a
-    category-specific hero and breadcrumbs. Browsing via the mega-menu
-    lands here. This pattern matches real e-commerce sites."""
+    category-specific hero, breadcrumbs, and subcategory drill-down.
+    Browsing via the mega-menu lands here. With ``?sub=`` the page
+    narrows to one subcategory (laptops, headphones, keyboards, ...),
+    the way a real shopper drills down a taxonomy."""
     s = _state()
     products = list(s.products.values())
     results = [p for p in products if p.category == cat]
+    if sub:
+        results = [p for p in results if _in_subcategory(p, cat, sub)]
     if max_price is not None:
         results = [p for p in results if p.base_price <= max_price]
     if min_rating is not None:
@@ -266,12 +318,20 @@ async def category_page(
     if in_stock:
         results = [p for p in results if p.stock > 0]
     results = _sort_products(results, sort)
-    log_action(s, "view_category", category=cat,
-               max_price=max_price, min_rating=min_rating,
-               in_stock=in_stock, sort=sort, n_results=len(results))
+    # Log distinct events for category vs subcategory navigation so
+    # taxonomy-navigation verifiers can confirm the agent drilled down
+    # rather than searching.
+    if sub:
+        log_action(s, "view_subcategory", category=cat, sub=sub,
+                   n_results=len(results))
+    else:
+        log_action(s, "view_category", category=cat,
+                   max_price=max_price, min_rating=min_rating,
+                   in_stock=in_stock, sort=sort, n_results=len(results))
+    subcats = sorted(SUBCATEGORIES.get(cat, {}).keys())
     return templates.TemplateResponse(
         request, "category.html",
-        _ctx(request, results=results, cat=cat,
+        _ctx(request, results=results, cat=cat, sub=sub, subcats=subcats,
              max_price=max_price, min_rating=min_rating,
              in_stock=in_stock, sort=sort),
     )

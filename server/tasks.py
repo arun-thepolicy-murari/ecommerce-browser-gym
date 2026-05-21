@@ -167,6 +167,29 @@ BRIEFS = {
         "that. I've got a TECH20 promo code for the electronics discount "
         "— apply it. Pay with my Visa and place the order."
     ),
+
+    # ──────────────────────────────────────────────────────────────
+    # TAXONOMY-NAVIGATION tasks — the agent must BROWSE the category /
+    # subcategory tree to find products, the way a shopper browses when
+    # they don't know the exact product name. Searching the search bar
+    # is the lazy shortcut these tasks are designed to discourage.
+    # ──────────────────────────────────────────────────────────────
+
+    "D1": (
+        "I'm in the mood to browse rather than search for something "
+        "specific. Take me through the Audio department, look at the "
+        "headphones, and pick out a well-reviewed pair — 4.5 stars or "
+        "better. Buy it, ship it home, and use my Visa. (I'd rather you "
+        "browse the store than type in the search box.)"
+    ),
+
+    "D2": (
+        "Walk me through the Electronics department to the keyboards "
+        "section — I want to see what's there rather than search. Pick "
+        "me out a proper mechanical keyboard with real tactile feedback, "
+        "not one of the cheap membrane ones. Buy it, ship home, pay with "
+        "Visa."
+    ),
 }
 
 
@@ -440,6 +463,20 @@ def task_c4_mega_checkout(seed: int) -> GymState:
     return state
 
 
+# ----- Category D: taxonomy navigation ------------------------------------- #
+
+def task_d1_browse_audio(seed: int) -> GymState:
+    """Browse the Audio category -> headphones subcategory, no search."""
+    return _base_state(seed, "D1/browse_audio_no_search", "medium", "D",
+                       with_login=True)
+
+
+def task_d2_drill_keyboards(seed: int) -> GymState:
+    """Drill Electronics -> keyboards subcategory, pick a mechanical one."""
+    return _base_state(seed, "D2/drill_electronics_keyboards", "hard", "D",
+                       with_login=True)
+
+
 # --------------------------------------------------------------------------- #
 # Registry
 # --------------------------------------------------------------------------- #
@@ -457,6 +494,8 @@ TASKS = {
     "C2/split_shipping_gift":    task_c2_split_shipping,
     "C3/subscription_loyalty":   task_c3_subscription,
     "C4/mega_checkout":          task_c4_mega_checkout,
+    "D1/browse_audio_no_search":     task_d1_browse_audio,
+    "D2/drill_electronics_keyboards": task_d2_drill_keyboards,
 }
 
 
