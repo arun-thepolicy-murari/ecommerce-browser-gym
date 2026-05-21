@@ -176,10 +176,10 @@ def _agent_summary(trajectories: list[Trajectory]) -> dict:
                 + tokens_out * _PRICE_OUT_PER_TOK)
 
     fail_cats = Counter(
-        t.verifier_result.get("primary_failure_category")
+        t.agent_failure_class
         for t in trajectories
         if not t.verifier_result.get("success", False)
-        and t.verifier_result.get("primary_failure_category")
+        and t.agent_failure_class
     )
 
     return {
@@ -375,7 +375,7 @@ def main() -> None:
                 print(f"-> score={v.get('score', 0):.2f} "
                       f"success={v.get('success', False)} "
                       f"steps={len(traj.steps)} "
-                      f"failure={v.get('primary_failure_category', '-') or '-'} "
+                      f"failure={traj.agent_failure_class or '-'} "
                       f"({elapsed:.1f}s)")
                 by_agent_task[(agent, task)].append(traj)
 

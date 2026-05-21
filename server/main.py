@@ -817,3 +817,34 @@ def harness_verify(req: HarnessVerifyRequest) -> dict[str, Any]:
         state=s, url=req.url, initial_state=SESSION.initial,
     )
     return SESSION.suite.evaluate(probe, req.step)
+
+
+@app.post("/_harness/classify_failure")
+def harness_classify_failure(payload: dict) -> dict[str, Any]:
+    """Run the UNIVERSAL failure classifier against the real GymState.
+
+    The server owns the GymState, so it's the right place to run the
+    rule-based classifier (and optionally the LLM judge). The caller
+    passes the episode's success/score plus behavioural hints it can
+    observe client-side (step count, whether it looped, whether it hit
+    the step cap) — the server can't see the agent's StepRecords.
+
+    Returns ``{"agent_failure_class": <label or None>}``. A label of
+    None means the episode succeeded (no failure to classify).
+    """
+    from harness import failure_classifier as fc
+    s = _state()
+    verifier_result = {
+        "success": bool(payload.get("success", False)),
+        "score": float(payload.get("score", 0.0)),
+        "final_url": payload.get("url", ""),
+    }
+    label = fc.classify(
+        s.task_brief, s, verifier_result,
+        n_steps=int(payload.get("n_steps", 0) or 0),
+        had_repeated_actions=bool(payload.get("had_repeated_actions", False)),
+        hit_max_steps=bool(payload.get("hit_max_steps", False)),
+        use_llm_fallback=bool(payload.get("use_llm_fallback", False)),
+        llm_model=payload.get("llm_model", "claude-haiku-4-5"),
+    )
+    return {"agent_failure_class": label}

@@ -62,10 +62,10 @@ class StepRecord:
       tokens_in / tokens_out:
                        prompt + completion tokens for this step's LLM
                        call. Cost accounting + training data weighting.
-      primary_failure_category:
-                       what the verifier thinks is the dominant failure
-                       so far. Mirrors verifier output for easy diffing
-                       across steps.
+
+    Note: per-step failure labels were removed. Failure classification is
+    a single episode-level summary (`Trajectory.agent_failure_class`)
+    produced by ``harness/failure_classifier.classify`` at episode end.
     """
     step_idx: int
     action_kind: str               # "click", "fill", "navigate", "screenshot", ...
@@ -81,7 +81,6 @@ class StepRecord:
     raw_model_output: str = ""
     tokens_in: int = 0
     tokens_out: int = 0
-    primary_failure_category: str | None = None
 
 
 @dataclass
@@ -103,6 +102,10 @@ class Trajectory:
     verifier_result: dict[str, Any] = field(default_factory=dict)
     video_path: str = ""
     error: str | None = None
+    # Universal failure label (from harness/failure_classifier). None on
+    # success. Set once at episode end. This is the queryable, task-
+    # agnostic failure key for the trajectory store.
+    agent_failure_class: str | None = None
 
     def to_json(self) -> dict[str, Any]:
         return {
@@ -120,6 +123,7 @@ class Trajectory:
             "final_url": self.final_url,
             "final_snapshot": self.final_snapshot,
             "verifier_result": self.verifier_result,
+            "agent_failure_class": self.agent_failure_class,
             "video_path": self.video_path,
             "error": self.error,
         }
@@ -504,7 +508,6 @@ class BrowserCtx:
         ).json()
         newly = list(verifier_resp.get("newly_fired", []))
         running_score = float(verifier_resp.get("score", 0.0))
-        primary_failure = verifier_resp.get("primary_failure_category")
 
         rec = StepRecord(
             step_idx=step_idx,
@@ -517,7 +520,6 @@ class BrowserCtx:
             reasoning=reasoning,
             action_error=error,
             action_latency_ms=latency_ms,
-            primary_failure_category=primary_failure,
         )
         self.trajectory.steps.append(rec)
         return rec

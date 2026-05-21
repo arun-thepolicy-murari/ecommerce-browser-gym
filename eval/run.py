@@ -59,10 +59,28 @@ def _parse_tasks(spec: str) -> list[str]:
     return [t.strip() for t in spec.split(",") if t.strip()]
 
 
+def _detect_loop(steps: list) -> bool:
+    """True if the agent repeated the same (kind, args) 3x in a row.
+
+    Used to feed the universal failure classifier a 'repeated_failed_actions'
+    behavioural hint (the server can't see the agent's StepRecords)."""
+    last_sig, run = None, 0
+    for s in steps:
+        sig = (getattr(s, "action_kind", None), repr(getattr(s, "action_args", None)))
+        if sig == last_sig:
+            run += 1
+            if run >= 2:
+                return True
+        else:
+            run, last_sig = 0, sig
+    return False
+
+
 async def _run_one(*, agent_kind: str, task_id: str, seed: int,
                    server_url: str, headless: bool, record_video: bool,
                    out_traj_dir: Path, out_screens_dir: Path,
-                   llm_model: str | None) -> Trajectory:
+                   llm_model: str | None,
+                   use_llm_judge: bool = False) -> Trajectory:
     # Reset the gym for this task
     reset = await reset_gym(server_url, task_id, seed)
 
@@ -146,6 +164,26 @@ async def _run_one(*, agent_kind: str, task_id: str, seed: int,
             f"{server_url}/_harness/verify",
             json={"url": page.url, "step": len(traj.steps)},
         )).json()
+        # Universal failure classification (task-agnostic). Server runs
+        # the rule-based classifier against the real GymState; we pass
+        # the behavioural hints it can't see (loop detection, step count).
+        if not traj.verifier_result.get("success"):
+            try:
+                cls = (await c.post(
+                    f"{server_url}/_harness/classify_failure",
+                    json={
+                        "url": page.url,
+                        "success": traj.verifier_result.get("success", False),
+                        "score": traj.verifier_result.get("score", 0.0),
+                        "n_steps": len(traj.steps),
+                        "had_repeated_actions": _detect_loop(traj.steps),
+                        "hit_max_steps": False,
+                        "use_llm_fallback": use_llm_judge,
+                    },
+                )).json()
+                traj.agent_failure_class = cls.get("agent_failure_class")
+            except Exception as e:
+                print(f"[runner] failure classification skipped: {e}")
     traj.finished_at = time.time()
 
     # Close browser BEFORE asking for video path — Playwright finalizes
@@ -204,6 +242,10 @@ def main() -> None:
                     help="Disable Playwright video recording.")
     ap.add_argument("--model", default=None,
                     help="LLM model id (Anthropic) — overrides default.")
+    ap.add_argument("--llm-judge", action="store_true",
+                    help="On failures the rules can't classify, call an LLM "
+                         "judge (Haiku) to pick a universal failure label. "
+                         "Costs a few cents per unclassified failure.")
     ap.add_argument("--out-traj", default=None)
     ap.add_argument("--out-screens", default=None)
     args = ap.parse_args()
@@ -237,11 +279,14 @@ def main() -> None:
                 out_traj_dir=out_traj_dir,
                 out_screens_dir=out_screens_dir,
                 llm_model=args.model,
+                use_llm_judge=args.llm_judge,
             ))
             v = traj.verifier_result
             print(f"  -> score={v.get('score', 0):.2f} "
                   f"success={v.get('success', False)} "
-                  f"steps={len(traj.steps)} video={traj.video_path or 'none'}")
+                  f"steps={len(traj.steps)} "
+                  f"failure={traj.agent_failure_class or '-'} "
+                  f"video={traj.video_path or 'none'}")
             trajectories.append(traj)
 
     elapsed = time.time() - started
