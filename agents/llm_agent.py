@@ -175,6 +175,25 @@ and adjust. Examples:
    applies to electronics"                       for the promo
 
 ═══════════════════════════════════════════════════════════════════════════
+MULTI-APP WORKSPACE — some tasks span more than one app
+═══════════════════════════════════════════════════════════════════════════
+
+At the very top of every page is a workspace bar with links to several
+apps: Shop (data-test-id='appbar-shop'), Mail (data-test-id='appbar-mail'),
+and Food (data-test-id='appbar-food'). Some tasks require you to move
+BETWEEN apps — for example: place an order in the Shop, then open the
+confirmation email in Mail and act on the tracking link inside it.
+
+To switch apps, CLICK the workspace-bar link (preferred) or navigate to the
+app root (/mail or /food). Inside Mail: click a message
+(data-test-id='mail-item-<id>') to open it; an order-confirmation email may
+contain a tracking link (data-test-id='link-tracking') — click it to follow
+it. CARRY facts (an order number, a total, an ETA) accurately from one app
+to the next; never invent them, and never act on a value you only guessed.
+When a task depends on information that lives in another app, actually GO
+there and READ it before you finish.
+
+═══════════════════════════════════════════════════════════════════════════
 General rules:
 ═══════════════════════════════════════════════════════════════════════════
 
@@ -387,6 +406,9 @@ class LLMBrowserAgent:
             "/account/addresses", "/account/payments", "/account/security",
             "/account/subscriptions", "/account/returns",
             "/account/returns/new", "/deals",
+            "/account/orders/<id>/track",
+            # Multi-app workspace roots (prefer clicking the appbar links):
+            "/mail", "/mail/compose", "/food",
         ]
 
         obs: dict[str, Any] = {

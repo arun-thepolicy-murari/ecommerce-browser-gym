@@ -99,6 +99,8 @@ async def _run_one(*, agent_kind: str, task_id: str, seed: int,
         agent_name = "oracle"
     elif agent_kind == "pixel":
         agent_name = f"pixel[{llm_model or 'default'}]"
+    elif agent_kind == "openai":
+        agent_name = f"openai[{llm_model or 'gpt-4o-mini'}]"
     else:
         agent_name = f"llm[{llm_model or 'default'}]"
     traj = Trajectory(
@@ -151,6 +153,12 @@ async def _run_one(*, agent_kind: str, task_id: str, seed: int,
             # No DOM/JSON to the agent. See agents/pixel_agent.py.
             from agents.pixel_agent import PixelBrowserAgent
             agent = PixelBrowserAgent(model=llm_model)
+            await agent.run(bctx, task_brief=reset["task_brief"])
+        elif agent_kind == "openai":
+            # GPT-backed DOM agent (function-calling). Default gpt-4o-mini —
+            # the small/cheap model we harvest cross-app failures from.
+            from agents.openai_agent import OpenAIBrowserAgent
+            agent = OpenAIBrowserAgent(model=llm_model)
             await agent.run(bctx, task_brief=reset["task_brief"])
         else:
             from agents.llm_agent import LLMBrowserAgent
@@ -234,8 +242,9 @@ def _print_scorecard(rows: list[Trajectory]) -> None:
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument(
-        "--agent", choices=["oracle", "llm", "pixel"], required=True,
-        help="oracle = hand-coded reference; llm = DOM/JSON observation; "
+        "--agent", choices=["oracle", "llm", "pixel", "openai"], required=True,
+        help="oracle = hand-coded reference; llm = Anthropic DOM/JSON agent; "
+             "openai = GPT DOM/JSON agent (default gpt-4o-mini); "
              "pixel = SoM annotated screenshots (no DOM to the agent)",
     )
     ap.add_argument("--tasks", default="all")
