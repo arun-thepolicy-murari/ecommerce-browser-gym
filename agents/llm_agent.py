@@ -56,6 +56,18 @@ TOOLS_ANTHROPIC = [
      "input_schema": {"type": "object", "properties": {
          "selector": {"type": "string"},
          "reason": {"type": "string"}}, "required": ["selector"]}},
+    {"name": "open_tab", "description": "Open a NEW browser tab at a path (e.g. '/mail') and switch to it. Your old tab stays exactly where it was — use this to keep one app open while you check another.",
+     "input_schema": {"type": "object", "properties": {
+         "url": {"type": "string"},
+         "reason": {"type": "string"}}, "required": ["url"]}},
+    {"name": "switch_tab", "description": "Make an already-open tab active by its index (see the `tabs` list in the observation). Use this to flip BACK to a tab you opened earlier.",
+     "input_schema": {"type": "object", "properties": {
+         "index": {"type": "integer"},
+         "reason": {"type": "string"}}, "required": ["index"]}},
+    {"name": "close_tab", "description": "Close an open tab by its index.",
+     "input_schema": {"type": "object", "properties": {
+         "index": {"type": "integer"},
+         "reason": {"type": "string"}}, "required": ["index"]}},
     {"name": "finish", "description": "Indicate that you believe the task is complete.",
      "input_schema": {"type": "object", "properties": {
          "reason": {"type": "string"}}, "required": []}},
@@ -194,6 +206,23 @@ When a task depends on information that lives in another app, actually GO
 there and READ it before you finish.
 
 ═══════════════════════════════════════════════════════════════════════════
+BROWSER TABS — keep multiple apps open at once
+═══════════════════════════════════════════════════════════════════════════
+
+You start with one tab. Every observation has a `tabs` field listing each
+open tab as {index, url, title, active}; your actions apply to the ACTIVE
+tab. Tab tools:
+  open_tab(url)     — open a NEW tab at a path (e.g. /mail) and switch to it
+  switch_tab(index) — make tab `index` active (flip back to one you opened)
+  close_tab(index)  — close a tab
+
+Use tabs the way a person does on a multi-app task: keep the Shop in your
+first tab, OPEN THE MAIL APP IN A SECOND TAB to read the confirmation
+email, then SWITCH BACK to the Shop tab to act on what you learned. Opening
+a new tab does not lose your place in the old one — that is the whole point.
+Prefer this over re-navigating a single tab back and forth.
+
+═══════════════════════════════════════════════════════════════════════════
 General rules:
 ═══════════════════════════════════════════════════════════════════════════
 
@@ -290,6 +319,12 @@ class LLMBrowserAgent:
                     await ctx.check(args["selector"], reasoning=args.get("reason", ""))
                 elif kind == "submit":
                     await ctx.submit(args["selector"], reasoning=args.get("reason", ""))
+                elif kind == "open_tab":
+                    await ctx.open_tab(args["url"], reasoning=args.get("reason", ""))
+                elif kind == "switch_tab":
+                    await ctx.switch_tab(int(args["index"]), reasoning=args.get("reason", ""))
+                elif kind == "close_tab":
+                    await ctx.close_tab(int(args["index"]), reasoning=args.get("reason", ""))
                 elif kind == "finish":
                     if self.verbose:
                         print(f"[llm_agent] finishing: "
@@ -411,8 +446,16 @@ class LLMBrowserAgent:
             "/mail", "/mail/compose", "/food",
         ]
 
+        # Open browser tabs (multi-tab observation) — what's open + which is
+        # active. The agent reads this like a real browser's tab bar.
+        try:
+            tabs = await ctx._tab_strip()
+        except Exception:
+            tabs = []
+
         obs: dict[str, Any] = {
             "url": url,
+            "tabs": tabs,
             "snapshot": snap,
             "interactables": elements,
             "hints": {

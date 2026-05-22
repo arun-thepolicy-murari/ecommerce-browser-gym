@@ -383,8 +383,13 @@ async def solve_d2_drill_keyboards(ctx: BrowserCtx) -> None:
 
 async def solve_m2_order_then_track(ctx: BrowserCtx) -> None:
     """Order the standard wireless mouse, then find the confirmation email
-    and follow ITS tracking link."""
-    # 1) Order the standard wireless mouse (not gaming / ergonomic).
+    and follow ITS tracking link.
+
+    Demonstrates TRUE multi-tab the way a person works: the Shop stays in
+    tab 0, Mail opens in a SECOND tab to read the confirmation, then we flip
+    BACK to the Shop tab to check tracking — carrying the order id across the
+    tab switch (the exact hop weak agents fumble)."""
+    # Tab 0 (Shop): order the standard wireless mouse (not gaming/ergonomic).
     await ctx.goto("/product/p_mouse_wireless",
                    reasoning="The standard wireless mouse, not the gaming one.")
     await ctx.click("button[data-test-id='btn-add-to-cart']")
@@ -393,16 +398,17 @@ async def solve_m2_order_then_track(ctx: BrowserCtx) -> None:
     await ctx.click("a[data-test-id='btn-continue-payment']")
     await ctx.click("a[data-test-id='btn-continue-review']")
     await ctx.click("button[data-test-id='btn-place-order']")
-    # 2) Switch to Mail and locate the order-confirmation email. The shop
-    #    confirmation is the only inbox mail carrying a tracking link.
-    await ctx.goto("/mail",
-                   reasoning="Switch to Mail to find the order confirmation.")
+    # Open Mail in a SECOND tab (the shop tab stays exactly where it is).
+    await ctx.open_tab("/mail",
+                       reasoning="Open Mail in a new tab to find the order confirmation.")
     world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
     conf = next(e for e in world["mail"]["inbox"].values()
                 if e.get("tracking_url"))
-    # 3) Open it (marks it read), then 4) follow the tracking link.
     await ctx.goto(f"/mail/message/{conf['id']}",
-                   reasoning="Open the order-confirmation email.")
+                   reasoning="Open the confirmation email in the Mail tab.")
+    # Flip BACK to the Shop tab and follow the tracking link there.
+    await ctx.switch_tab(0,
+                         reasoning="Switch back to the Shop tab to check tracking.")
     await ctx.goto(conf["tracking_url"],
                    reasoning="Follow the tracking link from the email.")
 

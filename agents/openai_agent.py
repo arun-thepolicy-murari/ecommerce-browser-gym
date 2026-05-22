@@ -121,6 +121,12 @@ class OpenAIBrowserAgent:
                     rec = await ctx.check(args["selector"], reasoning=args.get("reason", ""))
                 elif kind == "submit":
                     rec = await ctx.submit(args["selector"], reasoning=args.get("reason", ""))
+                elif kind == "open_tab":
+                    rec = await ctx.open_tab(args["url"], reasoning=args.get("reason", ""))
+                elif kind == "switch_tab":
+                    rec = await ctx.switch_tab(int(args["index"]), reasoning=args.get("reason", ""))
+                elif kind == "close_tab":
+                    rec = await ctx.close_tab(int(args["index"]), reasoning=args.get("reason", ""))
                 elif kind == "finish":
                     if self.verbose:
                         print(f"[openai_agent] finishing: {args.get('reason', '')}")
