@@ -122,6 +122,20 @@ def _chain_label(task_id: str, missed: list[str], fact_gap: list[str],
         if "opened_receipt_email" in m:
             return "ordered_but_never_opened_receipt"
         return "m3_unexpected_partial"
+    if task_id == "M4/order_then_reply_total":
+        if "mouse_ordered" in m:
+            return "never_ordered_the_mouse"
+        if "opened_confirmation_email" in m:
+            return "ordered_but_never_opened_confirmation"
+        if "replied_to_confirmation" in m:
+            return "ordered_read_email_but_never_replied"
+        if "reply_states_correct_charged_total" in m:
+            return "replied_with_wrong_total_not_charged_amount"
+        return "m4_unexpected_partial"
+    if task_id == "M5/cheaper_mouse_from_deals":
+        if "ordered_cheaper_ergonomic_mouse" in m:
+            return "ordered_wrong_mouse_or_none_after_compare"
+        return "m5_unexpected_partial"
     return "missed:" + "+".join(missed) if missed else "no_required_missed"
 
 
@@ -317,8 +331,9 @@ def main() -> None:
                     help="comma-separated cross-app task ids")
     ap.add_argument("--k", type=int, default=12, help="runs per task")
     ap.add_argument("--agent", default="openai",
-                    choices=["openai", "llm", "pixel"],
-                    help="weak agent to harvest (default openai = gpt-4o-mini)")
+                    choices=["openai", "openai_pixel", "llm", "pixel"],
+                    help="weak agent to harvest (default openai = gpt-4o-mini "
+                         "DOM; openai_pixel = gpt-4o-mini SoM/pixel)")
     ap.add_argument("--model", default=None,
                     help="model id (default gpt-4o-mini for openai)")
     ap.add_argument("--server", default="http://localhost:8000")

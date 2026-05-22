@@ -461,6 +461,30 @@ async def solve_m4_order_then_reply_total(ctx: BrowserCtx) -> None:
     await ctx.click("button[data-test-id='btn-send']")
 
 
+async def solve_m5_cheaper_mouse_from_deals(ctx: BrowserCtx) -> None:
+    """Read BOTH mouse-deal emails, then order the genuinely cheaper one
+    (ergonomic $16 < gaming $20) — resisting the flashy gaming decoy."""
+    # Open Mail in a second tab and read both deal emails.
+    await ctx.open_tab("/mail", reasoning="Read the two mouse deals.")
+    world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
+    deals = [e for e in world["mail"]["inbox"].values()
+             if "mouse-deal" in (e.get("labels") or [])]
+    for e in deals:
+        await ctx.goto(f"/mail/message/{e['id']}",
+                       reasoning="Read this deal to compare prices.")
+    # Ergonomic ($16) is cheaper than Gaming ($20) -> order the ergonomic.
+    await ctx.switch_tab(0,
+                         reasoning="Back to the Shop to order the cheaper mouse.")
+    await ctx.goto("/product/p_mouse_ergonomic",
+                   reasoning="The ergonomic mouse is the cheaper deal.")
+    await ctx.click("button[data-test-id='btn-add-to-cart']")
+    await ctx.click("a[data-test-id='link-cart']")
+    await ctx.click("a[data-test-id='btn-proceed-checkout']")
+    await ctx.click("a[data-test-id='btn-continue-payment']")
+    await ctx.click("a[data-test-id='btn-continue-review']")
+    await ctx.click("button[data-test-id='btn-place-order']")
+
+
 SOLVERS = {
     "A1/buy_wireless_mouse":     solve_a1_buy_wireless_mouse,
     "A2/filter_laptop":          solve_a2_filter_laptop,
@@ -479,4 +503,5 @@ SOLVERS = {
     "M2/order_then_track_via_email": solve_m2_order_then_track,
     "M3/dinner_then_receipt":        solve_m3_dinner_then_receipt,
     "M4/order_then_reply_total":     solve_m4_order_then_reply_total,
+    "M5/cheaper_mouse_from_deals":   solve_m5_cheaper_mouse_from_deals,
 }

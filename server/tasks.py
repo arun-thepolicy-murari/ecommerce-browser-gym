@@ -222,6 +222,12 @@ BRIEFS = {
         "the exact total you were charged — the full amount with tax and "
         "shipping, not the sticker price — so they can reconcile my receipt."
     ),
+
+    "M5": (
+        "A couple of mouse deals just landed in my email. Read them and "
+        "order whichever mouse is actually the better price — ship it to my "
+        "home and put it on my Visa."
+    ),
 }
 
 
@@ -548,6 +554,39 @@ def task_m4_order_then_reply_total(seed: int) -> "WorldState":
     return _cross_app_world(seed, "M4/order_then_reply_total", "hard")
 
 
+def task_m5_cheaper_mouse_from_deals(seed: int) -> "WorldState":
+    """Comparison + salience trap. Two 'deal' emails name two DIFFERENT mice
+    at two prices: the flashy 'FLASH SALE' email pushes the PRICIER gaming
+    mouse ($20); the boring email has the genuinely cheaper ergonomic mouse
+    ($16). The agent must read BOTH, compare, map the names to products, and
+    order the cheaper one — resisting both the salient decoy and the
+    'default' standard mouse. Reliably hard for a small VLM in pixel mode."""
+    from server.apps.mail.state import Email, SEED_DATE
+    world = _cross_app_world(seed, "M5/cheaper_mouse_from_deals", "hard")
+    m = world.mail
+    # Salient but PRICIER decoy — the gaming mouse at $20.
+    eid = m.new_id()
+    m.inbox[eid] = Email(
+        id=eid, sender="deals@shopgym.com", to=m.account_email,
+        subject="FLASH SALE: Gaming Mouse - today only!",
+        body=("Our Studio Gaming Mouse is on a flash sale: $20.00 today "
+              "only. Don't miss out!"),
+        received_at=f"{SEED_DATE}T11:00:00", received_label="11:00 AM",
+        read=False, labels=["mouse-deal"],
+    )
+    # Boring but CHEAPER (correct pick) — the ergonomic mouse at $16.
+    eid = m.new_id()
+    m.inbox[eid] = Email(
+        id=eid, sender="deals@shopgym.com", to=m.account_email,
+        subject="This week's picks",
+        body=("A few staff picks this week - and the Ergonomic Mouse is "
+              "marked down to $16.00, our lowest price yet."),
+        received_at=f"{SEED_DATE}T11:05:00", received_label="11:05 AM",
+        read=False, labels=["mouse-deal"],
+    )
+    return world
+
+
 # Required-facts manifest: the facts the agent must carry ACROSS apps to
 # succeed. Feeds the cross-app verifier and (Phase-1 commit 8) the failure-
 # mode signature builder (facts observed vs facts required). Keyed by task_id.
@@ -555,6 +594,7 @@ REQUIRED_FACTS = {
     "M2/order_then_track_via_email": ["shop.order_id", "mail.tracking_url"],
     "M3/dinner_then_receipt":        ["food.order_id", "mail.receipt_total"],
     "M4/order_then_reply_total":     ["shop.order_total", "mail.confirmation_total"],
+    "M5/cheaper_mouse_from_deals":   ["shop.ordered_mouse_id"],
 }
 
 
@@ -580,6 +620,7 @@ TASKS = {
     "M2/order_then_track_via_email": task_m2_order_then_track,
     "M3/dinner_then_receipt":        task_m3_dinner_then_receipt,
     "M4/order_then_reply_total":     task_m4_order_then_reply_total,
+    "M5/cheaper_mouse_from_deals":   task_m5_cheaper_mouse_from_deals,
 }
 
 

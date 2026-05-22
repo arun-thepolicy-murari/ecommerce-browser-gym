@@ -1141,6 +1141,39 @@ def _suite_m4() -> TaskSuite:
     )
 
 
+def _suite_m5() -> TaskSuite:
+    """Comparison + salience trap. Two 'deal' emails: the flashy one pushes
+    the PRICIER gaming mouse ($20); the boring one has the cheaper ergonomic
+    mouse ($16). Correct = read both, order the ergonomic. Expected failures:
+    ordered_the_flashy_decoy (gaming), ordered_the_default_mouse (wireless),
+    didn't_read_both_deals."""
+
+    OTHER_MICE = ("p_mouse_gaming", "p_mouse_wireless",
+                  "p_mouse_mini", "p_mouse_trackpad")
+
+    def _both_deals_opened(p: Probe) -> bool:
+        deals = [e for e in _mail_inbox(p).values()
+                 if "mouse-deal" in (e.labels or [])]
+        return len(deals) >= 2 and all(e.read for e in deals)
+
+    def _ordered_cheaper(p: Probe) -> bool:
+        # The ergonomic mouse is the genuinely-cheaper deal ($16 < $20).
+        return _order_with(
+            p, product_ids=("p_mouse_ergonomic",),
+            exclude_product_ids=OTHER_MICE,
+        )
+
+    return TaskSuite(
+        task_id="M5/cheaper_mouse_from_deals",
+        milestones=[
+            Milestone("both_deal_emails_opened", weight=0.30,
+                      check=_both_deals_opened),
+            Milestone("ordered_cheaper_ergonomic_mouse", weight=0.70,
+                      check=_ordered_cheaper, required_for_success=True),
+        ],
+    )
+
+
 # --------------------------------------------------------------------------- #
 # Registry
 # --------------------------------------------------------------------------- #
@@ -1163,6 +1196,7 @@ SUITE_FACTORIES = {
     "M2/order_then_track_via_email": _suite_m2,
     "M3/dinner_then_receipt":        _suite_m3,
     "M4/order_then_reply_total":     _suite_m4,
+    "M5/cheaper_mouse_from_deals":   _suite_m5,
 }
 
 

@@ -75,10 +75,24 @@ def _facts_m4(world: dict, url: str) -> dict[str, Any]:
     return facts
 
 
+def _facts_m5(world: dict, url: str) -> dict[str, Any]:
+    """M5: which mouse the agent actually ordered (the decision outcome)."""
+    facts: dict[str, Any] = {}
+    mice = {"p_mouse_wireless", "p_mouse_gaming", "p_mouse_ergonomic",
+            "p_mouse_mini", "p_mouse_trackpad"}
+    orders = (world.get("shop") or {}).get("orders") or {}
+    for o in orders.values():
+        for it in o.get("items", []):
+            if it.get("product_id") in mice:
+                facts["shop.ordered_mouse_id"] = it["product_id"]
+    return facts
+
+
 FACT_EXTRACTORS: dict[str, Callable[[dict, str], dict]] = {
     "M2/order_then_track_via_email": _facts_m2,
     "M3/dinner_then_receipt":        _facts_m3,
     "M4/order_then_reply_total":     _facts_m4,
+    "M5/cheaper_mouse_from_deals":   _facts_m5,
 }
 
 
