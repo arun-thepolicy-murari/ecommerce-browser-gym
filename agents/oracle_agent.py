@@ -374,6 +374,56 @@ async def solve_d2_drill_keyboards(ctx: BrowserCtx) -> None:
     await ctx.click("button[data-test-id='btn-place-order']")
 
 
+# --------------------------------------------------------------------------- #
+# Category M: cross-app journeys (Shop / Mail / Food in one browser).
+# The oracle navigates across apps in a single tab; the multi-tab path is
+# the richer option the LLM/pixel agents get. These are the verifier sanity
+# gates for the cross-app tasks.
+# --------------------------------------------------------------------------- #
+
+async def solve_m2_order_then_track(ctx: BrowserCtx) -> None:
+    """Order the standard wireless mouse, then find the confirmation email
+    and follow ITS tracking link."""
+    # 1) Order the standard wireless mouse (not gaming / ergonomic).
+    await ctx.goto("/product/p_mouse_wireless",
+                   reasoning="The standard wireless mouse, not the gaming one.")
+    await ctx.click("button[data-test-id='btn-add-to-cart']")
+    await ctx.click("a[data-test-id='link-cart']")
+    await ctx.click("a[data-test-id='btn-proceed-checkout']")
+    await ctx.click("a[data-test-id='btn-continue-payment']")
+    await ctx.click("a[data-test-id='btn-continue-review']")
+    await ctx.click("button[data-test-id='btn-place-order']")
+    # 2) Switch to Mail and locate the order-confirmation email. The shop
+    #    confirmation is the only inbox mail carrying a tracking link.
+    await ctx.goto("/mail",
+                   reasoning="Switch to Mail to find the order confirmation.")
+    world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
+    conf = next(e for e in world["mail"]["inbox"].values()
+                if e.get("tracking_url"))
+    # 3) Open it (marks it read), then 4) follow the tracking link.
+    await ctx.goto(f"/mail/message/{conf['id']}",
+                   reasoning="Open the order-confirmation email.")
+    await ctx.goto(conf["tracking_url"],
+                   reasoning="Follow the tracking link from the email.")
+
+
+async def solve_m3_dinner_then_receipt(ctx: BrowserCtx) -> None:
+    """Order dinner from the Food app, then open the receipt email."""
+    await ctx.goto("/food", reasoning="Open the food-delivery app.")
+    await ctx.goto("/food/restaurant/r_sushi", reasoning="Pick a restaurant.")
+    await ctx.click("button[data-test-id='btn-add-d_salmon_roll']")
+    await ctx.goto("/food/cart")
+    await ctx.click("button[data-test-id='btn-place-food-order']")
+    # Switch to Mail and open the receipt (the only inbox mail labelled
+    # 'receipts').
+    await ctx.goto("/mail", reasoning="Check email for the receipt.")
+    world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
+    receipt = next(e for e in world["mail"]["inbox"].values()
+                   if "receipts" in (e.get("labels") or []))
+    await ctx.goto(f"/mail/message/{receipt['id']}",
+                   reasoning="Open the receipt email to confirm the order.")
+
+
 SOLVERS = {
     "A1/buy_wireless_mouse":     solve_a1_buy_wireless_mouse,
     "A2/filter_laptop":          solve_a2_filter_laptop,
@@ -389,4 +439,6 @@ SOLVERS = {
     "C4/mega_checkout":          solve_c4_mega_checkout,
     "D1/browse_audio_no_search":     solve_d1_browse_audio,
     "D2/drill_electronics_keyboards": solve_d2_drill_keyboards,
+    "M2/order_then_track_via_email": solve_m2_order_then_track,
+    "M3/dinner_then_receipt":        solve_m3_dinner_then_receipt,
 }
