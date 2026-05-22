@@ -1,0 +1,41 @@
+{# Task banner + server-rendered flash messages — shared chrome so the agent
+   sees the task brief and any error/success banners on EVERY app, not just
+   the shop. Markup mirrors the shop _layout's inline banner (same
+   data-test-ids) so existing screenshots/selectors are unaffected. #}
+<section data-test-id="task-banner"
+         class="bg-gradient-to-r from-amber-50 to-amber-100 border-b border-amber-200"
+         x-data="{ open: true }">
+  <div class="max-w-7xl mx-auto px-4 py-2">
+    <div class="flex items-baseline gap-3 flex-wrap">
+      <span data-test-id="lbl-difficulty"
+            class="px-2 py-0.5 rounded text-white text-[10px] uppercase font-bold tracking-wider
+                   {% if task_difficulty == 'easy' %}bg-emerald-600
+                   {% elif task_difficulty == 'medium' %}bg-amber-600
+                   {% else %}bg-red-600{% endif %}">
+        {{ task_difficulty }}
+      </span>
+      <span data-test-id="lbl-category"
+            class="px-2 py-0.5 rounded bg-slate-700 text-white text-[10px] uppercase font-bold tracking-wider">
+        Track {{ task_category }}
+      </span>
+      <span data-test-id="lbl-task-id" class="font-mono text-xs text-amber-900">{{ task_id }}</span>
+      <button @click="open = !open" class="ml-auto text-xs text-amber-800 hover:text-amber-900" data-test-id="btn-toggle-banner">
+        <span x-text="open ? '▼ Hide brief' : '▶ Show brief'"></span>
+      </button>
+    </div>
+    <p x-show="open" data-test-id="lbl-task-brief"
+       class="mt-1 text-amber-950 text-sm leading-relaxed">{{ task_brief }}</p>
+  </div>
+</section>
+
+{% if flashes %}
+<section class="max-w-7xl mx-auto px-4 mt-3 space-y-1 w-full">
+  {% for f in flashes %}
+    <div data-test-id="flash-{{ f.kind }}"
+         class="{% if f.kind == 'error' %}bg-red-50 text-red-800 border-l-4 border-red-500{% else %}bg-emerald-50 text-emerald-900 border-l-4 border-emerald-500{% endif %} px-4 py-2 rounded shadow-sm flex items-center gap-2">
+      <span>{% if f.kind == 'error' %}⚠️{% else %}✅{% endif %}</span>
+      <span>{{ f.body }}</span>
+    </div>
+  {% endfor %}
+</section>
+{% endif %}

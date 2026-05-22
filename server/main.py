@@ -64,8 +64,11 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 
 from server import mutations, verifiers
-from server.state import GymState, log_action
+from server.state import GymState, flash, log_action
 from server.tasks import TASKS, make_task
+from server.apps.world import WorldState
+from server.apps.mail.state import make_mailstate
+from server.apps.mail import routes as mail_routes
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -92,6 +95,10 @@ class Session:
     initial: GymState | None = None
     current: GymState | None = None
     suite: verifiers.TaskSuite | None = None
+    # Multi-app wrapper. ``world.shop`` IS ``current`` (same object), so every
+    # existing shop mutation is reflected in the world with zero extra wiring;
+    # the new apps (mail, +food/calendar) own their own isolated stores.
+    world: "WorldState | None" = None
 
 
 SESSION = Session()
@@ -151,6 +158,17 @@ def _reset_inline(task_id: str, seed: int) -> None:
     SESSION.initial = copy.deepcopy(fresh)
     SESSION.current = fresh
     SESSION.suite = verifiers.build_suite(task_id)
+    # Wrap the shop state in the multi-app world. ``world.shop`` is the SAME
+    # object as ``current``, so shop routes (which use ``_state()``) and the
+    # world stay in sync automatically. Each new app gets its own store.
+    SESSION.world = WorldState(shop=fresh, mail=make_mailstate(seed))
+
+
+def _world() -> WorldState:
+    if SESSION.world is None:
+        _reset_inline("A1/buy_wireless_mouse", 0)
+    assert SESSION.world is not None
+    return SESSION.world
 
 
 # --------------------------------------------------------------------------- #
@@ -165,6 +183,9 @@ def _ctx(request: Request, **extra: Any) -> dict[str, Any]:
     flashes = list(s.flash_messages)
     s.flash_messages.clear()
     cart_count = sum(i.quantity for i in s.cart.items)
+    mail_unread = 0
+    if SESSION.world is not None and SESSION.world.mail is not None:
+        mail_unread = SESSION.world.mail.unread_count()
     return {
         "request": request, "state": s, "user": user,
         "task_brief": s.task_brief,
@@ -173,6 +194,10 @@ def _ctx(request: Request, **extra: Any) -> dict[str, Any]:
         "task_category": s.task_category,
         "cart_count": cart_count,
         "flashes": flashes,
+        # Multi-app chrome (app-switcher bar). Routes for other apps pass
+        # active_app="mail" etc. via **extra, which overrides this default.
+        "active_app": "shop",
+        "mail_unread": mail_unread,
         **extra,
     }
 
@@ -908,3 +933,16 @@ def harness_classify_failure(payload: dict) -> dict[str, Any]:
         llm_model=payload.get("llm_model", "claude-haiku-4-5"),
     )
     return {"agent_failure_class": label}
+
+
+# --------------------------------------------------------------------------- #
+# Multi-app sub-sites (route-prefixed on the SAME server)
+# --------------------------------------------------------------------------- #
+# Each app's routes live in its own module and receive the shared handles
+# (templates, world accessor, context builder, flash) via configure() — this
+# keeps a clean one-way import (main -> app.routes) with no circular import.
+
+mail_routes.configure(
+    templates=templates, get_world=_world, build_ctx=_ctx, flash=flash,
+)
+app.include_router(mail_routes.router)

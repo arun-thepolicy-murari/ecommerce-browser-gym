@@ -1,0 +1,52 @@
+{% extends "mail/_mail_layout.html" %}
+{% block title %}{{ email.subject }}{% endblock %}
+{% block content %}
+
+<a href="/mail" data-test-id="link-back-to-inbox" class="text-sm text-indigo-600 hover:underline inline-flex items-center gap-1">
+  ← Back to inbox
+</a>
+
+<article class="bg-white rounded-lg border border-slate-200 shadow-sm mt-3" data-test-id="mail-message">
+  <header class="px-5 py-4 border-b border-slate-200">
+    <h1 class="text-xl font-bold" data-test-id="message-subject">{{ email.subject }}</h1>
+    <div class="text-sm text-slate-500 mt-1 flex flex-wrap gap-x-2">
+      <span data-test-id="message-from">From: <span class="text-slate-700">{{ email.sender }}</span></span>
+      <span>·</span>
+      <span data-test-id="message-to">To: {{ email.to }}</span>
+      <span>·</span>
+      <span>{{ email.received_label }}</span>
+    </div>
+  </header>
+
+  <div class="px-5 py-4 whitespace-pre-line text-slate-800 leading-relaxed" data-test-id="message-body">{{ email.body }}</div>
+
+  {% if email.order_id %}
+  <div class="mx-5 mb-4 rounded-md bg-slate-50 border border-slate-200 px-4 py-3 text-sm">
+    <div class="font-semibold text-slate-700 mb-1">Order details</div>
+    <div data-test-id="message-order-id">Order number: <span class="font-mono">{{ email.order_id }}</span></div>
+    {% if email.amount_total is not none %}
+    <div data-test-id="message-total">Total charged: ${{ '%.2f'|format(email.amount_total) }}</div>
+    {% endif %}
+    {% if email.eta %}
+    <div data-test-id="message-eta">Estimated arrival: {{ email.eta }}</div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if email.tracking_url %}
+  <div class="px-5 pb-5">
+    <a href="{{ email.tracking_url }}" data-test-id="link-tracking" role="button"
+       class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-md text-sm font-semibold">
+      <span aria-hidden="true">📦</span> Track your package
+    </a>
+  </div>
+  {% endif %}
+
+  <div class="px-5 pb-5 flex gap-2 border-t border-slate-100 pt-4">
+    <a href="/mail/compose?to={{ email.sender|urlencode }}&subject={{ ('Re: ' + email.subject)|urlencode }}"
+       data-test-id="btn-reply" role="button"
+       class="border border-slate-300 hover:bg-slate-50 px-4 py-2 rounded-md text-sm">Reply</a>
+  </div>
+</article>
+
+{% endblock %}

@@ -21,9 +21,15 @@ from server.tasks import TASKS, make_task
 from server.apps import bus
 from server.apps.bus import emit, subscribe, clear_subscribers
 from server.apps.world import WorldState
+from server.apps.mail.state import make_mailstate
+from server.apps.mail import mutations as mail_mut
 
 # Any valid shop task works — these tests only need a real GymState to wrap.
 _TASK_ID = next(iter(TASKS))
+
+
+def _mail_world() -> WorldState:
+    return WorldState(shop=make_task(_TASK_ID, 0), mail=make_mailstate(0))
 
 
 @pytest.fixture(autouse=True)
@@ -158,3 +164,76 @@ def test_worldstate_to_json_shape():
     assert j["mail"] is None and j["food"] is None and j["calendar"] is None
     assert j["events"][0]["type"] == "ShopOrderPlaced"
     assert j["events"][0]["delivered"] is False
+
+
+# --------------------------------------------------------------------------- #
+# Mail app — store seeding + mutation isolation (mutations touch ONLY MailState)
+# --------------------------------------------------------------------------- #
+
+def test_make_mailstate_seeds_default_inbox():
+    m = make_mailstate(0)
+    assert len(m.inbox) >= 2
+    assert m.unread_count() >= 1
+    # newest-first ordering
+    ordered = m.ordered_inbox()
+    assert [e.received_at for e in ordered] == sorted(
+        (e.received_at for e in ordered), reverse=True,
+    )
+
+
+def test_make_mailstate_is_deterministic_per_seed():
+    a, b = make_mailstate(0), make_mailstate(0)
+    assert a.to_json() == b.to_json()         # reset reproduces the same inbox
+
+
+def test_search_inbox_filters_and_empty_returns_all():
+    m = make_mailstate(0)
+    all_emails = mail_mut.search_inbox(m, "")
+    assert len(all_emails) == len(m.inbox)
+    dinner = mail_mut.search_inbox(m, "dinner")
+    assert dinner and all("dinner" in e.subject.lower()
+                          or "dinner" in e.body.lower() for e in dinner)
+    assert mail_mut.search_inbox(m, "zzz-nonexistent") == []
+
+
+def test_mark_read_only_touches_mailstate():
+    w = _mail_world()
+    shop_before = w.shop.to_json()
+    unread = next(e for e in w.mail.inbox.values() if not e.read)
+    r = mail_mut.mark_read(w.mail, unread.id)
+    assert r["ok"] is True
+    assert w.mail.inbox[unread.id].read is True
+    assert w.shop.to_json() == shop_before     # shop untouched
+    # bad id is a clean no-op error
+    assert mail_mut.mark_read(w.mail, "nope")["ok"] is False
+
+
+def test_send_email_appends_to_sent_only():
+    w = _mail_world()
+    shop_before = w.shop.to_json()
+    inbox_ids_before = set(w.mail.inbox)
+    r = mail_mut.send_email(w.mail, to="alex@example.com",
+                            subject="Dinner Thursday?", body="Works for me.")
+    assert r["ok"] is True
+    assert r["email_id"] in w.mail.sent
+    assert set(w.mail.inbox) == inbox_ids_before    # inbox unchanged
+    assert w.shop.to_json() == shop_before          # shop untouched
+
+
+def test_send_email_validates_recipient_and_subject():
+    m = make_mailstate(0)
+    assert mail_mut.send_email(m, to="not-an-email", subject="x")["ok"] is False
+    assert mail_mut.send_email(m, to="a@b.com", subject="")["ok"] is False
+    assert m.sent == {}                              # nothing sent on failure
+
+
+def test_mail_mutation_batch_never_mutates_shop():
+    """The headline isolation guarantee: a run of mail operations leaves the
+    shop's GymState byte-for-byte identical."""
+    w = _mail_world()
+    shop_before = w.shop.to_json()
+    for e in list(w.mail.inbox.values()):
+        mail_mut.mark_read(w.mail, e.id)
+    mail_mut.send_email(w.mail, to="x@y.com", subject="hi", body="there")
+    mail_mut.search_inbox(w.mail, "deals")
+    assert w.shop.to_json() == shop_before
