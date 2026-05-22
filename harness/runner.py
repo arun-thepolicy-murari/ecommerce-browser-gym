@@ -30,7 +30,7 @@ import time
 import uuid
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 import httpx
 from playwright.async_api import (
@@ -68,7 +68,7 @@ class StepRecord:
     produced by ``harness/failure_classifier.classify`` at episode end.
     """
     step_idx: int
-    action_kind: str               # "click", "fill", "navigate", "screenshot", ...
+    action_kind: str               # "click", "fill", "navigate", "open_tab", ...
     action_args: dict[str, Any]
     url_after: str
     screenshot_path: str | None
@@ -81,6 +81,17 @@ class StepRecord:
     raw_model_output: str = ""
     tokens_in: int = 0
     tokens_out: int = 0
+    # Environment-truth facts VISIBLE or CREATED at this step, namespaced by
+    # app (e.g. {"mail.order_id": "ORD-1042", "mail.tracking_url": "..."}).
+    # Populated by a per-task extract_facts hook (see harness/facts.py). This
+    # is what lets the harvester detect "the fact was on screen at step k but
+    # the agent acted on a wrong value at step k+n" — the root of cross-app
+    # failures. Empty for single-app tasks (no extractor wired).
+    facts_visible_or_created: dict[str, Any] = field(default_factory=dict)
+    # Multi-tab context: which tab was active + the open tab strip after this
+    # action. Single-tab episodes record a one-entry strip.
+    active_tab: int = 0
+    tab_strip: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass
@@ -175,6 +186,18 @@ class BrowserCtx:
     )
     show_cursor: bool = True
     cursor_pause_ms: int = 450  # how long to linger so the human can see
+    # Multi-tab: ``page`` is always the ACTIVE tab; ``pages`` holds every open
+    # tab in the one BrowserContext. open/switch/close_tab keep ``page`` in
+    # sync. Single-tab episodes leave pages=[page], active_tab=0 — unchanged.
+    pages: list = field(default_factory=list)
+    active_tab: int = 0
+    # Per-task fact extractor: (world_json, active_url) -> {namespaced facts}.
+    # None for single-app tasks (then no /_harness/world fetch happens).
+    extract_facts: Optional[Callable[[dict, str], dict]] = None
+
+    def __post_init__(self) -> None:
+        if not self.pages:
+            self.pages = [self.page]
 
     # --------- helpers the agent calls ---------
     #
@@ -310,6 +333,94 @@ class BrowserCtx:
             "submit", {"selector": selector}, reasoning=reasoning,
             error=err, latency_ms=latency_ms,
         )
+
+    # ─────────────────────────────────────────────────────────────────
+    # Multi-tab actions — the agent juggles tabs like a real person.
+    #
+    # ``page`` always points at the ACTIVE tab; all the action methods
+    # above operate on it, so they keep working unchanged. Tabs live in
+    # ONE BrowserContext (shared cookies/session), so the agent stays
+    # logged in across tabs — exactly like a real browser. Cross-app
+    # tasks (Shop in one tab, Mail in another) are the point.
+    # ─────────────────────────────────────────────────────────────────
+
+    async def open_tab(self, path: str, reasoning: str = "") -> StepRecord:
+        url = self._abs(path)
+        t0 = time.monotonic()
+        err: str | None = None
+        try:
+            new_page = await self.page.context.new_page()
+            await new_page.goto(url, wait_until="load")
+            self.pages.append(new_page)
+            self.active_tab = len(self.pages) - 1
+            self.page = new_page
+            await new_page.bring_to_front()
+        except Exception as e:
+            err = f"{type(e).__name__}: {e}"
+        latency_ms = int((time.monotonic() - t0) * 1000)
+        return await self._record(
+            "open_tab", {"url": path, "tab_index": self.active_tab},
+            reasoning=reasoning, error=err, latency_ms=latency_ms,
+        )
+
+    async def switch_tab(self, index: int, reasoning: str = "") -> StepRecord:
+        t0 = time.monotonic()
+        err: str | None = None
+        try:
+            if 0 <= index < len(self.pages):
+                self.active_tab = index
+                self.page = self.pages[index]
+                await self.page.bring_to_front()
+            else:
+                err = (f"ValueError: tab index {index} out of range "
+                       f"(0..{len(self.pages) - 1})")
+        except Exception as e:
+            err = f"{type(e).__name__}: {e}"
+        latency_ms = int((time.monotonic() - t0) * 1000)
+        return await self._record(
+            "switch_tab", {"tab_index": index}, reasoning=reasoning,
+            error=err, latency_ms=latency_ms,
+        )
+
+    async def close_tab(self, index: int, reasoning: str = "") -> StepRecord:
+        t0 = time.monotonic()
+        err: str | None = None
+        try:
+            if len(self.pages) <= 1:
+                err = "ValueError: cannot close the last remaining tab"
+            elif 0 <= index < len(self.pages):
+                pg = self.pages.pop(index)
+                try:
+                    await pg.close()
+                except Exception:
+                    pass
+                self.active_tab = min(self.active_tab, len(self.pages) - 1)
+                self.page = self.pages[self.active_tab]
+                await self.page.bring_to_front()
+            else:
+                err = f"ValueError: tab index {index} out of range"
+        except Exception as e:
+            err = f"{type(e).__name__}: {e}"
+        latency_ms = int((time.monotonic() - t0) * 1000)
+        return await self._record(
+            "close_tab", {"tab_index": index}, reasoning=reasoning,
+            error=err, latency_ms=latency_ms,
+        )
+
+    async def _tab_strip(self) -> list[dict[str, Any]]:
+        """The open-tabs bar an agent reads off its browser: one entry per
+        tab with {index, url, title, active}."""
+        strip: list[dict[str, Any]] = []
+        for i, pg in enumerate(self.pages):
+            try:
+                title = await pg.title()
+            except Exception:
+                title = ""
+            strip.append({
+                "index": i, "url": pg.url, "title": title,
+                "active": i == self.active_tab,
+            })
+        return strip
 
     # ─────────────────────────────────────────────────────────────────
     # Mark-based actions (used by the pixel agent — feat/pixel-agent-fork)
@@ -509,6 +620,23 @@ class BrowserCtx:
         newly = list(verifier_resp.get("newly_fired", []))
         running_score = float(verifier_resp.get("score", 0.0))
 
+        # Per-step facts (cross-app tasks only). Best-effort: a faulty
+        # extractor must never break the episode.
+        facts: dict[str, Any] = {}
+        if self.extract_facts is not None:
+            try:
+                world_json = self.http.get(
+                    f"{self.server_url}/_harness/world",
+                ).json()
+                facts = self.extract_facts(world_json, url) or {}
+            except Exception:
+                facts = {}
+
+        try:
+            strip = await self._tab_strip()
+        except Exception:
+            strip = []
+
         rec = StepRecord(
             step_idx=step_idx,
             action_kind=kind, action_args=args,
@@ -520,6 +648,9 @@ class BrowserCtx:
             reasoning=reasoning,
             action_error=error,
             action_latency_ms=latency_ms,
+            facts_visible_or_created=facts,
+            active_tab=self.active_tab,
+            tab_strip=strip,
         )
         self.trajectory.steps.append(rec)
         return rec

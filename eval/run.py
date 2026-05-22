@@ -33,6 +33,7 @@ from pathlib import Path
 import httpx
 
 from agents.oracle_agent import SOLVERS as ORACLE_SOLVERS
+from harness.facts import get_fact_extractor
 from harness.runner import (
     BrowserCtx, Trajectory, open_browser, reset_gym, save_trajectory,
 )
@@ -112,6 +113,10 @@ async def _run_one(*, agent_kind: str, task_id: str, seed: int,
         page=page, server_url=server_url, trajectory=traj,
         screenshot_dir=shots_dir,
     )
+    # Cross-app tasks record per-step facts (the substrate for the failure-
+    # mode signature builder). Single-app tasks get None -> no facts, no
+    # extra world fetch.
+    bctx.extract_facts = get_fact_extractor(task_id)
 
     # Pre-navigate to the gym home page so the agent starts on the
     # rendered site, not about:blank. This simulates "user opens the
