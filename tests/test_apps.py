@@ -23,6 +23,9 @@ from server.apps.bus import emit, subscribe, clear_subscribers
 from server.apps.world import WorldState
 from server.apps.mail.state import make_mailstate
 from server.apps.mail import mutations as mail_mut
+from server.apps.food.state import make_foodstate
+from server.apps.food import mutations as food_mut
+from server.apps import wiring as apps_wiring
 
 # Any valid shop task works — these tests only need a real GymState to wrap.
 _TASK_ID = next(iter(TASKS))
@@ -30,6 +33,13 @@ _TASK_ID = next(iter(TASKS))
 
 def _mail_world() -> WorldState:
     return WorldState(shop=make_task(_TASK_ID, 0), mail=make_mailstate(0))
+
+
+def _full_world() -> WorldState:
+    return WorldState(
+        shop=make_task(_TASK_ID, 0),
+        mail=make_mailstate(0), food=make_foodstate(0),
+    )
 
 
 @pytest.fixture(autouse=True)
@@ -237,3 +247,79 @@ def test_mail_mutation_batch_never_mutates_shop():
     mail_mut.send_email(w.mail, to="x@y.com", subject="hi", body="there")
     mail_mut.search_inbox(w.mail, "deals")
     assert w.shop.to_json() == shop_before
+
+
+# --------------------------------------------------------------------------- #
+# Food app — store seeding + the FoodOrderPlaced -> Mail cross-app chain
+# --------------------------------------------------------------------------- #
+
+def test_make_foodstate_seeds_restaurants_and_is_deterministic():
+    f = make_foodstate(0)
+    assert len(f.restaurants) >= 2
+    # Coffee pods exist so the cross-store price-compare task (M5) is possible.
+    assert any(
+        "pods" in d.tags
+        for r in f.restaurants.values() for d in r.dishes
+    )
+    assert make_foodstate(0).to_json() == make_foodstate(0).to_json()
+
+
+def test_add_dish_only_touches_foodstate():
+    w = _full_world()
+    shop_before, mail_before = w.shop.to_json(), w.mail.to_json()
+    r = food_mut.add_dish(w.food, restaurant_id="r_sushi",
+                          dish_id="d_salmon_roll", quantity=2)
+    assert r["ok"] is True and w.food.cart.count() == 2
+    assert w.shop.to_json() == shop_before     # shop untouched
+    assert w.mail.to_json() == mail_before      # mail untouched
+
+
+def test_food_cart_is_single_restaurant():
+    w = _full_world()
+    assert food_mut.add_dish(w.food, restaurant_id="r_sushi",
+                             dish_id="d_salmon_roll")["ok"] is True
+    bad = food_mut.add_dish(w.food, restaurant_id="r_burger", dish_id="d_classic")
+    assert bad["ok"] is False and bad["error"] == "cart_has_other_restaurant"
+
+
+def test_place_food_order_emits_and_delivers_receipt():
+    # Register the real subscriber, exactly as the server does at startup.
+    apps_wiring.register_default_subscribers()
+    w = _full_world()
+    shop_before = w.shop.to_json()
+    food_mut.add_dish(w.food, restaurant_id="r_sushi", dish_id="d_salmon_roll")
+    food_mut.add_dish(w.food, restaurant_id="r_sushi", dish_id="d_miso")
+    r = food_mut.place_food_order(w)
+    assert r["ok"] is True
+    # FoodState: order created, cart cleared
+    assert r["order_id"] in w.food.orders
+    assert w.food.cart.count() == 0
+    # Event log: appended AND delivered
+    evs = bus.events_of_type(w, "FoodOrderPlaced")
+    assert len(evs) == 1 and evs[0].delivered is True
+    # Mail: a receipt email with the matching total + ETA arrived
+    receipts = [e for e in w.mail.inbox.values() if e.order_id == r["order_id"]]
+    assert len(receipts) == 1
+    assert abs((receipts[0].amount_total or 0) - r["total"]) < 1e-9
+    assert receipts[0].eta == r["eta"]
+    # Shop: completely untouched by the food->mail chain
+    assert w.shop.to_json() == shop_before
+
+
+def test_place_food_order_without_subscriber_records_but_not_delivered():
+    # The autouse fixture cleared the registry; we deliberately do NOT
+    # register a subscriber. This is the env-bug case: the order exists but
+    # no receipt was produced — and that is VISIBLE as delivered=False,
+    # NOT silently mislabeled as the agent failing to read mail.
+    w = _full_world()
+    food_mut.add_dish(w.food, restaurant_id="r_burger", dish_id="d_classic")
+    r = food_mut.place_food_order(w)
+    assert r["ok"] is True
+    evs = bus.events_of_type(w, "FoodOrderPlaced")
+    assert len(evs) == 1 and evs[0].delivered is False
+    assert not any(e.order_id == r["order_id"] for e in w.mail.inbox.values())
+
+
+def test_place_food_order_empty_cart_fails():
+    w = _full_world()
+    assert food_mut.place_food_order(w)["ok"] is False

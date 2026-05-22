@@ -1,0 +1,29 @@
+{% extends "food/_food_layout.html" %}
+{% block title %}Restaurants{% endblock %}
+{% block content %}
+
+<h1 class="text-2xl font-bold mb-4" data-test-id="food-title">Order food delivery</h1>
+
+<ul role="list" data-test-id="restaurant-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+  {% for r in restaurants %}
+  <li role="listitem">
+    <a href="/food/restaurant/{{ r.id }}" data-test-id="restaurant-{{ r.id }}"
+       class="block bg-white rounded-lg border border-slate-200 shadow-sm hover:shadow-md hover:border-orange-300 transition p-4">
+      <div class="flex items-center gap-3">
+        <span class="text-4xl" aria-hidden="true">{{ r.emoji }}</span>
+        <div class="flex-1">
+          <div class="font-bold text-lg" data-test-id="restaurant-name-{{ r.id }}">{{ r.name }}</div>
+          <div class="text-sm text-slate-500">{{ r.cuisine }}</div>
+        </div>
+        <div class="text-right text-sm">
+          <div class="text-amber-600 font-semibold">★ {{ '%.1f'|format(r.rating) }}</div>
+          <div class="text-slate-500" data-test-id="restaurant-eta-{{ r.id }}">{{ r.eta_label }}</div>
+        </div>
+      </div>
+      <div class="mt-2 text-xs text-slate-400">Delivery ${{ '%.2f'|format(r.delivery_fee) }}</div>
+    </a>
+  </li>
+  {% endfor %}
+</ul>
+
+{% endblock %}

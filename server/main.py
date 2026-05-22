@@ -69,6 +69,9 @@ from server.tasks import TASKS, make_task
 from server.apps.world import WorldState
 from server.apps.mail.state import make_mailstate
 from server.apps.mail import routes as mail_routes
+from server.apps.food.state import make_foodstate
+from server.apps.food import routes as food_routes
+from server.apps import wiring as apps_wiring
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -161,7 +164,9 @@ def _reset_inline(task_id: str, seed: int) -> None:
     # Wrap the shop state in the multi-app world. ``world.shop`` is the SAME
     # object as ``current``, so shop routes (which use ``_state()``) and the
     # world stay in sync automatically. Each new app gets its own store.
-    SESSION.world = WorldState(shop=fresh, mail=make_mailstate(seed))
+    SESSION.world = WorldState(
+        shop=fresh, mail=make_mailstate(seed), food=make_foodstate(seed),
+    )
 
 
 def _world() -> WorldState:
@@ -877,6 +882,16 @@ def harness_state() -> dict[str, Any]:
     return _state().to_json()
 
 
+@app.get("/_harness/world")
+def harness_world() -> dict[str, Any]:
+    """Omniscient multi-app snapshot: every per-app store + the append-only
+    cross-app event log (with each event's ``delivered`` flag). This is the
+    HTTP view the environment-correctness gate uses to confirm a cross-app
+    effect was actually produced (delivered=True), and the failure harvester
+    uses to read which facts were available to the agent."""
+    return _world().to_json()
+
+
 @app.get("/_harness/snapshot")
 def harness_snapshot() -> dict[str, Any]:
     """Lightweight snapshot: cart count, orders count, current user, etc."""
@@ -946,3 +961,12 @@ mail_routes.configure(
     templates=templates, get_world=_world, build_ctx=_ctx, flash=flash,
 )
 app.include_router(mail_routes.router)
+
+food_routes.configure(
+    templates=templates, get_world=_world, build_ctx=_ctx, flash=flash,
+)
+app.include_router(food_routes.router)
+
+# Cross-app event subscribers (FoodOrderPlaced -> mail receipt; the shop
+# order-confirmation subscriber is registered too, ready for commit 4).
+apps_wiring.register_default_subscribers()

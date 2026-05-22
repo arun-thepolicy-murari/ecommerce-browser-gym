@@ -1,0 +1,40 @@
+{% extends "food/_food_layout.html" %}
+{% block title %}{{ restaurant.name }}{% endblock %}
+{% block content %}
+
+<a href="/food" data-test-id="link-back-to-restaurants" class="text-sm text-orange-600 hover:underline">← All restaurants</a>
+
+<div class="bg-white rounded-lg border border-slate-200 shadow-sm mt-3 p-5 flex items-center gap-4" data-test-id="menu-header">
+  <span class="text-5xl" aria-hidden="true">{{ restaurant.emoji }}</span>
+  <div>
+    <h1 class="text-2xl font-bold" data-test-id="menu-restaurant-name">{{ restaurant.name }}</h1>
+    <div class="text-sm text-slate-500">{{ restaurant.cuisine }} · ★ {{ '%.1f'|format(restaurant.rating) }} · ETA {{ restaurant.eta_label }} · delivery ${{ '%.2f'|format(restaurant.delivery_fee) }}</div>
+  </div>
+</div>
+
+<ul role="list" data-test-id="dish-list" class="mt-4 space-y-3">
+  {% for d in restaurant.dishes %}
+  <li role="listitem" class="bg-white rounded-lg border border-slate-200 shadow-sm p-4 flex items-center gap-4" data-test-id="dish-{{ d.id }}">
+    <span class="text-3xl" aria-hidden="true">{{ d.emoji }}</span>
+    <div class="flex-1">
+      <div class="font-semibold flex items-center gap-2">
+        <span data-test-id="dish-name-{{ d.id }}">{{ d.name }}</span>
+        {% if d.popular %}<span data-test-id="dish-popular-{{ d.id }}" class="text-[10px] uppercase tracking-wider bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-bold">Best seller</span>{% endif %}
+      </div>
+      <div class="text-sm text-slate-500">{{ d.description }}</div>
+      <div class="text-sm font-semibold text-slate-800 mt-1" data-test-id="dish-price-{{ d.id }}">${{ '%.2f'|format(d.price) }}</div>
+    </div>
+    <form action="/food/cart/add" method="post" data-test-id="form-add-{{ d.id }}">
+      <input type="hidden" name="restaurant_id" value="{{ restaurant.id }}" />
+      <input type="hidden" name="dish_id" value="{{ d.id }}" />
+      <input type="hidden" name="quantity" value="1" />
+      <button type="submit" data-test-id="btn-add-{{ d.id }}"
+              class="bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded-md text-sm font-semibold whitespace-nowrap">
+        Add +
+      </button>
+    </form>
+  </li>
+  {% endfor %}
+</ul>
+
+{% endblock %}
