@@ -28,9 +28,12 @@ inspect backend state, not just DOM.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any, Callable, TYPE_CHECKING
 
 from server.state import GymState
+
+if TYPE_CHECKING:
+    from server.apps.world import WorldState
 
 
 # --------------------------------------------------------------------------- #
@@ -39,10 +42,20 @@ from server.state import GymState
 
 @dataclass
 class Probe:
-    """All the information a milestone check can use to evaluate itself."""
+    """All the information a milestone check can use to evaluate itself.
+
+    ``state`` is always the shop ``GymState`` — so every existing single-app
+    milestone (which reads ``probe.state.*``) is UNCHANGED. Cross-app
+    episodes additionally carry the whole multi-app ``world`` (every per-app
+    store + the append-only event log) and ``initial_world``; cross-app
+    milestones read those. ``active_tab_url`` is the URL of the focused tab
+    in a multi-tab episode (defaults to ``url`` for single-tab)."""
     state: GymState
     url: str                                      # current browser URL
     initial_state: GymState                       # snapshot at episode start
+    world: "WorldState | None" = None
+    initial_world: "WorldState | None" = None
+    active_tab_url: str = ""
 
 
 # --------------------------------------------------------------------------- #
@@ -969,6 +982,107 @@ def _suite_d2() -> TaskSuite:
 
 
 # --------------------------------------------------------------------------- #
+# Category M: cross-app journeys — read multiple app stores + the event log
+# --------------------------------------------------------------------------- #
+
+def _mail_inbox(probe: Probe) -> dict:
+    if probe.world is None or getattr(probe.world, "mail", None) is None:
+        return {}
+    return probe.world.mail.inbox
+
+
+def _mouse_order_id(probe: Probe) -> str | None:
+    """Id of the shop order holding the STANDARD wireless mouse (and no mouse
+    distractor). None if there is no such order."""
+    distractors = {"p_mouse_gaming", "p_mouse_ergonomic",
+                   "p_mouse_mini", "p_mouse_trackpad"}
+    for o in probe.state.orders.values():
+        pids = {it.product_id for it in o.items}
+        if "p_mouse_wireless" in pids and not (pids & distractors):
+            return o.id
+    return None
+
+
+def _suite_m2() -> TaskSuite:
+    """NORTH-STAR. Order the standard wireless mouse -> open the order-
+    confirmation email -> use its tracking link to view the package status
+    for the RIGHT order. The cross-app memory hop (carry the order id from
+    Mail back to the shop tracking page) is where weak agents break:
+    confirmation_email_not_checked, order_id_memory_loss,
+    wrong_source_of_truth, premature_finish_without_verification."""
+
+    def _mouse_ordered(p: Probe) -> bool:
+        return _mouse_order_id(p) is not None
+
+    def _confirmation_delivered(p: Probe) -> bool:
+        oid = _mouse_order_id(p)
+        return oid is not None and any(
+            e.order_id == oid for e in _mail_inbox(p).values()
+        )
+
+    def _confirmation_opened(p: Probe) -> bool:
+        oid = _mouse_order_id(p)
+        return oid is not None and any(
+            e.order_id == oid and e.read for e in _mail_inbox(p).values()
+        )
+
+    def _tracking_viewed_correct(p: Probe) -> bool:
+        oid = _mouse_order_id(p)
+        return oid is not None and _log_has(p, "viewed_tracking", order_id=oid)
+
+    return TaskSuite(
+        task_id="M2/order_then_track_via_email",
+        milestones=[
+            Milestone("mouse_ordered", weight=0.30,
+                      check=_mouse_ordered, required_for_success=True),
+            Milestone("confirmation_email_delivered", weight=0.15,
+                      check=_confirmation_delivered),
+            Milestone("opened_confirmation_email", weight=0.25,
+                      check=_confirmation_opened, required_for_success=True),
+            Milestone("tracking_viewed_for_correct_order", weight=0.30,
+                      check=_tracking_viewed_correct,
+                      required_for_success=True),
+        ],
+    )
+
+
+def _suite_m3() -> TaskSuite:
+    """Order dinner from the Food app -> open the receipt email for THAT
+    order. Spans Food -> Mail; the agent must open the RIGHT receipt, not an
+    older inbox message."""
+
+    def _food_order_ids(p: Probe) -> set[str]:
+        if p.world is None or getattr(p.world, "food", None) is None:
+            return set()
+        return set(p.world.food.orders)
+
+    def _food_order_placed(p: Probe) -> bool:
+        return len(_food_order_ids(p)) > 0
+
+    def _receipt_delivered(p: Probe) -> bool:
+        oids = _food_order_ids(p)
+        return any(e.order_id in oids for e in _mail_inbox(p).values())
+
+    def _receipt_opened(p: Probe) -> bool:
+        oids = _food_order_ids(p)
+        return any(
+            e.order_id in oids and e.read for e in _mail_inbox(p).values()
+        )
+
+    return TaskSuite(
+        task_id="M3/dinner_then_receipt",
+        milestones=[
+            Milestone("food_order_placed", weight=0.40,
+                      check=_food_order_placed, required_for_success=True),
+            Milestone("receipt_email_delivered", weight=0.20,
+                      check=_receipt_delivered),
+            Milestone("opened_receipt_email", weight=0.40,
+                      check=_receipt_opened, required_for_success=True),
+        ],
+    )
+
+
+# --------------------------------------------------------------------------- #
 # Registry
 # --------------------------------------------------------------------------- #
 
@@ -987,6 +1101,8 @@ SUITE_FACTORIES = {
     "C4/mega_checkout":          _suite_c4,
     "D1/browse_audio_no_search":     _suite_d1,
     "D2/drill_electronics_keyboards": _suite_d2,
+    "M2/order_then_track_via_email": _suite_m2,
+    "M3/dinner_then_receipt":        _suite_m3,
 }
 
 

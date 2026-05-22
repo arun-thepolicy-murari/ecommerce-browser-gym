@@ -21,11 +21,16 @@ from __future__ import annotations
 import random
 from datetime import datetime, timedelta, timezone
 
+from typing import TYPE_CHECKING
+
 from server import catalog
 from server.state import (
     Address, GymState, Order, OrderItem, PaymentMethod, Product, Promotion,
     Shipment, ShipmentEvent, User,
 )
+
+if TYPE_CHECKING:
+    from server.apps.world import WorldState
 
 
 # --------------------------------------------------------------------------- #
@@ -189,6 +194,26 @@ BRIEFS = {
         "me out a proper mechanical keyboard with real tactile feedback, "
         "not one of the cheap membrane ones. Buy it, ship home, pay with "
         "Visa."
+    ),
+
+    # ──────────────────────────────────────────────────────────────
+    # CROSS-APP tasks (category "M") — one journey spanning several apps
+    # (Shop / Mail / Food), the way a real person juggles browser tabs.
+    # The hard part is carrying a fact across the app boundary (an order
+    # id, a receipt) and acting on the RIGHT one.
+    # ──────────────────────────────────────────────────────────────
+
+    "M2": (
+        "I need a basic wireless mouse — just the standard everyday one, "
+        "nothing fancy. Order it for me. Then I want to know where my "
+        "package is: find the order confirmation in my email and use the "
+        "tracking link in it to check the delivery status."
+    ),
+
+    "M3": (
+        "I'm hungry — order me some dinner tonight from the food app, "
+        "whatever looks good from one place. Once it's placed, hop over to "
+        "my email and open the receipt so we know it actually went through."
     ),
 }
 
@@ -477,6 +502,45 @@ def task_d2_drill_keyboards(seed: int) -> GymState:
                        with_login=True)
 
 
+# ----- Category M: cross-app journeys (Shop / Mail / Food) ----------------- #
+# These factories return a WorldState (shop GymState + the per-app stores),
+# not a bare GymState, because the journey spans apps. The shop half is built
+# with the same _base_state() the single-app tasks use (logged-in Alice + the
+# full catalog); the mail/food stores get their default seeds.
+
+def _cross_app_world(seed: int, task_id: str, difficulty: str) -> "WorldState":
+    from server.apps.world import WorldState
+    from server.apps.mail.state import make_mailstate
+    from server.apps.food.state import make_foodstate
+    shop = _base_state(seed, task_id, difficulty, "M", with_login=True)
+    return WorldState(
+        shop=shop, mail=make_mailstate(seed), food=make_foodstate(seed),
+    )
+
+
+def task_m2_order_then_track(seed: int) -> "WorldState":
+    """North-star: order the standard wireless mouse, then find the order-
+    confirmation email and use ITS tracking link. Spans Shop -> Mail ->
+    (back to) Shop tracking; the agent has to carry the order id across the
+    tab switch and act on the right one."""
+    return _cross_app_world(seed, "M2/order_then_track_via_email", "hard")
+
+
+def task_m3_dinner_then_receipt(seed: int) -> "WorldState":
+    """Order dinner from the Food app, then open the receipt email it
+    generates. Spans Food -> Mail."""
+    return _cross_app_world(seed, "M3/dinner_then_receipt", "medium")
+
+
+# Required-facts manifest: the facts the agent must carry ACROSS apps to
+# succeed. Feeds the cross-app verifier and (Phase-1 commit 8) the failure-
+# mode signature builder (facts observed vs facts required). Keyed by task_id.
+REQUIRED_FACTS = {
+    "M2/order_then_track_via_email": ["shop.order_id", "mail.tracking_url"],
+    "M3/dinner_then_receipt":        ["food.order_id", "mail.receipt_total"],
+}
+
+
 # --------------------------------------------------------------------------- #
 # Registry
 # --------------------------------------------------------------------------- #
@@ -496,10 +560,15 @@ TASKS = {
     "C4/mega_checkout":          task_c4_mega_checkout,
     "D1/browse_audio_no_search":     task_d1_browse_audio,
     "D2/drill_electronics_keyboards": task_d2_drill_keyboards,
+    "M2/order_then_track_via_email": task_m2_order_then_track,
+    "M3/dinner_then_receipt":        task_m3_dinner_then_receipt,
 }
 
 
-def make_task(task_id: str, seed: int) -> GymState:
+def make_task(task_id: str, seed: int) -> "GymState | WorldState":
+    """Returns a GymState for single-app tasks and a WorldState for the
+    cross-app (category M) tasks. Callers that may receive either should
+    branch on ``isinstance(result, WorldState)``."""
     if task_id not in TASKS:
         raise KeyError(f"unknown task {task_id!r}")
     return TASKS[task_id](seed)

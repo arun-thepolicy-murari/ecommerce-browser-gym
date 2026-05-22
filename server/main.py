@@ -72,6 +72,8 @@ from server.apps.mail import routes as mail_routes
 from server.apps.food.state import make_foodstate
 from server.apps.food import routes as food_routes
 from server.apps import wiring as apps_wiring
+from server.apps import shop_hooks
+from server.apps import bus
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -102,6 +104,7 @@ class Session:
     # existing shop mutation is reflected in the world with zero extra wiring;
     # the new apps (mail, +food/calendar) own their own isolated stores.
     world: "WorldState | None" = None
+    initial_world: "WorldState | None" = None    # snapshot for cross-app verifiers
 
 
 SESSION = Session()
@@ -157,16 +160,27 @@ def _state() -> GymState:
 
 
 def _reset_inline(task_id: str, seed: int) -> None:
-    fresh = make_task(task_id, seed)
-    SESSION.initial = copy.deepcopy(fresh)
-    SESSION.current = fresh
+    built = make_task(task_id, seed)
+    # Cross-app (category M) factories return a fully-built WorldState;
+    # single-app factories return a GymState we wrap with default stores.
+    if isinstance(built, WorldState):
+        world = built
+        if world.mail is None:
+            world.mail = make_mailstate(seed)
+        if world.food is None:
+            world.food = make_foodstate(seed)
+    else:
+        world = WorldState(
+            shop=built, mail=make_mailstate(seed), food=make_foodstate(seed),
+        )
+    shop = world.shop
+    # ``current`` IS ``world.shop`` (same object), so shop routes (which use
+    # ``_state()``) and the world stay in sync automatically.
+    SESSION.current = shop
+    SESSION.initial = copy.deepcopy(shop)
+    SESSION.world = world
+    SESSION.initial_world = copy.deepcopy(world)
     SESSION.suite = verifiers.build_suite(task_id)
-    # Wrap the shop state in the multi-app world. ``world.shop`` is the SAME
-    # object as ``current``, so shop routes (which use ``_state()``) and the
-    # world stay in sync automatically. Each new app gets its own store.
-    SESSION.world = WorldState(
-        shop=fresh, mail=make_mailstate(seed), food=make_foodstate(seed),
-    )
 
 
 def _world() -> WorldState:
@@ -739,6 +753,9 @@ async def api_place_order(payment_id: str = Form(...)):
     s = _state()
     r = mutations.place_order(s, payment_id=payment_id)
     if r.get("ok"):
+        # Cross-app effect: a confirmation email (with the tracking link)
+        # lands in Mail. Harmless for single-app tasks (they ignore mail).
+        shop_hooks.emit_shop_order_placed(_world(), r["order_id"])
         return RedirectResponse(f"/order/{r['order_id']}", 303)
     return RedirectResponse("/checkout/review?err=1", 303)
 
@@ -915,6 +932,8 @@ def harness_verify(req: HarnessVerifyRequest) -> dict[str, Any]:
     s.step = req.step
     probe = verifiers.Probe(
         state=s, url=req.url, initial_state=SESSION.initial,
+        world=SESSION.world, initial_world=SESSION.initial_world,
+        active_tab_url=req.url,
     )
     return SESSION.suite.evaluate(probe, req.step)
 
