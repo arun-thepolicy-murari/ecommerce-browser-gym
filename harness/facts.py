@@ -57,9 +57,28 @@ def _facts_m3(world: dict, url: str) -> dict[str, Any]:
     return facts
 
 
+def _facts_m4(world: dict, url: str) -> dict[str, Any]:
+    """M4: the CHARGED order total (created in the shop) and the total shown
+    in the confirmation email. The agent must carry the charged total (not
+    the sticker price) into a reply."""
+    facts: dict[str, Any] = {}
+    orders = (world.get("shop") or {}).get("orders") or {}
+    if orders:
+        oid = sorted(orders)[0]
+        facts["shop.order_id"] = oid
+        facts["shop.order_total"] = orders[oid].get("total")
+    inbox = (world.get("mail") or {}).get("inbox") or {}
+    for e in inbox.values():
+        if e.get("tracking_url"):                 # the shop confirmation email
+            facts["mail.confirmation_total"] = e.get("amount_total")
+            break
+    return facts
+
+
 FACT_EXTRACTORS: dict[str, Callable[[dict, str], dict]] = {
     "M2/order_then_track_via_email": _facts_m2,
     "M3/dinner_then_receipt":        _facts_m3,
+    "M4/order_then_reply_total":     _facts_m4,
 }
 
 

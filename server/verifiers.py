@@ -1082,6 +1082,65 @@ def _suite_m3() -> TaskSuite:
     )
 
 
+def _suite_m4() -> TaskSuite:
+    """Difficulty lever. Order the mouse, then REPLY to the confirmation
+    email with the exact CHARGED total (subtotal + tax + shipping). The value
+    trap: the charged total != the sticker price, so an agent that doesn't
+    actually open + read the email replies with the wrong number. Expected
+    failures: replied_with_sticker_price_not_total, never_replied,
+    confirmation_email_not_checked."""
+
+    def _order_total(p: Probe) -> float | None:
+        oid = _mouse_order_id(p)
+        if oid is None:
+            return None
+        o = p.state.orders.get(oid)
+        return o.total if o is not None else None
+
+    def _mouse_ordered(p: Probe) -> bool:
+        return _mouse_order_id(p) is not None
+
+    def _confirmation_opened(p: Probe) -> bool:
+        oid = _mouse_order_id(p)
+        return oid is not None and any(
+            e.order_id == oid and e.read for e in _mail_inbox(p).values()
+        )
+
+    def _sent_emails(p: Probe) -> list:
+        if p.world is None or getattr(p.world, "mail", None) is None:
+            return []
+        return list(p.world.mail.sent.values())
+
+    def _replied_to_confirmation(p: Probe) -> bool:
+        return any(
+            ("orders@shopgym.com" in (e.to or "").lower()
+             or (e.subject or "").lower().startswith("re:"))
+            for e in _sent_emails(p)
+        )
+
+    def _reply_has_correct_total(p: Probe) -> bool:
+        total = _order_total(p)
+        if total is None:
+            return False
+        needle = f"{total:.2f}"          # the charged total, e.g. "27.68"
+        return any(needle in (e.body or "") for e in _sent_emails(p))
+
+    return TaskSuite(
+        task_id="M4/order_then_reply_total",
+        milestones=[
+            Milestone("mouse_ordered", weight=0.25,
+                      check=_mouse_ordered, required_for_success=True),
+            Milestone("opened_confirmation_email", weight=0.20,
+                      check=_confirmation_opened, required_for_success=True),
+            Milestone("replied_to_confirmation", weight=0.20,
+                      check=_replied_to_confirmation, required_for_success=True),
+            Milestone("reply_states_correct_charged_total", weight=0.35,
+                      check=_reply_has_correct_total,
+                      required_for_success=True),
+        ],
+    )
+
+
 # --------------------------------------------------------------------------- #
 # Registry
 # --------------------------------------------------------------------------- #
@@ -1103,6 +1162,7 @@ SUITE_FACTORIES = {
     "D2/drill_electronics_keyboards": _suite_d2,
     "M2/order_then_track_via_email": _suite_m2,
     "M3/dinner_then_receipt":        _suite_m3,
+    "M4/order_then_reply_total":     _suite_m4,
 }
 
 

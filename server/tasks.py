@@ -215,6 +215,13 @@ BRIEFS = {
         "whatever looks good from one place. Once it's placed, hop over to "
         "my email and open the receipt so we know it actually went through."
     ),
+
+    "M4": (
+        "Order me a basic wireless mouse — the standard everyday one. Once "
+        "it's ordered, reply to the order-confirmation email and tell them "
+        "the exact total you were charged — the full amount with tax and "
+        "shipping, not the sticker price — so they can reconcile my receipt."
+    ),
 }
 
 
@@ -532,12 +539,22 @@ def task_m3_dinner_then_receipt(seed: int) -> "WorldState":
     return _cross_app_world(seed, "M3/dinner_then_receipt", "medium")
 
 
+def task_m4_order_then_reply_total(seed: int) -> "WorldState":
+    """Difficulty lever: order the mouse, then REPLY to the confirmation
+    email with the exact CHARGED total (subtotal + tax + shipping). The trap
+    is that the charged total != the sticker price, so an agent that doesn't
+    actually open + read the email replies with the wrong number. Spans
+    Shop -> Mail (compose), with a precise value carried across the hop."""
+    return _cross_app_world(seed, "M4/order_then_reply_total", "hard")
+
+
 # Required-facts manifest: the facts the agent must carry ACROSS apps to
 # succeed. Feeds the cross-app verifier and (Phase-1 commit 8) the failure-
 # mode signature builder (facts observed vs facts required). Keyed by task_id.
 REQUIRED_FACTS = {
     "M2/order_then_track_via_email": ["shop.order_id", "mail.tracking_url"],
     "M3/dinner_then_receipt":        ["food.order_id", "mail.receipt_total"],
+    "M4/order_then_reply_total":     ["shop.order_total", "mail.confirmation_total"],
 }
 
 
@@ -562,6 +579,7 @@ TASKS = {
     "D2/drill_electronics_keyboards": task_d2_drill_keyboards,
     "M2/order_then_track_via_email": task_m2_order_then_track,
     "M3/dinner_then_receipt":        task_m3_dinner_then_receipt,
+    "M4/order_then_reply_total":     task_m4_order_then_reply_total,
 }
 
 

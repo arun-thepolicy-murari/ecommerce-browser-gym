@@ -430,6 +430,37 @@ async def solve_m3_dinner_then_receipt(ctx: BrowserCtx) -> None:
                    reasoning="Open the receipt email to confirm the order.")
 
 
+async def solve_m4_order_then_reply_total(ctx: BrowserCtx) -> None:
+    """Order the mouse, open the confirmation email, and reply with the
+    EXACT charged total (subtotal + tax + shipping) read from the order."""
+    # Tab 0: order the standard wireless mouse.
+    await ctx.goto("/product/p_mouse_wireless",
+                   reasoning="The standard wireless mouse, not the gaming one.")
+    await ctx.click("button[data-test-id='btn-add-to-cart']")
+    await ctx.click("a[data-test-id='link-cart']")
+    await ctx.click("a[data-test-id='btn-proceed-checkout']")
+    await ctx.click("a[data-test-id='btn-continue-payment']")
+    await ctx.click("a[data-test-id='btn-continue-review']")
+    await ctx.click("button[data-test-id='btn-place-order']")
+    # Read the CHARGED total + confirmation email from the world.
+    world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
+    conf = next(e for e in world["mail"]["inbox"].values()
+                if e.get("tracking_url"))
+    total = world["shop"]["orders"][conf["order_id"]]["total"]
+    # Open Mail in a second tab, open the confirmation, reply with the total.
+    await ctx.open_tab("/mail",
+                       reasoning="Open Mail in a new tab to read the confirmation.")
+    await ctx.goto(f"/mail/message/{conf['id']}",
+                   reasoning="Open the confirmation email to read the charged total.")
+    await ctx.click("a[data-test-id='btn-reply']",
+                    reasoning="Reply to the confirmation email.")
+    await ctx.fill(
+        "textarea[data-test-id='input-compose-body']",
+        f"The exact total charged was ${total:.2f}, including tax and shipping.",
+    )
+    await ctx.click("button[data-test-id='btn-send']")
+
+
 SOLVERS = {
     "A1/buy_wireless_mouse":     solve_a1_buy_wireless_mouse,
     "A2/filter_laptop":          solve_a2_filter_laptop,
@@ -447,4 +478,5 @@ SOLVERS = {
     "D2/drill_electronics_keyboards": solve_d2_drill_keyboards,
     "M2/order_then_track_via_email": solve_m2_order_then_track,
     "M3/dinner_then_receipt":        solve_m3_dinner_then_receipt,
+    "M4/order_then_reply_total":     solve_m4_order_then_reply_total,
 }
