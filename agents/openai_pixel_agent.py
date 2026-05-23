@@ -112,7 +112,7 @@ SYSTEM_PROMPT = _PIXEL_SYSTEM_PROMPT + _MULTI_APP_TABS
 class OpenAIPixelAgent:
     """gpt-4o-mini pixel/SoM agent with multi-tab tools."""
 
-    def __init__(self, model: str | None = None, max_steps: int = 24,
+    def __init__(self, model: str | None = None, max_steps: int = 40,
                  verbose: bool = True):
         from openai import OpenAI
         self.client = OpenAI()                     # reads OPENAI_API_KEY
@@ -157,7 +157,7 @@ class OpenAIPixelAgent:
             # small models (gpt-4o-mini) tend to narrate the plan as prose and
             # never emit a tool call, stalling the episode at step 0.
             resp = self.client.chat.completions.create(
-                model=self.model, max_completion_tokens=2048,
+                model=self.model, max_completion_tokens=4096,
                 tools=TOOLS_OPENAI_PIXEL, tool_choice="required",
                 messages=messages,
             )
