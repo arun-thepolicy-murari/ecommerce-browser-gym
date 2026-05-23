@@ -141,6 +141,29 @@ def _chain_label(task_id: str, missed: list[str], fact_gap: list[str],
                 return "compared_deals_then_failed_to_complete_order"
             return "ordered_the_wrong_decoy_mouse"
         return "m5_unexpected_partial"
+    if task_id == "M6/reorder_bigger_order":
+        if "reordered_bigger_orders_instock_items" in m:
+            return "wrong_or_no_reorder_of_bigger_order"
+        if "replied_listing_reordered_items" in m:
+            return "reordered_but_never_replied_with_list"
+        return "m6_unexpected_partial"
+    if task_id == "M7/dinner_and_host_gift":
+        if "food_order_under_35" in m:
+            return "food_over_budget_or_not_ordered"
+        if "bought_qualifying_book" in m:
+            return "bought_disqualified_or_no_book"
+        if "replied_to_alex_with_eta_and_book" in m:
+            return "did_both_but_reply_missing_eta_or_book"
+        return "m7_unexpected_partial"
+    if task_id == "M8/spending_audit_branch":
+        if "correct_branch_made_no_new_purchase" in m \
+                and "replied_cancel_to_most_expensive_order" in m:
+            return "took_treat_yourself_branch_instead_of_cancel"
+        if "correct_branch_made_no_new_purchase" in m:
+            return "made_a_purchase_wrong_branch"
+        if "replied_cancel_to_most_expensive_order" in m:
+            return "no_cancel_reply_or_wrong_order"
+        return "m8_unexpected_partial"
     return "missed:" + "+".join(missed) if missed else "no_required_missed"
 
 

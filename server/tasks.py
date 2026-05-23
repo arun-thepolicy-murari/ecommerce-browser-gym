@@ -249,6 +249,17 @@ BRIEFS = {
         "let them know roughly when the food will arrive and which book "
         "you chose."
     ),
+
+    "M8": (
+        "Go through the order confirmations in my email and add up the "
+        "totals of all my past shop orders. If they come to more than "
+        "$1,000, I've been overspending this month — so DON'T buy anything "
+        "new; instead, reply to the confirmation of my single most "
+        "expensive order asking them to cancel it. But if the total is "
+        "$1,000 or less, treat yourself: order a coffee from the food app "
+        "and reply to my cheapest order's confirmation with a quick "
+        "thank-you."
+    ),
 }
 
 
@@ -663,6 +674,47 @@ def task_m7_dinner_and_host_gift(seed: int) -> "WorldState":
     return world
 
 
+def task_m8_spending_audit_branch(seed: int) -> "WorldState":
+    """HARDEST: aggregation + conditional branch + superlative + 'don't do
+    the other branch'. Three past shop orders (totals in the emails) sum to
+    $1,319.92 (> $1,000), so the correct branch is: buy NOTHING new and reply
+    to the MOST EXPENSIVE order (ORD-P2, $982.48) asking to cancel it. Traps:
+    miscompute the sum -> wrong branch; pick the wrong order; take the easy
+    'treat yourself' branch; or do nothing."""
+    from server.apps.mail.state import Email, SEED_DATE
+    world = _cross_app_world(seed, "M8/spending_audit_branch", "hard")
+    shop = world.shop
+    addr, pay = "addr_home", "pay_visa"
+
+    def _oi(lid, pid, name, price):
+        return OrderItem(
+            id=lid, product_id=pid, product_name=name, variant_id=None,
+            variant_label="", quantity=1, unit_price=price, gift_wrap=False,
+            gift_message="", ship_to_address_id=addr, scheduled_delivery=None)
+
+    specs = [
+        ("ORD-P1", [_oi("p1a", "p_mouse_wireless", "Wireless Mouse", 29.99),
+                    _oi("p1b", "p_hp_studio", "Bluetooth Headphone Studio", 149.99)]),
+        ("ORD-P2", [_oi("p2a", "p_laptop_studio", "Studio Laptop 14", 899.99)]),  # most expensive
+        ("ORD-P3", [_oi("p3a", "p_kb_mech", "Mechanical Keyboard", 119.99)]),
+    ]
+    m = world.mail
+    for oid, items in specs:
+        o = _seed_past_order(shop, order_id=oid, items=items,
+                             addr_id=addr, pay_id=pay)
+        eid = m.new_id()
+        lines = "\n".join(f"  {it.quantity} x {it.product_name}"
+                          for it in o.items)
+        m.inbox[eid] = Email(
+            id=eid, sender="orders@shopgym.com", to=m.account_email,
+            subject=f"Your ShopGym order {oid} is confirmed",
+            body=(f"Order {oid}\nItems:\n{lines}\n\n"
+                  f"Order total: ${o.total:.2f}\n"),
+            received_at=f"{SEED_DATE}T08:00:00", received_label="8:00 AM",
+            read=False, labels=["orders"], order_id=oid, amount_total=o.total)
+    return world
+
+
 def task_m5_cheaper_mouse_from_deals(seed: int) -> "WorldState":
     """Comparison + salience trap. Two 'deal' emails name two DIFFERENT mice
     at two prices: the flashy 'FLASH SALE' email pushes the PRICIER gaming
@@ -706,6 +758,7 @@ REQUIRED_FACTS = {
     "M5/cheaper_mouse_from_deals":   ["shop.ordered_mouse_id"],
     "M6/reorder_bigger_order":       ["mail.bigger_order_id", "shop.reordered_items"],
     "M7/dinner_and_host_gift":       ["food.eta", "shop.book_name"],
+    "M8/spending_audit_branch":      ["mail.shop_orders_total", "mail.most_expensive_order_id"],
 }
 
 
@@ -734,6 +787,7 @@ TASKS = {
     "M5/cheaper_mouse_from_deals":   task_m5_cheaper_mouse_from_deals,
     "M6/reorder_bigger_order":       task_m6_reorder_bigger_order,
     "M7/dinner_and_host_gift":       task_m7_dinner_and_host_gift,
+    "M8/spending_audit_branch":      task_m8_spending_audit_branch,
 }
 
 

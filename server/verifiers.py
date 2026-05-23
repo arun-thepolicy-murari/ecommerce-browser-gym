@@ -1269,6 +1269,49 @@ def _suite_m7() -> TaskSuite:
     )
 
 
+def _suite_m8() -> TaskSuite:
+    """Aggregation + conditional branch + superlative. The three seeded
+    shop orders total $1,319.92 (> $1,000), so the CORRECT branch is: buy
+    nothing new and reply to the MOST EXPENSIVE order (ORD-P2) asking to
+    cancel it. Expected failures: took_the_treat_yourself_branch (bought
+    coffee / thanked), miscomputed_total -> wrong branch, replied_to_wrong
+    _order, did_nothing."""
+
+    MOST_EXPENSIVE = "ORD-P2"
+
+    def _sent(p: Probe) -> list:
+        if p.world is None or getattr(p.world, "mail", None) is None:
+            return []
+        return list(p.world.mail.sent.values())
+
+    def _replied_cancel_to_most_expensive(p: Probe) -> bool:
+        for e in _sent(p):
+            haystack = ((e.subject or "") + " " + (e.body or "")).upper()
+            if MOST_EXPENSIVE in haystack and "cancel" in (e.body or "").lower():
+                return True
+        return False
+
+    def _no_new_purchase(p: Probe) -> bool:
+        # The correct branch buys NOTHING: only the 3 seeded shop orders
+        # remain, and no food order was placed.
+        shop_ok = len(p.state.orders) <= 3
+        food_ok = True
+        if p.world is not None and getattr(p.world, "food", None) is not None:
+            food_ok = len(p.world.food.orders) == 0
+        return shop_ok and food_ok
+
+    return TaskSuite(
+        task_id="M8/spending_audit_branch",
+        milestones=[
+            Milestone("replied_cancel_to_most_expensive_order", weight=0.60,
+                      check=_replied_cancel_to_most_expensive,
+                      required_for_success=True),
+            Milestone("correct_branch_made_no_new_purchase", weight=0.40,
+                      check=_no_new_purchase, required_for_success=True),
+        ],
+    )
+
+
 # --------------------------------------------------------------------------- #
 # Registry
 # --------------------------------------------------------------------------- #
@@ -1294,6 +1337,7 @@ SUITE_FACTORIES = {
     "M5/cheaper_mouse_from_deals":   _suite_m5,
     "M6/reorder_bigger_order":       _suite_m6,
     "M7/dinner_and_host_gift":       _suite_m7,
+    "M8/spending_audit_branch":      _suite_m8,
 }
 
 

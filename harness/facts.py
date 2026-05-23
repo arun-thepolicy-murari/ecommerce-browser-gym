@@ -125,6 +125,21 @@ def _facts_m7(world: dict, url: str) -> dict[str, Any]:
     return facts
 
 
+def _facts_m8(world: dict, url: str) -> dict[str, Any]:
+    """M8: the aggregate shop-orders total (the branch condition) + the
+    most-expensive order id (the superlative the agent must pick)."""
+    facts: dict[str, Any] = {}
+    inbox = (world.get("mail") or {}).get("inbox") or {}
+    confs = {e.get("order_id"): e for e in inbox.values()
+             if (e.get("order_id") or "").startswith("ORD-P")}
+    if confs:
+        facts["mail.shop_orders_total"] = round(
+            sum((e.get("amount_total") or 0) for e in confs.values()), 2)
+        big = max(confs.values(), key=lambda e: e.get("amount_total") or 0)
+        facts["mail.most_expensive_order_id"] = big.get("order_id")
+    return facts
+
+
 FACT_EXTRACTORS: dict[str, Callable[[dict, str], dict]] = {
     "M2/order_then_track_via_email": _facts_m2,
     "M3/dinner_then_receipt":        _facts_m3,
@@ -132,6 +147,7 @@ FACT_EXTRACTORS: dict[str, Callable[[dict, str], dict]] = {
     "M5/cheaper_mouse_from_deals":   _facts_m5,
     "M6/reorder_bigger_order":       _facts_m6,
     "M7/dinner_and_host_gift":       _facts_m7,
+    "M8/spending_audit_branch":      _facts_m8,
 }
 
 

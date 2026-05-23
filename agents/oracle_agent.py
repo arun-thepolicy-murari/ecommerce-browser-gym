@@ -558,6 +558,31 @@ async def solve_m7_dinner_and_host_gift(ctx: BrowserCtx) -> None:
     await ctx.click("button[data-test-id='btn-send']")
 
 
+async def solve_m8_spending_audit_branch(ctx: BrowserCtx) -> None:
+    """Sum the 3 past order totals (> $1,000 -> overspend branch): buy
+    NOTHING new, and reply to the MOST EXPENSIVE order asking to cancel it."""
+    await ctx.open_tab("/mail", reasoning="Find the order confirmations.")
+    world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
+    confs = {e["order_id"]: e for e in world["mail"]["inbox"].values()
+             if (e.get("order_id") or "").startswith("ORD-P")}
+    for e in confs.values():                       # read all three totals
+        await ctx.goto(f"/mail/message/{e['id']}",
+                       reasoning="Read this order's total.")
+    total = sum((e.get("amount_total") or 0) for e in confs.values())
+    big = max(confs.values(), key=lambda e: e.get("amount_total") or 0)
+    # total (~$1,319.92) > $1,000 -> overspend branch: cancel the priciest,
+    # buy nothing new.
+    await ctx.goto(f"/mail/message/{big['id']}",
+                   reasoning="Open the most expensive order to reply.")
+    await ctx.click("a[data-test-id='btn-reply']")
+    await ctx.fill(
+        "textarea[data-test-id='input-compose-body']",
+        f"Please cancel order {big['order_id']} - my recent orders total "
+        f"over $1,000 and I've been overspending this month. Thank you.",
+    )
+    await ctx.click("button[data-test-id='btn-send']")
+
+
 SOLVERS = {
     "A1/buy_wireless_mouse":     solve_a1_buy_wireless_mouse,
     "A2/filter_laptop":          solve_a2_filter_laptop,
@@ -579,4 +604,5 @@ SOLVERS = {
     "M5/cheaper_mouse_from_deals":   solve_m5_cheaper_mouse_from_deals,
     "M6/reorder_bigger_order":       solve_m6_reorder_bigger_order,
     "M7/dinner_and_host_gift":       solve_m7_dinner_and_host_gift,
+    "M8/spending_audit_branch":      solve_m8_spending_audit_branch,
 }
