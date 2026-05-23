@@ -112,7 +112,7 @@ SYSTEM_PROMPT = _PIXEL_SYSTEM_PROMPT + _MULTI_APP_TABS
 class OpenAIPixelAgent:
     """gpt-4o-mini pixel/SoM agent with multi-tab tools."""
 
-    def __init__(self, model: str | None = None, max_steps: int = 40,
+    def __init__(self, model: str | None = None, max_steps: int = 50,
                  verbose: bool = True):
         from openai import OpenAI
         self.client = OpenAI()                     # reads OPENAI_API_KEY
