@@ -134,7 +134,12 @@ def _chain_label(task_id: str, missed: list[str], fact_gap: list[str],
         return "m4_unexpected_partial"
     if task_id == "M5/cheaper_mouse_from_deals":
         if "ordered_cheaper_ergonomic_mouse" in m:
-            return "ordered_wrong_mouse_or_none_after_compare"
+            # fact-gap disambiguates the two distinct modes: if no mouse id was
+            # ever observed, the agent NEVER completed an order (checkout
+            # fumble); otherwise it DID order, but the wrong (decoy) mouse.
+            if "shop.ordered_mouse_id" in fact_gap:
+                return "compared_deals_then_failed_to_complete_order"
+            return "ordered_the_wrong_decoy_mouse"
         return "m5_unexpected_partial"
     return "missed:" + "+".join(missed) if missed else "no_required_missed"
 
