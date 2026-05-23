@@ -275,13 +275,16 @@ def cluster(signatures: list[dict], total_runs: int,
 # --------------------------------------------------------------------------- #
 
 async def _run_k(task_id: str, k: int, *, agent: str, model: str | None,
-                 server_url: str, traj_dir: Path, ui_variant: str) -> list[dict]:
+                 server_url: str, traj_dir: Path, ui_variant: str,
+                 seeds: list[int] | None = None) -> list[dict]:
     from eval.run import _run_one
     out: list[dict] = []
-    for i in range(k):
-        print(f"  [{i + 1}/{k}] {agent} on {task_id} seed={i} ui={ui_variant}")
+    run_seeds = seeds if seeds is not None else list(range(k))
+    for n, seed in enumerate(run_seeds):
+        print(f"  [{n + 1}/{len(run_seeds)}] {agent} on {task_id} "
+              f"seed={seed} ui={ui_variant}")
         traj = await _run_one(
-            agent_kind=agent, task_id=task_id, seed=i,
+            agent_kind=agent, task_id=task_id, seed=seed,
             server_url=server_url, headless=True, record_video=False,
             out_traj_dir=traj_dir, out_screens_dir=Path("screenshots/harvest"),
             llm_model=model,
@@ -386,6 +389,9 @@ def main() -> None:
     ap.add_argument("--tasks", default="M2/order_then_track_via_email",
                     help="comma-separated cross-app task ids")
     ap.add_argument("--k", type=int, default=12, help="runs per task")
+    ap.add_argument("--seeds", default=None,
+                    help="explicit comma-separated seeds (overrides --k); e.g. "
+                         "'1,3,5,7' to harvest only the busy M9 branch")
     ap.add_argument("--agent", default="openai",
                     choices=["openai", "openai_pixel", "llm", "pixel"],
                     help="weak agent to harvest (default openai = gpt-4o-mini "
@@ -406,16 +412,21 @@ def main() -> None:
 
     traj_dir = Path(args.traj_dir)
     tasks = [t.strip() for t in args.tasks.split(",") if t.strip()]
+    seeds = ([int(s) for s in args.seeds.split(",") if s.strip()]
+             if args.seeds else None)
 
     for task_id in tasks:
-        print(f"\n### Harvesting {task_id} (k={args.k}, agent={args.agent})")
+        n_runs = len(seeds) if seeds is not None else args.k
+        print(f"\n### Harvesting {task_id} (n={n_runs}, agent={args.agent}, "
+              f"seeds={seeds if seeds is not None else f'0..{args.k - 1}'})")
         if args.analyze_only:
             trajs = _load_trajectories(traj_dir, task_id)
             print(f"  loaded {len(trajs)} trajectories from {traj_dir}")
         else:
             trajs = asyncio.run(_run_k(
                 task_id, args.k, agent=args.agent, model=args.model,
-                server_url=args.server, traj_dir=traj_dir, ui_variant=args.ui))
+                server_url=args.server, traj_dir=traj_dir, ui_variant=args.ui,
+                seeds=seeds))
 
         total = len(trajs)
         failures = [t for t in trajs
