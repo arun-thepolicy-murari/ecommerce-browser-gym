@@ -249,6 +249,12 @@ def _print_scorecard(rows: list[Trajectory]) -> None:
 
 
 def main() -> None:
+    # Agents can emit non-cp1252 characters (★, emoji) in their reasoning;
+    # make stdout tolerant so a debug print never crashes a step on Windows.
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument(
         "--agent", choices=["oracle", "llm", "pixel", "openai", "openai_pixel"],
