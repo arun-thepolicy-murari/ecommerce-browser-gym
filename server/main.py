@@ -71,6 +71,8 @@ from server.apps.mail.state import make_mailstate
 from server.apps.mail import routes as mail_routes
 from server.apps.food.state import make_foodstate
 from server.apps.food import routes as food_routes
+from server.apps.calendar.state import make_calendarstate
+from server.apps.calendar import routes as calendar_routes
 from server.apps import wiring as apps_wiring
 from server.apps import shop_hooks
 from server.apps import bus
@@ -169,9 +171,12 @@ def _reset_inline(task_id: str, seed: int) -> None:
             world.mail = make_mailstate(seed)
         if world.food is None:
             world.food = make_foodstate(seed)
+        if world.calendar is None:
+            world.calendar = make_calendarstate(seed)
     else:
         world = WorldState(
             shop=built, mail=make_mailstate(seed), food=make_foodstate(seed),
+            calendar=make_calendarstate(seed),
         )
     shop = world.shop
     # ``current`` IS ``world.shop`` (same object), so shop routes (which use
@@ -985,6 +990,11 @@ food_routes.configure(
     templates=templates, get_world=_world, build_ctx=_ctx, flash=flash,
 )
 app.include_router(food_routes.router)
+
+calendar_routes.configure(
+    templates=templates, get_world=_world, build_ctx=_ctx, flash=flash,
+)
+app.include_router(calendar_routes.router)
 
 # Cross-app event subscribers (FoodOrderPlaced -> mail receipt; the shop
 # order-confirmation subscriber is registered too, ready for commit 4).

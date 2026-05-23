@@ -1,0 +1,45 @@
+{% extends "calendar/_calendar_layout.html" %}
+{% block title %}New event{% endblock %}
+{% block content %}
+
+<a href="/calendar" data-test-id="link-back-to-agenda" class="text-sm text-blue-600 hover:underline">← Back to agenda</a>
+
+<form action="/calendar/create" method="post"
+      class="bg-white rounded-lg border border-slate-200 shadow-sm max-w-xl mt-3" data-test-id="form-new-event">
+  <div class="px-5 py-3 border-b border-slate-200 font-bold">Add a calendar event</div>
+  <div class="px-5 py-4 space-y-3">
+    <label class="block">
+      <span class="text-xs text-slate-500">Title</span>
+      <input name="title" required value="{{ title_prefill or '' }}"
+             data-test-id="input-event-title" aria-label="Event title"
+             class="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+    </label>
+    <label class="block">
+      <span class="text-xs text-slate-500">Day</span>
+      <select name="day" data-test-id="select-event-day" aria-label="Day"
+              class="w-full border border-slate-300 rounded px-3 py-2 text-sm">
+        <option value="{{ tomorrow }}" {% if day_prefill == tomorrow %}selected{% endif %}>Tomorrow (Fri May 22)</option>
+        <option value="{{ today }}" {% if day_prefill == today %}selected{% endif %}>Today (Thu May 21)</option>
+      </select>
+    </label>
+    <div class="flex gap-3">
+      <label class="block flex-1">
+        <span class="text-xs text-slate-500">Start</span>
+        <input name="start" value="19:00" data-test-id="input-event-start" aria-label="Start time"
+               class="w-full border border-slate-300 rounded px-3 py-2 text-sm" />
+      </label>
+      <label class="block flex-1">
+        <span class="text-xs text-slate-500">End</span>
+        <input name="end" value="20:00" data-test-id="input-event-end" aria-label="End time"
+               class="w-full border border-slate-300 rounded px-3 py-2 text-sm" />
+      </label>
+    </div>
+  </div>
+  <div class="px-5 py-3 border-t border-slate-200 flex gap-2">
+    <button type="submit" data-test-id="btn-save-event"
+            class="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-md text-sm font-semibold">Add event</button>
+    <a href="/calendar" data-test-id="btn-cancel-event" class="px-5 py-2 text-sm text-slate-500 hover:text-slate-700">Cancel</a>
+  </div>
+</form>
+
+{% endblock %}

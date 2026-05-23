@@ -1312,6 +1312,50 @@ def _suite_m8() -> TaskSuite:
     )
 
 
+def _suite_m9() -> TaskSuite:
+    """4-app, free/busy-gated branch. Tomorrow evening IS free, so the
+    correct (hard) branch is: order food + add a calendar event + email Alex
+    to CONFIRM. Expected failures: proposed_thursday_wrong_branch (assumed
+    busy / skipped the check), forgot_calendar_event, forgot_or_wrong_email,
+    forgot_food_order."""
+
+    def _food_ordered(p: Probe) -> bool:
+        return (p.world is not None
+                and getattr(p.world, "food", None) is not None
+                and len(p.world.food.orders) > 0)
+
+    def _calendar_event_created(p: Probe) -> bool:
+        if p.world is None or getattr(p.world, "calendar", None) is None:
+            return False
+        return any(e.source == "user"
+                   for e in p.world.calendar.events.values())
+
+    def _emailed_alex_confirm(p: Probe) -> bool:
+        if p.world is None or getattr(p.world, "mail", None) is None:
+            return False
+        for e in p.world.mail.sent.values():
+            to = (e.to or "").lower()
+            body = (e.body or "").lower()
+            # Confirm (the FREE branch) — must NOT be the propose-Thursday
+            # branch, and should reference dinner/tomorrow/confirm.
+            if ("alex" in to and "thursday" not in body
+                    and any(w in body for w in ("dinner", "tomorrow", "confirm"))):
+                return True
+        return False
+
+    return TaskSuite(
+        task_id="M9/calendar_gated_dinner",
+        milestones=[
+            Milestone("food_ordered", weight=0.35,
+                      check=_food_ordered, required_for_success=True),
+            Milestone("calendar_event_created", weight=0.30,
+                      check=_calendar_event_created, required_for_success=True),
+            Milestone("emailed_alex_confirm_not_thursday", weight=0.35,
+                      check=_emailed_alex_confirm, required_for_success=True),
+        ],
+    )
+
+
 # --------------------------------------------------------------------------- #
 # Registry
 # --------------------------------------------------------------------------- #
@@ -1338,6 +1382,7 @@ SUITE_FACTORIES = {
     "M6/reorder_bigger_order":       _suite_m6,
     "M7/dinner_and_host_gift":       _suite_m7,
     "M8/spending_audit_branch":      _suite_m8,
+    "M9/calendar_gated_dinner":      _suite_m9,
 }
 
 

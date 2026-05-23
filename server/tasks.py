@@ -260,6 +260,15 @@ BRIEFS = {
         "and reply to my cheapest order's confirmation with a quick "
         "thank-you."
     ),
+
+    "M9": (
+        "Quick one about tomorrow evening: check my calendar and see "
+        "whether I'm free after 6pm tomorrow. If I am free, order us dinner "
+        "from the food app, add a calendar event for when it's due to "
+        "arrive, and email Alex to confirm we're on for dinner tomorrow "
+        "evening. If I'm NOT free tomorrow evening, don't order anything — "
+        "just email Alex asking whether we can move it to Thursday instead."
+    ),
 }
 
 
@@ -557,9 +566,11 @@ def _cross_app_world(seed: int, task_id: str, difficulty: str) -> "WorldState":
     from server.apps.world import WorldState
     from server.apps.mail.state import make_mailstate
     from server.apps.food.state import make_foodstate
+    from server.apps.calendar.state import make_calendarstate
     shop = _base_state(seed, task_id, difficulty, "M", with_login=True)
     return WorldState(
         shop=shop, mail=make_mailstate(seed), food=make_foodstate(seed),
+        calendar=make_calendarstate(seed),
     )
 
 
@@ -715,6 +726,16 @@ def task_m8_spending_audit_branch(seed: int) -> "WorldState":
     return world
 
 
+def task_m9_calendar_gated_dinner(seed: int) -> "WorldState":
+    """4-app, free/busy-GATED, multi-step branch. The seeded calendar leaves
+    TOMORROW EVENING free (events at 10am + 2pm tomorrow), so the correct
+    branch is the HARD one: order dinner (Food) + add a delivery event
+    (Calendar) + email Alex to CONFIRM (Mail) — three actions across three
+    apps after first CHECKING the calendar. Trap: assume busy / skip the
+    check -> propose Thursday (wrong branch) and order nothing."""
+    return _cross_app_world(seed, "M9/calendar_gated_dinner", "hard")
+
+
 def task_m5_cheaper_mouse_from_deals(seed: int) -> "WorldState":
     """Comparison + salience trap. Two 'deal' emails name two DIFFERENT mice
     at two prices: the flashy 'FLASH SALE' email pushes the PRICIER gaming
@@ -759,6 +780,7 @@ REQUIRED_FACTS = {
     "M6/reorder_bigger_order":       ["mail.bigger_order_id", "shop.reordered_items"],
     "M7/dinner_and_host_gift":       ["food.eta", "shop.book_name"],
     "M8/spending_audit_branch":      ["mail.shop_orders_total", "mail.most_expensive_order_id"],
+    "M9/calendar_gated_dinner":      ["food.eta", "calendar.user_event_created"],
 }
 
 
@@ -788,6 +810,7 @@ TASKS = {
     "M6/reorder_bigger_order":       task_m6_reorder_bigger_order,
     "M7/dinner_and_host_gift":       task_m7_dinner_and_host_gift,
     "M8/spending_audit_branch":      task_m8_spending_audit_branch,
+    "M9/calendar_gated_dinner":      task_m9_calendar_gated_dinner,
 }
 
 

@@ -164,6 +164,16 @@ def _chain_label(task_id: str, missed: list[str], fact_gap: list[str],
         if "replied_cancel_to_most_expensive_order" in m:
             return "no_cancel_reply_or_wrong_order"
         return "m8_unexpected_partial"
+    if task_id == "M9/calendar_gated_dinner":
+        if "emailed_alex_confirm_not_thursday" in m and "food_ordered" in m:
+            return "proposed_thursday_wrong_branch_no_order"
+        if "calendar_event_created" in m:
+            return "ordered_but_forgot_calendar_event"
+        if "emailed_alex_confirm_not_thursday" in m:
+            return "did_actions_but_no_or_wrong_confirmation_email"
+        if "food_ordered" in m:
+            return "checked_but_never_ordered_food"
+        return "m9_unexpected_partial"
     return "missed:" + "+".join(missed) if missed else "no_required_missed"
 
 

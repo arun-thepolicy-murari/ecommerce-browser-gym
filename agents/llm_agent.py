@@ -192,9 +192,10 @@ MULTI-APP WORKSPACE — some tasks span more than one app
 
 At the very top of every page is a workspace bar with links to several
 apps: Shop (data-test-id='appbar-shop'), Mail (data-test-id='appbar-mail'),
-and Food (data-test-id='appbar-food'). Some tasks require you to move
-BETWEEN apps — for example: place an order in the Shop, then open the
-confirmation email in Mail and act on the tracking link inside it.
+Food (data-test-id='appbar-food'), and Calendar
+(data-test-id='appbar-calendar'). Some tasks require you to move BETWEEN
+apps — e.g. place an order in the Shop, then open the confirmation email in
+Mail; or check the Calendar's free/busy before booking something.
 
 To switch apps, CLICK the workspace-bar link (preferred) or navigate to the
 app root (/mail or /food). Inside Mail: click a message
@@ -443,7 +444,7 @@ class LLMBrowserAgent:
             "/account/returns/new", "/deals",
             "/account/orders/<id>/track",
             # Multi-app workspace roots (prefer clicking the appbar links):
-            "/mail", "/mail/compose", "/food",
+            "/mail", "/mail/compose", "/food", "/calendar", "/calendar/new",
         ]
 
         # Open browser tabs (multi-tab observation) — what's open + which is

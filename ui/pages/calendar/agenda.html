@@ -1,0 +1,32 @@
+{% extends "calendar/_calendar_layout.html" %}
+{% block title %}Agenda{% endblock %}
+{% block content %}
+
+<h1 class="text-2xl font-bold mb-4" data-test-id="calendar-title">Your agenda</h1>
+
+<div class="space-y-5" data-test-id="agenda">
+  {% for day_label, events in days.items() %}
+  <section data-test-id="agenda-day">
+    <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-2">{{ day_label }}</h2>
+    <ul role="list" class="space-y-2">
+      {% for e in events %}
+      <li role="listitem" data-test-id="event-{{ e.id }}"
+          class="bg-white rounded-lg border border-slate-200 shadow-sm px-4 py-3 flex items-center gap-3">
+        <span class="text-xs font-mono text-blue-700 w-28 shrink-0">{{ e.start }}–{{ e.end }}</span>
+        <span class="font-medium" data-test-id="event-title-{{ e.id }}">{{ e.title }}</span>
+        {% if e.source != 'seed' %}<span class="ml-auto text-[10px] uppercase bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded">added</span>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endfor %}
+  {% if not days %}
+  <div class="text-slate-500" data-test-id="agenda-empty">No events scheduled.</div>
+  {% endif %}
+</div>
+
+<p class="mt-6 text-sm text-slate-500">
+  Evenings (after 6:00 PM) are open unless an event above says otherwise.
+</p>
+
+{% endblock %}

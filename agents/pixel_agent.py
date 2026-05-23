@@ -341,12 +341,14 @@ MULTI-APP WORKSPACE + BROWSER TABS
 ═══════════════════════════════════════════════════════════════════════════
 
 At the very top of every page is a dark workspace bar with marks for
-several apps: Shop, Mail, and Food. Some tasks span apps — e.g. place an
-order in the Shop, then read the confirmation email in Mail and act on it.
+several apps: Shop, Mail, Food, and Calendar. Some tasks span apps — e.g.
+place an order in the Shop, then read the confirmation email in Mail; or
+check the Calendar for free/busy before booking something.
 
 You have THREE extra tools for tabs (in addition to the five above):
   open_tab(url)     open an app in a NEW tab and switch to it. `url` is an
-                    app ROOT: "/" (Shop), "/mail" (Mail), "/food" (Food).
+                    app ROOT: "/" (Shop), "/mail" (Mail), "/food" (Food),
+                    "/calendar" (Calendar).
   switch_tab(index) make an already-open tab active (see the open-tabs list).
   close_tab(index)  close a tab.
 

@@ -583,6 +583,39 @@ async def solve_m8_spending_audit_branch(ctx: BrowserCtx) -> None:
     await ctx.click("button[data-test-id='btn-send']")
 
 
+async def solve_m9_calendar_gated_dinner(ctx: BrowserCtx) -> None:
+    """Tomorrow evening is FREE -> the hard branch: order food + add a
+    calendar delivery event + email Alex to confirm (NOT propose Thursday)."""
+    # Check the calendar first (tomorrow evening is free).
+    await ctx.goto("/calendar", reasoning="Check whether tomorrow evening is free.")
+    # Free -> order dinner.
+    await ctx.goto("/food/restaurant/r_sushi",
+                   reasoning="Calendar is free tomorrow evening - order dinner.")
+    await ctx.click("button[data-test-id='btn-add-d_salmon_roll']")
+    await ctx.goto("/food/cart")
+    await ctx.click("button[data-test-id='btn-place-food-order']")
+    world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
+    eta = next(iter(world["food"]["orders"].values()))["eta_label"]
+    # Add a calendar event for the delivery (day defaults to tomorrow).
+    await ctx.goto("/calendar/new", reasoning="Add the delivery to the calendar.")
+    await ctx.fill("input[data-test-id='input-event-title']",
+                   f"Dinner delivery ~{eta}")
+    await ctx.click("button[data-test-id='btn-save-event']")
+    # Email Alex to confirm (free branch -> confirm, not propose Thursday).
+    world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
+    alex = next(e for e in world["mail"]["inbox"].values()
+                if "alex@" in (e.get("sender") or ""))
+    await ctx.goto(f"/mail/message/{alex['id']}",
+                   reasoning="Reply to Alex to confirm tomorrow's dinner.")
+    await ctx.click("a[data-test-id='btn-reply']")
+    await ctx.fill(
+        "textarea[data-test-id='input-compose-body']",
+        f"Confirmed - we're on for dinner tomorrow evening, arriving around "
+        f"{eta}. See you then!",
+    )
+    await ctx.click("button[data-test-id='btn-send']")
+
+
 SOLVERS = {
     "A1/buy_wireless_mouse":     solve_a1_buy_wireless_mouse,
     "A2/filter_laptop":          solve_a2_filter_laptop,
@@ -605,4 +638,5 @@ SOLVERS = {
     "M6/reorder_bigger_order":       solve_m6_reorder_bigger_order,
     "M7/dinner_and_host_gift":       solve_m7_dinner_and_host_gift,
     "M8/spending_audit_branch":      solve_m8_spending_audit_branch,
+    "M9/calendar_gated_dinner":      solve_m9_calendar_gated_dinner,
 }

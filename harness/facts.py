@@ -140,6 +140,19 @@ def _facts_m8(world: dict, url: str) -> dict[str, Any]:
     return facts
 
 
+def _facts_m9(world: dict, url: str) -> dict[str, Any]:
+    """M9: the food ETA + whether the agent created a calendar event (the
+    multi-step free-branch outcomes)."""
+    facts: dict[str, Any] = {}
+    forders = (world.get("food") or {}).get("orders") or {}
+    if forders:
+        facts["food.eta"] = next(iter(forders.values())).get("eta_label")
+    evs = (world.get("calendar") or {}).get("events") or {}
+    facts["calendar.user_event_created"] = any(
+        e.get("source") == "user" for e in evs.values())
+    return facts
+
+
 FACT_EXTRACTORS: dict[str, Callable[[dict, str], dict]] = {
     "M2/order_then_track_via_email": _facts_m2,
     "M3/dinner_then_receipt":        _facts_m3,
@@ -148,6 +161,7 @@ FACT_EXTRACTORS: dict[str, Callable[[dict, str], dict]] = {
     "M6/reorder_bigger_order":       _facts_m6,
     "M7/dinner_and_host_gift":       _facts_m7,
     "M8/spending_audit_branch":      _facts_m8,
+    "M9/calendar_gated_dinner":      _facts_m9,
 }
 
 
