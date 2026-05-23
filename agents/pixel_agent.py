@@ -432,8 +432,8 @@ class PixelBrowserAgent:
             try:
                 resp = self.client.messages.create(
                     model=self.model,
-                    max_tokens=4096,
-                    thinking={
+                    max_tokens=8000,          # > thinking budget, leaves room
+                    thinking={                #   for the tool_use response
                         "type": "enabled",
                         "budget_tokens": self.thinking_budget,
                     },
