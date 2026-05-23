@@ -106,7 +106,7 @@ def _missed_required(traj: dict) -> list[str]:
 # These turn the structural signature into the sellable "the agent broke
 # THIS way" phrase.
 def _chain_label(task_id: str, missed: list[str], fact_gap: list[str],
-                 app_path: list[str]) -> str:
+                 app_path: list[str], branch_free: bool | None = None) -> str:
     m = set(missed)
     if task_id == "M2/order_then_track_via_email":
         if "mouse_ordered" in m:
@@ -165,15 +165,28 @@ def _chain_label(task_id: str, missed: list[str], fact_gap: list[str],
             return "no_cancel_reply_or_wrong_order"
         return "m8_unexpected_partial"
     if task_id == "M9/calendar_gated_dinner":
-        if "emailed_alex_confirm_not_thursday" in m and "food_ordered" in m:
-            return "proposed_thursday_wrong_branch_no_order"
-        if "calendar_event_created" in m:
+        food = "food_action_matches_calendar" in m
+        cal = "calendar_event_matches_branch" in m
+        email = "emailed_alex_correct_branch" in m
+        if branch_free is False:
+            # BUSY seed: correct branch is don't-order + propose Thursday.
+            if food:
+                return "ordered_dinner_despite_busy_calendar"
+            if email:
+                return "busy_no_order_but_missing_thursday_proposal"
+            if cal:
+                return "added_event_despite_busy_calendar"
+            return "m9_busy_unexpected_partial"
+        # FREE seed: correct branch is order + event + confirm.
+        if food and email:
+            return "took_busy_branch_despite_free_calendar"
+        if food:
+            return "free_but_never_ordered_dinner"
+        if cal:
             return "ordered_but_forgot_calendar_event"
-        if "emailed_alex_confirm_not_thursday" in m:
+        if email:
             return "did_actions_but_no_or_wrong_confirmation_email"
-        if "food_ordered" in m:
-            return "checked_but_never_ordered_food"
-        return "m9_unexpected_partial"
+        return "m9_free_unexpected_partial"
     return "missed:" + "+".join(missed) if missed else "no_required_missed"
 
 
@@ -187,7 +200,12 @@ def build_signature(traj: dict) -> dict[str, Any]:
     observed = _observed_facts(steps)
     required = list(REQUIRED_FACTS.get(task_id, []))
     fact_gap = sorted([f for f in required if f not in observed])
-    chain = _chain_label(task_id, missed, fact_gap, app_path)
+    # For gated M9, the correct branch hinges on the calendar. Prefer the value
+    # the agent actually observed; fall back to the seed parity (even=free).
+    branch_free = observed.get("calendar.evening_free")
+    if branch_free is None and task_id == "M9/calendar_gated_dinner":
+        branch_free = (int(traj.get("seed", 0)) % 2 == 0)
+    chain = _chain_label(task_id, missed, fact_gap, app_path, branch_free)
 
     # The clustering key: two failures are "the same mode" iff this matches.
     signature_key = "|".join([

@@ -14,6 +14,12 @@ from typing import Any
 TODAY = "2026-05-21"
 TOMORROW = "2026-05-22"
 
+# The window the M9 task asks about ("free after 6pm tomorrow"). One source of
+# truth shared by the verifier, the oracle and the facts layer so the
+# free/busy gate can never drift between them.
+EVENING_START = "18:00"
+EVENING_END = "23:00"
+
 
 @dataclass
 class CalendarEvent:
@@ -58,17 +64,33 @@ class CalendarState:
 
 
 def make_calendarstate(seed: int = 0) -> CalendarState:
-    """Seed a non-empty calendar. Critically, TOMORROW EVENING (19:00) is
-    FREE — there's a 2pm meeting tomorrow and an event today, so the agent
-    must check the SPECIFIC evening window rather than assume busy/free."""
+    """Seed a non-empty calendar. The TOMORROW-EVENING window is the gate for
+    M9 and it flips with the seed: EVEN seeds leave the evening FREE (correct
+    branch = order dinner + confirm), ODD seeds book it BUSY (correct branch =
+    don't order, propose Thursday). Either way there's a 10am + 2pm event
+    tomorrow plus an event today, so the agent must inspect the SPECIFIC
+    evening window rather than assume from the day being non-empty."""
     c = CalendarState()
-    for title, day, dl, s, e in [
+    rows = [
         ("Gym session", TODAY, "Today (Thu May 21)", "18:00", "19:00"),
         ("Team sync", TOMORROW, "Tomorrow (Fri May 22)", "14:00", "15:00"),
         ("Dentist", TOMORROW, "Tomorrow (Fri May 22)", "10:00", "10:45"),
-    ]:
+    ]
+    if seed % 2 == 1:
+        # Tomorrow evening is taken -> the gate says "busy".
+        rows.append(
+            ("Book club", TOMORROW, "Tomorrow (Fri May 22)", "19:00", "21:30"))
+    for title, day, dl, s, e in rows:
         eid = c.new_id()
         c.events[eid] = CalendarEvent(id=eid, title=title, day=day,
                                       day_label=dl, start=s, end=e,
                                       source="seed")
     return c
+
+
+def evening_free(cal: CalendarState | None) -> bool:
+    """Whether TOMORROW evening is free — the single M9 gate predicate. A
+    missing calendar defaults to free so the verifier never crashes."""
+    if cal is None:
+        return True
+    return cal.is_free(TOMORROW, EVENING_START, EVENING_END)

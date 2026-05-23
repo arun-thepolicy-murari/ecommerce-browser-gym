@@ -141,13 +141,24 @@ def _facts_m8(world: dict, url: str) -> dict[str, Any]:
 
 
 def _facts_m9(world: dict, url: str) -> dict[str, Any]:
-    """M9: the food ETA + whether the agent created a calendar event (the
-    multi-step free-branch outcomes)."""
+    """M9: the GATE (is tomorrow evening free?) the branch hinges on, plus the
+    food ETA and whether the agent created a calendar event. Recording
+    ``calendar.evening_free`` is what lets the harvester catch "the calendar
+    said busy but the agent ordered anyway"."""
     facts: dict[str, Any] = {}
+    cal = world.get("calendar") or {}
+    tomorrow = cal.get("tomorrow")
+    evs = cal.get("events") or {}
+    if tomorrow:
+        # Mirror CalendarState.is_free over the 18:00-23:00 evening window.
+        evening_busy = any(
+            e.get("day") == tomorrow and e.get("start", "") < "23:00"
+            and "18:00" < e.get("end", "")
+            for e in evs.values())
+        facts["calendar.evening_free"] = not evening_busy
     forders = (world.get("food") or {}).get("orders") or {}
     if forders:
         facts["food.eta"] = next(iter(forders.values())).get("eta_label")
-    evs = (world.get("calendar") or {}).get("events") or {}
     facts["calendar.user_event_created"] = any(
         e.get("source") == "user" for e in evs.values())
     return facts

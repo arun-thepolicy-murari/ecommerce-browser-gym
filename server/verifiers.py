@@ -1313,45 +1313,78 @@ def _suite_m8() -> TaskSuite:
 
 
 def _suite_m9() -> TaskSuite:
-    """4-app, free/busy-gated branch. Tomorrow evening IS free, so the
-    correct (hard) branch is: order food + add a calendar event + email Alex
-    to CONFIRM. Expected failures: proposed_thursday_wrong_branch (assumed
-    busy / skipped the check), forgot_calendar_event, forgot_or_wrong_email,
-    forgot_food_order."""
+    """4-app, free/busy-GATED branch. The correct branch flips with the seeded
+    calendar (read from initial_world, the env truth):
 
-    def _food_ordered(p: Probe) -> bool:
+      FREE evening -> order food + add a user calendar event + email Alex to
+                      CONFIRM (not Thursday).
+      BUSY evening -> do NOT order, do NOT add an event, email Alex to PROPOSE
+                      THURSDAY.
+
+    Each milestone scores the action that is correct FOR THE SEEDED BRANCH, so
+    the classic trap (assume free, order anyway) fails the food + email
+    milestones on busy seeds, and skipping the calendar read is no longer a
+    free pass. Expected failures: ordered_despite_busy_calendar,
+    proposed_thursday_when_free, forgot_calendar_event, forgot_food_order,
+    wrong_or_missing_email."""
+    from server.apps.calendar.state import evening_free as _evening_free
+
+    def _free(p: Probe) -> bool:
+        iw = p.initial_world
+        return _evening_free(getattr(iw, "calendar", None) if iw else None)
+
+    def _has_food_order(p: Probe) -> bool:
         return (p.world is not None
                 and getattr(p.world, "food", None) is not None
                 and len(p.world.food.orders) > 0)
 
-    def _calendar_event_created(p: Probe) -> bool:
+    def _has_user_event(p: Probe) -> bool:
         if p.world is None or getattr(p.world, "calendar", None) is None:
             return False
         return any(e.source == "user"
                    for e in p.world.calendar.events.values())
 
-    def _emailed_alex_confirm(p: Probe) -> bool:
+    def _food_action_matches_branch(p: Probe) -> bool:
+        # FREE -> a food order must exist; BUSY -> none should.
+        return _has_food_order(p) if _free(p) else (not _has_food_order(p))
+
+    def _calendar_action_matches_branch(p: Probe) -> bool:
+        # FREE -> a user calendar event must exist; BUSY -> none should.
+        return _has_user_event(p) if _free(p) else (not _has_user_event(p))
+
+    def _emailed_alex_correct_branch(p: Probe) -> bool:
         if p.world is None or getattr(p.world, "mail", None) is None:
             return False
+        free = _free(p)
         for e in p.world.mail.sent.values():
             to = (e.to or "").lower()
             body = (e.body or "").lower()
-            # Confirm (the FREE branch) — must NOT be the propose-Thursday
-            # branch, and should reference dinner/tomorrow/confirm.
-            if ("alex" in to and "thursday" not in body
-                    and any(w in body for w in ("dinner", "tomorrow", "confirm"))):
-                return True
+            if "alex" not in to:
+                continue
+            if free:
+                # CONFIRM branch — references dinner/tomorrow/confirm, and is
+                # NOT the propose-Thursday branch.
+                if ("thursday" not in body
+                        and any(w in body for w in ("dinner", "tomorrow", "confirm"))):
+                    return True
+            else:
+                # PROPOSE-THURSDAY branch.
+                if "thursday" in body:
+                    return True
         return False
 
     return TaskSuite(
         task_id="M9/calendar_gated_dinner",
         milestones=[
-            Milestone("food_ordered", weight=0.35,
-                      check=_food_ordered, required_for_success=True),
-            Milestone("calendar_event_created", weight=0.30,
-                      check=_calendar_event_created, required_for_success=True),
-            Milestone("emailed_alex_confirm_not_thursday", weight=0.35,
-                      check=_emailed_alex_confirm, required_for_success=True),
+            Milestone("food_action_matches_calendar", weight=0.35,
+                      check=_food_action_matches_branch,
+                      required_for_success=True),
+            Milestone("calendar_event_matches_branch", weight=0.30,
+                      check=_calendar_action_matches_branch,
+                      required_for_success=True),
+            Milestone("emailed_alex_correct_branch", weight=0.35,
+                      check=_emailed_alex_correct_branch,
+                      required_for_success=True),
         ],
     )
 

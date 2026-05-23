@@ -780,7 +780,7 @@ REQUIRED_FACTS = {
     "M6/reorder_bigger_order":       ["mail.bigger_order_id", "shop.reordered_items"],
     "M7/dinner_and_host_gift":       ["food.eta", "shop.book_name"],
     "M8/spending_audit_branch":      ["mail.shop_orders_total", "mail.most_expensive_order_id"],
-    "M9/calendar_gated_dinner":      ["food.eta", "calendar.user_event_created"],
+    "M9/calendar_gated_dinner":      ["calendar.evening_free", "food.eta", "calendar.user_event_created"],
 }
 
 

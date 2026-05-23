@@ -584,11 +584,37 @@ async def solve_m8_spending_audit_branch(ctx: BrowserCtx) -> None:
 
 
 async def solve_m9_calendar_gated_dinner(ctx: BrowserCtx) -> None:
-    """Tomorrow evening is FREE -> the hard branch: order food + add a
-    calendar delivery event + email Alex to confirm (NOT propose Thursday)."""
-    # Check the calendar first (tomorrow evening is free).
+    """Free/busy-GATED. Read the calendar, then branch:
+      FREE  -> order food + add a delivery event + email Alex to confirm.
+      BUSY  -> don't order; email Alex to propose Thursday."""
+    # Check the calendar first — the gate.
     await ctx.goto("/calendar", reasoning="Check whether tomorrow evening is free.")
-    # Free -> order dinner.
+    world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
+    cal = world.get("calendar") or {}
+    tomorrow = cal.get("tomorrow")
+    # Tomorrow-evening (18:00-23:00) overlap, mirroring CalendarState.is_free.
+    evening_busy = any(
+        ev.get("day") == tomorrow and ev.get("start", "") < "23:00"
+        and "18:00" < ev.get("end", "")
+        for ev in (cal.get("events") or {}).values())
+
+    alex = next(e for e in world["mail"]["inbox"].values()
+                if "alex@" in (e.get("sender") or ""))
+
+    if evening_busy:
+        # BUSY branch: do NOT order, propose Thursday.
+        await ctx.goto(f"/mail/message/{alex['id']}",
+                       reasoning="Tomorrow evening is busy - ask Alex about Thursday.")
+        await ctx.click("a[data-test-id='btn-reply']")
+        await ctx.fill(
+            "textarea[data-test-id='input-compose-body']",
+            "I'm tied up tomorrow evening - could we move dinner to Thursday "
+            "instead? Let me know what works.",
+        )
+        await ctx.click("button[data-test-id='btn-send']")
+        return
+
+    # FREE branch: order dinner.
     await ctx.goto("/food/restaurant/r_sushi",
                    reasoning="Calendar is free tomorrow evening - order dinner.")
     await ctx.click("button[data-test-id='btn-add-d_salmon_roll']")
@@ -602,9 +628,6 @@ async def solve_m9_calendar_gated_dinner(ctx: BrowserCtx) -> None:
                    f"Dinner delivery ~{eta}")
     await ctx.click("button[data-test-id='btn-save-event']")
     # Email Alex to confirm (free branch -> confirm, not propose Thursday).
-    world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
-    alex = next(e for e in world["mail"]["inbox"].values()
-                if "alex@" in (e.get("sender") or ""))
     await ctx.goto(f"/mail/message/{alex['id']}",
                    reasoning="Reply to Alex to confirm tomorrow's dinner.")
     await ctx.click("a[data-test-id='btn-reply']")
