@@ -125,6 +125,45 @@ TOOLS_PIXEL = [
         },
     },
     {
+        "name": "open_tab",
+        "description": (
+            "Open an APP in a NEW browser tab and switch to it. `url` is an "
+            "app root: '/' (Shop), '/mail' (Mail), '/food' (Food). Your old "
+            "tab stays exactly where it was — use this to keep one app open "
+            "while you read another."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {"url": {"type": "string"},
+                           "reason": {"type": "string"}},
+            "required": ["url"],
+        },
+    },
+    {
+        "name": "switch_tab",
+        "description": (
+            "Make an already-open tab active by its index (see the open "
+            "tabs list in the observation). Use this to flip BACK to a tab "
+            "you opened earlier."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {"index": {"type": "integer"},
+                           "reason": {"type": "string"}},
+            "required": ["index"],
+        },
+    },
+    {
+        "name": "close_tab",
+        "description": "Close an open tab by its index.",
+        "input_schema": {
+            "type": "object",
+            "properties": {"index": {"type": "integer"},
+                           "reason": {"type": "string"}},
+            "required": ["index"],
+        },
+    },
+    {
         "name": "finish",
         "description": (
             "End the episode. Call this ONLY after verifying that the "
@@ -296,6 +335,32 @@ verify.
 The task brief is your goal. Read it literally. If it says "Home
 address" use Home, not Work. If it says "size M Black" pick exactly
 that variant. If it says "under $550", check the running subtotal.
+
+═══════════════════════════════════════════════════════════════════════════
+MULTI-APP WORKSPACE + BROWSER TABS
+═══════════════════════════════════════════════════════════════════════════
+
+At the very top of every page is a dark workspace bar with marks for
+several apps: Shop, Mail, and Food. Some tasks span apps — e.g. place an
+order in the Shop, then read the confirmation email in Mail and act on it.
+
+You have THREE extra tools for tabs (in addition to the five above):
+  open_tab(url)     open an app in a NEW tab and switch to it. `url` is an
+                    app ROOT: "/" (Shop), "/mail" (Mail), "/food" (Food).
+  switch_tab(index) make an already-open tab active (see the open-tabs list).
+  close_tab(index)  close a tab.
+
+Each turn the observation lists your open tabs as {index, url, title,
+active}. Use tabs like a person on a multi-app task: keep the Shop in
+tab 0, OPEN MAIL IN A SECOND TAB to read a confirmation email, then
+switch_tab(0) BACK to the Shop to act on it. (open_tab is the ONE exception
+to "no navigation" — it only opens an app root in a new tab; WITHIN a tab
+you still navigate by clicking marks.)
+
+CARRY VALUES ACCURATELY across tabs (an order number, a charged total, an
+ETA). Read them off the OTHER app's screenshot — never invent or guess a
+value. If a task needs the exact total you were charged, OPEN and READ the
+email; the sticker price on the product is NOT the charged total.
 """
 
 
@@ -334,8 +399,13 @@ class PixelBrowserAgent:
             b64 = base64.standard_b64encode(annotated_png).decode("ascii")
 
             url = ctx.page.url
+            try:
+                tabs = await ctx._tab_strip()
+            except Exception:
+                tabs = []
             user_text = (
                 f"URL: {url}\n"
+                f"Open tabs: {json.dumps(tabs)}\n"
                 f"Task: {task_brief}\n"
                 f"\n"
                 f"Visible marks ({len(marks)}):\n{manifest}\n"
@@ -449,6 +519,15 @@ class PixelBrowserAgent:
                         amount_px=int(args["amount_px"]),
                         reasoning=args.get("reason", ""),
                     )
+                elif kind == "open_tab":
+                    step_record = await ctx.open_tab(
+                        args["url"], reasoning=args.get("reason", ""))
+                elif kind == "switch_tab":
+                    step_record = await ctx.switch_tab(
+                        int(args["index"]), reasoning=args.get("reason", ""))
+                elif kind == "close_tab":
+                    step_record = await ctx.close_tab(
+                        int(args["index"]), reasoning=args.get("reason", ""))
                 elif kind == "finish":
                     if self.verbose:
                         print(f"[pixel_agent] finishing: {args.get('reason', '')}")
