@@ -485,6 +485,79 @@ async def solve_m5_cheaper_mouse_from_deals(ctx: BrowserCtx) -> None:
     await ctx.click("button[data-test-id='btn-place-order']")
 
 
+async def solve_m6_reorder_bigger_order(ctx: BrowserCtx) -> None:
+    """Compare the two past-order confirmation emails, reorder the BIGGER
+    order's in-stock items (laptop + keyboard; charger is OOS), then reply
+    to that order's email listing what was reordered."""
+    await ctx.open_tab("/mail", reasoning="Find the two past order confirmations.")
+    world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
+    confs = {e["order_id"]: e for e in world["mail"]["inbox"].values()
+             if (e.get("order_id") or "").startswith("ORD-PAST")}
+    for e in confs.values():                       # open both to read the totals
+        await ctx.goto(f"/mail/message/{e['id']}",
+                       reasoning="Read this confirmation's total.")
+    big = max(confs.values(), key=lambda e: e.get("amount_total") or 0)
+    # Reorder the bigger order's IN-STOCK items (the charger is out of stock).
+    await ctx.switch_tab(0, reasoning="Back to the shop to reorder the bigger order.")
+    for pid in ("p_laptop_studio", "p_kb_mech"):
+        await ctx.goto(f"/product/{pid}",
+                       reasoning="Reorder this item from the bigger order.")
+        await ctx.click("button[data-test-id='btn-add-to-cart']")
+    await ctx.click("a[data-test-id='link-cart']")
+    await ctx.click("a[data-test-id='btn-proceed-checkout']")
+    await ctx.click("a[data-test-id='btn-continue-payment']")
+    await ctx.click("a[data-test-id='btn-continue-review']")
+    await ctx.click("button[data-test-id='btn-place-order']")
+    # Reply to the bigger order's confirmation listing what we reordered.
+    await ctx.switch_tab(1, reasoning="Back to Mail to reply to the bigger order.")
+    await ctx.goto(f"/mail/message/{big['id']}",
+                   reasoning="Open the bigger order's confirmation to reply.")
+    await ctx.click("a[data-test-id='btn-reply']")
+    await ctx.fill(
+        "textarea[data-test-id='input-compose-body']",
+        "I reordered the Studio Laptop 14 and the Mechanical Keyboard. The "
+        "USB-C charger was out of stock, so I skipped it.",
+    )
+    await ctx.click("button[data-test-id='btn-send']")
+
+
+async def solve_m7_dinner_and_host_gift(ctx: BrowserCtx) -> None:
+    """Order food under $35, buy the qualifying host-gift book (>=4.5 stars,
+    under $20), then reply to Alex with the food ETA + the book name."""
+    # 1) Food under $35.
+    await ctx.open_tab("/food", reasoning="Order dinner from the food app.")
+    await ctx.goto("/food/restaurant/r_sushi", reasoning="Pick a restaurant.")
+    await ctx.click("button[data-test-id='btn-add-d_salmon_roll']")
+    await ctx.goto("/food/cart")
+    await ctx.click("button[data-test-id='btn-place-food-order']")
+    world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
+    eta = next(iter(world["food"]["orders"].values()))["eta_label"]
+    # 2) The qualifying book: Project Hail Mary (4.7 stars, $16.50).
+    await ctx.switch_tab(0, reasoning="Back to the shop for the host gift.")
+    await ctx.goto("/product/p_book_sci_fi",
+                   reasoning="A book rated 4.5+ and under $20.")
+    await ctx.click("button[data-test-id='btn-add-to-cart']")
+    await ctx.click("a[data-test-id='link-cart']")
+    await ctx.click("a[data-test-id='btn-proceed-checkout']")
+    await ctx.click("a[data-test-id='btn-continue-payment']")
+    await ctx.click("a[data-test-id='btn-continue-review']")
+    await ctx.click("button[data-test-id='btn-place-order']")
+    # 3) Reply to Alex with the ETA + the book.
+    await ctx.switch_tab(1, reasoning="Back to Mail to reply to Alex.")
+    world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
+    alex = next(e for e in world["mail"]["inbox"].values()
+                if "alex@" in (e.get("sender") or ""))
+    await ctx.goto(f"/mail/message/{alex['id']}",
+                   reasoning="Open Alex's dinner email to reply.")
+    await ctx.click("a[data-test-id='btn-reply']")
+    await ctx.fill(
+        "textarea[data-test-id='input-compose-body']",
+        f"All set for tonight! Dinner should arrive around {eta}, and I "
+        f"picked up Project Hail Mary as the host gift.",
+    )
+    await ctx.click("button[data-test-id='btn-send']")
+
+
 SOLVERS = {
     "A1/buy_wireless_mouse":     solve_a1_buy_wireless_mouse,
     "A2/filter_laptop":          solve_a2_filter_laptop,
@@ -504,4 +577,6 @@ SOLVERS = {
     "M3/dinner_then_receipt":        solve_m3_dinner_then_receipt,
     "M4/order_then_reply_total":     solve_m4_order_then_reply_total,
     "M5/cheaper_mouse_from_deals":   solve_m5_cheaper_mouse_from_deals,
+    "M6/reorder_bigger_order":       solve_m6_reorder_bigger_order,
+    "M7/dinner_and_host_gift":       solve_m7_dinner_and_host_gift,
 }

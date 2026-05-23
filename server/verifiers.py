@@ -1174,6 +1174,101 @@ def _suite_m5() -> TaskSuite:
     )
 
 
+def _suite_m6() -> TaskSuite:
+    """Reorder the BIGGER past order's in-stock items, then reply listing
+    them. Bigger order B = laptop + keyboard + charger (charger now OOS), so
+    the correct reorder is laptop + keyboard. Pre-seeded order B itself is
+    excluded by the charger; order A (mouse) is the wrong order. Expected
+    failures: reordered_the_wrong_order, reordered_partial, never_replied,
+    goal_incomplete_no_order."""
+
+    def _reordered_correct(p: Probe) -> bool:
+        # A NEW order holding exactly the bigger order's in-stock items
+        # (laptop + keyboard), without the OOS charger or order A's mouse.
+        return _order_with(
+            p, product_ids=("p_laptop_studio", "p_kb_mech"),
+            exclude_product_ids=("p_charger", "p_mouse_wireless"),
+        )
+
+    def _replied_with_item_list(p: Probe) -> bool:
+        if p.world is None or getattr(p.world, "mail", None) is None:
+            return False
+        for e in p.world.mail.sent.values():
+            b = (e.body or "").lower()
+            if "laptop" in b and "keyboard" in b:
+                return True
+        return False
+
+    return TaskSuite(
+        task_id="M6/reorder_bigger_order",
+        milestones=[
+            Milestone("reordered_bigger_orders_instock_items", weight=0.65,
+                      check=_reordered_correct, required_for_success=True),
+            Milestone("replied_listing_reordered_items", weight=0.35,
+                      check=_replied_with_item_list, required_for_success=True),
+        ],
+    )
+
+
+def _suite_m7() -> TaskSuite:
+    """3-app: food order under $35 + a host gift that is a book rated >=4.5
+    AND under $20 (only Project Hail Mary qualifies) + a reply to Alex
+    carrying the food ETA AND the book name. Expected failures:
+    over_budget_food, bought_disqualified_book, reply_missing_eta_or_book,
+    never_replied."""
+
+    QUALIFYING_BOOK = "p_book_sci_fi"
+    DECOY_BOOKS = ("p_book_history", "p_book_cook", "p_book_oos",
+                   "p_book_sci_fi_signed")
+
+    def _food_under_budget(p: Probe) -> bool:
+        if p.world is None or getattr(p.world, "food", None) is None:
+            return False
+        return any(o.total < 35.0 for o in p.world.food.orders.values())
+
+    def _bought_qualifying_book(p: Probe) -> bool:
+        for o in p.state.orders.values():
+            for it in o.items:
+                prod = p.state.products.get(it.product_id)
+                if (it.product_id == QUALIFYING_BOOK and prod is not None
+                        and prod.rating >= 4.5 and it.unit_price < 20.0):
+                    return True
+        return False
+
+    def _avoided_decoy_books(p: Probe) -> bool:
+        return not any(
+            it.product_id in DECOY_BOOKS
+            for o in p.state.orders.values() for it in o.items
+        )
+
+    def _replied_to_alex(p: Probe) -> bool:
+        if p.world is None or getattr(p.world, "mail", None) is None:
+            return False
+        etas = [o.eta_label for o in p.world.food.orders.values()] \
+            if p.world.food is not None else []
+        for e in p.world.mail.sent.values():
+            to = (e.to or "").lower()
+            body = (e.body or "").lower()
+            if ("alex" in to and "hail mary" in body
+                    and any(eta.lower() in body for eta in etas)):
+                return True
+        return False
+
+    return TaskSuite(
+        task_id="M7/dinner_and_host_gift",
+        milestones=[
+            Milestone("food_order_under_35", weight=0.30,
+                      check=_food_under_budget, required_for_success=True),
+            Milestone("bought_qualifying_book", weight=0.30,
+                      check=_bought_qualifying_book, required_for_success=True),
+            Milestone("avoided_disqualified_books", weight=0.10,
+                      check=_avoided_decoy_books),
+            Milestone("replied_to_alex_with_eta_and_book", weight=0.30,
+                      check=_replied_to_alex, required_for_success=True),
+        ],
+    )
+
+
 # --------------------------------------------------------------------------- #
 # Registry
 # --------------------------------------------------------------------------- #
@@ -1197,6 +1292,8 @@ SUITE_FACTORIES = {
     "M3/dinner_then_receipt":        _suite_m3,
     "M4/order_then_reply_total":     _suite_m4,
     "M5/cheaper_mouse_from_deals":   _suite_m5,
+    "M6/reorder_bigger_order":       _suite_m6,
+    "M7/dinner_and_host_gift":       _suite_m7,
 }
 
 

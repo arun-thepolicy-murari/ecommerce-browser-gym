@@ -88,11 +88,50 @@ def _facts_m5(world: dict, url: str) -> dict[str, Any]:
     return facts
 
 
+def _facts_m6(world: dict, url: str) -> dict[str, Any]:
+    """M6: which past order is the bigger one (from the emails) + what the
+    agent actually reordered (newest order's items)."""
+    facts: dict[str, Any] = {}
+    inbox = (world.get("mail") or {}).get("inbox") or {}
+    confs = {e.get("order_id"): e for e in inbox.values()
+             if (e.get("order_id") or "").startswith("ORD-PAST")}
+    if confs:
+        big = max(confs.values(), key=lambda e: e.get("amount_total") or 0)
+        facts["mail.bigger_order_id"] = big.get("order_id")
+    orders = (world.get("shop") or {}).get("orders") or {}
+    # Exclude the two pre-seeded past orders; the agent's reorder is the rest.
+    new_orders = {k: o for k, o in orders.items()
+                  if not (k or "").startswith("ORD-PAST")}
+    if new_orders:
+        newest = max(new_orders.values(), key=lambda o: o.get("placed_at", ""))
+        facts["shop.reordered_items"] = sorted(
+            {it.get("product_id") for it in newest.get("items", [])})
+    return facts
+
+
+def _facts_m7(world: dict, url: str) -> dict[str, Any]:
+    """M7: the food ETA + total, and the host-gift book the agent bought."""
+    facts: dict[str, Any] = {}
+    forders = (world.get("food") or {}).get("orders") or {}
+    if forders:
+        o = next(iter(forders.values()))
+        facts["food.eta"] = o.get("eta_label")
+        facts["food.total"] = o.get("total")
+    orders = (world.get("shop") or {}).get("orders") or {}
+    for o in orders.values():
+        for it in o.get("items", []):
+            if (it.get("product_id") or "").startswith("p_book"):
+                facts["shop.book_name"] = it.get("product_name")
+    return facts
+
+
 FACT_EXTRACTORS: dict[str, Callable[[dict, str], dict]] = {
     "M2/order_then_track_via_email": _facts_m2,
     "M3/dinner_then_receipt":        _facts_m3,
     "M4/order_then_reply_total":     _facts_m4,
     "M5/cheaper_mouse_from_deals":   _facts_m5,
+    "M6/reorder_bigger_order":       _facts_m6,
+    "M7/dinner_and_host_gift":       _facts_m7,
 }
 
 

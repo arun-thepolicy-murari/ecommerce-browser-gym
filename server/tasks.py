@@ -230,6 +230,25 @@ BRIEFS = {
         "one that is, then order it — ship it to my home address and pay "
         "with my Visa."
     ),
+
+    "M6": (
+        "Two of my past order confirmations are sitting in my email. "
+        "Whichever of those two orders had the higher total, I'd like to "
+        "buy everything in it again — but skip any item that's no longer "
+        "in stock. Put those items back in the cart and place the order, "
+        "then reply to that same confirmation email telling me exactly "
+        "which items you reordered."
+    ),
+
+    "M7": (
+        "I'm hosting a small dinner tonight and need two things handled. "
+        "First, order us some food from a single restaurant in the food "
+        "app — keep the food total under $35. Second, pick up a host gift "
+        "in the shop: it has to be a book, rated at least 4.5 stars, and "
+        "under $20. Once both are sorted, reply to Alex's dinner email and "
+        "let them know roughly when the food will arrive and which book "
+        "you chose."
+    ),
 }
 
 
@@ -556,6 +575,94 @@ def task_m4_order_then_reply_total(seed: int) -> "WorldState":
     return _cross_app_world(seed, "M4/order_then_reply_total", "hard")
 
 
+def _seed_past_order(shop, *, order_id, items, addr_id, pay_id):
+    """Helper: create a delivered past order from a list of OrderItems."""
+    subtotal = round(sum(it.unit_price * it.quantity for it in items), 2)
+    shop.orders[order_id] = Order(
+        id=order_id, user_id="u_alice", placed_at="2026-05-01T10:00:00Z",
+        items=items, subtotal=subtotal, discount=0.0,
+        tax=round(subtotal * 0.085, 2), shipping=5.99,
+        total=round(subtotal * 1.085 + 5.99, 2),
+        promo_code=None, payment_id=pay_id, status="delivered",
+    )
+    return shop.orders[order_id]
+
+
+def task_m6_reorder_bigger_order(seed: int) -> "WorldState":
+    """BRUTAL multi-step: two past orders (with confirmation emails) of
+    different totals. The agent must compare the totals, reorder ALL items
+    of the BIGGER order (skipping the out-of-stock one), place it, and reply
+    to that order's email listing what it reordered. Memory + comparison +
+    multi-item + conditional (OOS) + carry-the-list-back across apps."""
+    from server.apps.mail.state import Email, SEED_DATE
+    world = _cross_app_world(seed, "M6/reorder_bigger_order", "hard")
+    shop = world.shop
+    addr = "addr_home"
+    pay = "pay_visa"
+
+    def _oi(lid, pid, name, price):
+        return OrderItem(
+            id=lid, product_id=pid, product_name=name, variant_id=None,
+            variant_label="", quantity=1, unit_price=price,
+            gift_wrap=False, gift_message="",
+            ship_to_address_id=addr, scheduled_delivery=None,
+        )
+
+    # Order A (SMALLER): one wireless mouse.
+    oa = _seed_past_order(
+        shop, order_id="ORD-PAST-A",
+        items=[_oi("a_mouse", "p_mouse_wireless", "Wireless Mouse", 29.99)],
+        addr_id=addr, pay_id=pay,
+    )
+    # Order B (BIGGER): laptop + keyboard + charger. Charger goes OOS, so the
+    # correct reorder is laptop + keyboard only.
+    ob = _seed_past_order(
+        shop, order_id="ORD-PAST-B",
+        items=[
+            _oi("b_laptop", "p_laptop_studio", "Studio Laptop 14", 899.99),
+            _oi("b_kb", "p_kb_mech", "Mechanical Keyboard", 119.99),
+            _oi("b_charger", "p_charger", "USB-C Fast Charger 65W", 29.99),
+        ],
+        addr_id=addr, pay_id=pay,
+    )
+    shop.products["p_charger"].stock = 0     # now out of stock -> must be skipped
+
+    # Confirmation emails (so the totals live in Mail, not the shop UI).
+    m = world.mail
+    for oid, order, label in [("ORD-PAST-A", oa, "9:10 AM"),
+                              ("ORD-PAST-B", ob, "9:40 AM")]:
+        eid = m.new_id()
+        lines = "\n".join(f"  {it.quantity} x {it.product_name}"
+                          for it in order.items)
+        m.inbox[eid] = Email(
+            id=eid, sender="orders@shopgym.com", to=m.account_email,
+            subject=f"Your ShopGym order {oid} is confirmed",
+            body=(f"Thanks for your order!\n\nOrder number: {oid}\n"
+                  f"Items:\n{lines}\n\nOrder total: ${order.total:.2f}\n"),
+            received_at=f"{SEED_DATE}T09:00:00", received_label=label,
+            read=False, labels=["orders"],
+            order_id=oid, amount_total=order.total,
+        )
+    return world
+
+
+def task_m7_dinner_and_host_gift(seed: int) -> "WorldState":
+    """BRUTAL 3-app: order food under $35 (Food) + buy a host gift that is a
+    book rated >=4.5 AND under $20 (Shop; only ONE of three books qualifies)
+    + reply to Alex's dinner email with BOTH the food ETA and the book name
+    (Mail). Budget + multi-constraint selection + 2-fact memory across apps."""
+    world = _cross_app_world(seed, "M7/dinner_and_host_gift", "hard")
+    shop = world.shop
+    # Set book ratings so EXACTLY ONE book qualifies (>=4.5 AND <$20):
+    #   p_book_sci_fi  "Project Hail Mary"  $16.50  -> 4.7  QUALIFIES
+    #   p_book_history "Sapiens"            $19.99  -> 4.2  fails rating
+    #   p_book_cook    "The Joy of Cooking" $24.99  -> 4.8  fails price
+    shop.products["p_book_sci_fi"].rating = 4.7
+    shop.products["p_book_history"].rating = 4.2
+    shop.products["p_book_cook"].rating = 4.8
+    return world
+
+
 def task_m5_cheaper_mouse_from_deals(seed: int) -> "WorldState":
     """Comparison + salience trap. Two 'deal' emails name two DIFFERENT mice
     at two prices: the flashy 'FLASH SALE' email pushes the PRICIER gaming
@@ -597,6 +704,8 @@ REQUIRED_FACTS = {
     "M3/dinner_then_receipt":        ["food.order_id", "mail.receipt_total"],
     "M4/order_then_reply_total":     ["shop.order_total", "mail.confirmation_total"],
     "M5/cheaper_mouse_from_deals":   ["shop.ordered_mouse_id"],
+    "M6/reorder_bigger_order":       ["mail.bigger_order_id", "shop.reordered_items"],
+    "M7/dinner_and_host_gift":       ["food.eta", "shop.book_name"],
 }
 
 
@@ -623,6 +732,8 @@ TASKS = {
     "M3/dinner_then_receipt":        task_m3_dinner_then_receipt,
     "M4/order_then_reply_total":     task_m4_order_then_reply_total,
     "M5/cheaper_mouse_from_deals":   task_m5_cheaper_mouse_from_deals,
+    "M6/reorder_bigger_order":       task_m6_reorder_bigger_order,
+    "M7/dinner_and_host_gift":       task_m7_dinner_and_host_gift,
 }
 
 
