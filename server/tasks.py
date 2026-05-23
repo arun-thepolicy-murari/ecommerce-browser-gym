@@ -224,9 +224,11 @@ BRIEFS = {
     ),
 
     "M5": (
-        "A couple of mouse deals just landed in my email. Read them and "
-        "order whichever mouse is actually the better price — ship it to my "
-        "home and put it on my Visa."
+        "I have two promotional emails in my inbox, each advertising a "
+        "different computer mouse at a sale price. I only want to buy one "
+        "mouse: whichever of those two is the cheaper deal. Work out which "
+        "one that is, then order it — ship it to my home address and pay "
+        "with my Visa."
     ),
 }
 

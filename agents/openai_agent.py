@@ -55,7 +55,7 @@ class OpenAIBrowserAgent:
                  verbose: bool = True):
         from openai import OpenAI
         self.client = OpenAI()                     # reads OPENAI_API_KEY
-        self.model = model or os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+        self.model = model or os.getenv("OPENAI_MODEL", "gpt-5.4")
         self.max_steps = max_steps
         self.verbose = verbose
 
@@ -69,7 +69,7 @@ class OpenAIBrowserAgent:
             messages.append({"role": "user", "content": await _observation(ctx)})
 
             resp = self.client.chat.completions.create(
-                model=self.model, max_tokens=1024,
+                model=self.model, max_completion_tokens=2048,
                 tools=TOOLS_OPENAI, tool_choice="auto", messages=messages,
             )
             msg = resp.choices[0].message

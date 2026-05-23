@@ -116,7 +116,7 @@ class OpenAIPixelAgent:
                  verbose: bool = True):
         from openai import OpenAI
         self.client = OpenAI()                     # reads OPENAI_API_KEY
-        self.model = model or os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+        self.model = model or os.getenv("OPENAI_MODEL", "gpt-5.4")
         self.max_steps = max_steps
         self.verbose = verbose
 
@@ -157,7 +157,7 @@ class OpenAIPixelAgent:
             # small models (gpt-4o-mini) tend to narrate the plan as prose and
             # never emit a tool call, stalling the episode at step 0.
             resp = self.client.chat.completions.create(
-                model=self.model, max_tokens=1024,
+                model=self.model, max_completion_tokens=2048,
                 tools=TOOLS_OPENAI_PIXEL, tool_choice="required",
                 messages=messages,
             )
