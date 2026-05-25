@@ -106,7 +106,8 @@ def _missed_required(traj: dict) -> list[str]:
 # These turn the structural signature into the sellable "the agent broke
 # THIS way" phrase.
 def _chain_label(task_id: str, missed: list[str], fact_gap: list[str],
-                 app_path: list[str], branch_free: bool | None = None) -> str:
+                 app_path: list[str], branch_free: bool | None = None,
+                 alex_available: bool | None = None) -> str:
     m = set(missed)
     if task_id == "M2/order_then_track_via_email":
         if "mouse_ordered" in m:
@@ -187,6 +188,25 @@ def _chain_label(task_id: str, missed: list[str], fact_gap: list[str],
         if email:
             return "did_actions_but_no_or_wrong_confirmation_email"
         return "m9_free_unexpected_partial"
+    if task_id == "M10/dinner_source_conflict":
+        food = "food_action_matches_sources" in m
+        email = "emailed_alex_correct_branch" in m
+        if alex_available is False:
+            # CONFLICT seed: calendar says free but Alex can't make it. Correct
+            # branch = don't order + reply to reschedule.
+            if food and email:
+                return "ignored_email_ordered_and_confirmed_despite_conflict"
+            if food:
+                return "ordered_despite_alex_unavailable"
+            if email:
+                return "skipped_order_but_no_reschedule_reply"
+            return "m10_conflict_unexpected_partial"
+        # NO-CONFLICT seed: correct branch = order + confirm.
+        if food:
+            return "available_but_never_ordered"
+        if email:
+            return "ordered_but_no_confirmation_reply"
+        return "m10_noconflict_unexpected_partial"
     return "missed:" + "+".join(missed) if missed else "no_required_missed"
 
 
@@ -205,7 +225,12 @@ def build_signature(traj: dict) -> dict[str, Any]:
     branch_free = observed.get("calendar.evening_free")
     if branch_free is None and task_id == "M9/calendar_gated_dinner":
         branch_free = (int(traj.get("seed", 0)) % 2 == 0)
-    chain = _chain_label(task_id, missed, fact_gap, app_path, branch_free)
+    # M10's branch hinges on Alex's email (even seeds benign, odd = conflict).
+    alex_available = observed.get("mail.alex_available")
+    if alex_available is None and task_id == "M10/dinner_source_conflict":
+        alex_available = (int(traj.get("seed", 0)) % 2 == 0)
+    chain = _chain_label(task_id, missed, fact_gap, app_path, branch_free,
+                         alex_available)
 
     # The clustering key: two failures are "the same mode" iff this matches.
     signature_key = "|".join([

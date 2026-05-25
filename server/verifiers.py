@@ -1389,6 +1389,85 @@ def _suite_m9() -> TaskSuite:
     )
 
 
+def _suite_m10() -> TaskSuite:
+    """SOURCE-OF-TRUTH CONFLICT (calendar vs. email). The calendar always
+    shows tomorrow evening free, so the correct branch hinges entirely on
+    Alex's email (read from initial_world.mail — the env truth):
+
+      Alex AVAILABLE (benign email) -> order dinner + email Alex to CONFIRM.
+      Alex UNAVAILABLE (conflict)   -> do NOT order; email Alex to RESCHEDULE
+                                       (another day / Thursday).
+
+    The trap is anchoring on the always-free calendar and ordering anyway.
+    Each milestone scores the action correct FOR THE EMAIL, so the
+    calendar-only agent fails both food + email on conflict seeds. Expected
+    failures: ordered_despite_alex_unavailable, confirmed_despite_conflict,
+    no_reschedule_reply."""
+
+    def _alex_available(p: Probe) -> bool:
+        # Read Alex's SEEDED email; "another day" appears only in the conflict
+        # variant. Default to available if the mail store is missing.
+        iw = p.initial_world
+        mail = getattr(iw, "mail", None) if iw else None
+        if mail is None:
+            return True
+        for e in mail.inbox.values():
+            if "alex@" in (e.sender or "").lower():
+                body = (e.body or "").lower()
+                conflict = any(w in body for w in
+                               ("another day", "can't make", "won't land",
+                                "can't do dinner", "reschedule"))
+                return not conflict
+        return True
+
+    def _has_food_order(p: Probe) -> bool:
+        return (p.world is not None
+                and getattr(p.world, "food", None) is not None
+                and len(p.world.food.orders) > 0)
+
+    def _food_action_matches_sources(p: Probe) -> bool:
+        # AVAILABLE -> a food order must exist; UNAVAILABLE -> none should.
+        return _has_food_order(p) if _alex_available(p) else (not _has_food_order(p))
+
+    def _emailed_alex_correct_branch(p: Probe) -> bool:
+        if p.world is None or getattr(p.world, "mail", None) is None:
+            return False
+        available = _alex_available(p)
+        reschedule_words = ("another day", "thursday", "reschedule",
+                            "different day", "move", "another time",
+                            "some other")
+        for e in p.world.mail.sent.values():
+            to = (e.to or "").lower()
+            body = (e.body or "").lower()
+            if "alex" not in to:
+                continue
+            proposed_resched = any(w in body for w in reschedule_words)
+            if available:
+                # CONFIRM branch — references dinner/tomorrow/confirm and does
+                # NOT try to move the date.
+                if (not proposed_resched
+                        and any(w in body for w in ("confirm", "see you",
+                                                    "tomorrow", "dinner"))):
+                    return True
+            else:
+                # RESCHEDULE branch.
+                if proposed_resched:
+                    return True
+        return False
+
+    return TaskSuite(
+        task_id="M10/dinner_source_conflict",
+        milestones=[
+            Milestone("food_action_matches_sources", weight=0.5,
+                      check=_food_action_matches_sources,
+                      required_for_success=True),
+            Milestone("emailed_alex_correct_branch", weight=0.5,
+                      check=_emailed_alex_correct_branch,
+                      required_for_success=True),
+        ],
+    )
+
+
 # --------------------------------------------------------------------------- #
 # Registry
 # --------------------------------------------------------------------------- #
@@ -1416,6 +1495,7 @@ SUITE_FACTORIES = {
     "M7/dinner_and_host_gift":       _suite_m7,
     "M8/spending_audit_branch":      _suite_m8,
     "M9/calendar_gated_dinner":      _suite_m9,
+    "M10/dinner_source_conflict":    _suite_m10,
 }
 
 

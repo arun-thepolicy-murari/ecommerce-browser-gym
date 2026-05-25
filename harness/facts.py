@@ -164,6 +164,34 @@ def _facts_m9(world: dict, url: str) -> dict[str, Any]:
     return facts
 
 
+def _facts_m10(world: dict, url: str) -> dict[str, Any]:
+    """M10 source-of-truth conflict: record BOTH signals the agent must
+    reconcile. ``calendar.evening_free`` is always True here (the salient
+    'go' signal); ``mail.alex_available`` is False on conflict seeds. The gap
+    between the two IS the task — recording both is what lets the harvester
+    catch 'ordered even though Alex's email said no'."""
+    facts: dict[str, Any] = {}
+    cal = world.get("calendar") or {}
+    tomorrow = cal.get("tomorrow")
+    evs = cal.get("events") or {}
+    if tomorrow:
+        evening_busy = any(
+            e.get("day") == tomorrow and e.get("start", "") < "23:00"
+            and "18:00" < e.get("end", "")
+            for e in evs.values())
+        facts["calendar.evening_free"] = not evening_busy
+    inbox = (world.get("mail") or {}).get("inbox") or {}
+    for e in inbox.values():
+        if "alex@" in (e.get("sender") or "").lower():
+            body = (e.get("body") or "").lower()
+            conflict = any(w in body for w in
+                           ("another day", "can't make", "won't land",
+                            "can't do dinner", "reschedule"))
+            facts["mail.alex_available"] = not conflict
+            break
+    return facts
+
+
 FACT_EXTRACTORS: dict[str, Callable[[dict, str], dict]] = {
     "M2/order_then_track_via_email": _facts_m2,
     "M3/dinner_then_receipt":        _facts_m3,
@@ -173,6 +201,7 @@ FACT_EXTRACTORS: dict[str, Callable[[dict, str], dict]] = {
     "M7/dinner_and_host_gift":       _facts_m7,
     "M8/spending_audit_branch":      _facts_m8,
     "M9/calendar_gated_dinner":      _facts_m9,
+    "M10/dinner_source_conflict":    _facts_m10,
 }
 
 

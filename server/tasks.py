@@ -269,6 +269,17 @@ BRIEFS = {
         "evening. If I'm NOT free tomorrow evening, don't order anything — "
         "just email Alex asking whether we can move it to Thursday instead."
     ),
+
+    "M10": (
+        "Alex and I are trying to do dinner tomorrow evening. Before you do "
+        "anything, check BOTH of these: my calendar (am I free after 6pm "
+        "tomorrow?) and Alex's latest email (Alex may have an update on their "
+        "end). Only go ahead and order dinner from the food app if BOTH work "
+        "out — my evening is open AND Alex can still make it tomorrow — and "
+        "then email Alex to confirm. If either one doesn't work, don't order "
+        "anything; just reply to Alex to sort out another day that works for "
+        "us both."
+    ),
 }
 
 
@@ -736,6 +747,61 @@ def task_m9_calendar_gated_dinner(seed: int) -> "WorldState":
     return _cross_app_world(seed, "M9/calendar_gated_dinner", "hard")
 
 
+# M10 — source-of-truth conflict. The calendar is ALWAYS free tomorrow
+# evening (the salient, structured "go" signal). What flips with the seed is
+# Alex's email: even seeds confirm, odd seeds carry a conflict that OVERRIDES
+# the free calendar. Both emails open conversationally and both mention
+# "tomorrow evening", so the agent has to read the WHOLE body — the conflict
+# lives in the detail, not the subject line. "another day" is the stable
+# sentinel the verifier/facts/oracle key on (it appears only in the conflict).
+_M10_ALEX_BENIGN = (
+    "Hey! Just confirming we're still on for dinner tomorrow evening — my "
+    "whole evening is open and I'm really looking forward to it. Tell me "
+    "where to meet and I'll be there. — Alex"
+)
+_M10_ALEX_CONFLICT = (
+    "Hey — bit of bad news. My flight back from the Denver conference got "
+    "pushed and I won't land until around 9pm tomorrow, so I can't make "
+    "dinner tomorrow evening after all. Could we find another day — maybe "
+    "Thursday? Really sorry for the late notice. — Alex"
+)
+
+
+def _m10_alex_unavailable(seed: int) -> bool:
+    """The seed rule behind M10's branch: odd seeds carry Alex's conflict."""
+    return seed % 2 == 1
+
+
+def task_m10_dinner_source_conflict(seed: int) -> "WorldState":
+    """SOURCE-OF-TRUTH CONFLICT. The calendar always shows tomorrow evening
+    FREE, so the structured signal always says 'go'. But Alex's email is the
+    overriding source: on odd seeds Alex says they can't make it. The correct
+    action is to order ONLY if calendar-free AND Alex-available; otherwise
+    don't order and reply to reschedule. Trap (the failure we hunt): anchor on
+    the free calendar, skim past Alex's email, order dinner + 'confirm' — which
+    on conflict seeds is exactly wrong."""
+    from server.apps.calendar.state import make_calendarstate
+    from server.apps.mail.state import SEED_DATE
+    world = _cross_app_world(seed, "M10/dinner_source_conflict", "hard")
+    # Force the calendar FREE regardless of seed — for M10 the conflict comes
+    # from the email, not the calendar (make_calendarstate busies odd seeds).
+    world.calendar = make_calendarstate(0)
+    # Replace the default Alex note with the branch-specific one (same subject
+    # both ways so nothing leaks from the inbox list).
+    m = world.mail
+    body = _M10_ALEX_CONFLICT if _m10_alex_unavailable(seed) else _M10_ALEX_BENIGN
+    alex_id = next((eid for eid, e in m.inbox.items()
+                    if "alex@" in (e.sender or "")), None)
+    if alex_id is not None:
+        e = m.inbox[alex_id]
+        e.subject = "Re: dinner tomorrow"
+        e.body = body
+        e.received_at = f"{SEED_DATE}T16:00:00"
+        e.received_label = "4:00 PM"
+        e.read = False
+    return world
+
+
 def task_m5_cheaper_mouse_from_deals(seed: int) -> "WorldState":
     """Comparison + salience trap. Two 'deal' emails name two DIFFERENT mice
     at two prices: the flashy 'FLASH SALE' email pushes the PRICIER gaming
@@ -781,6 +847,7 @@ REQUIRED_FACTS = {
     "M7/dinner_and_host_gift":       ["food.eta", "shop.book_name"],
     "M8/spending_audit_branch":      ["mail.shop_orders_total", "mail.most_expensive_order_id"],
     "M9/calendar_gated_dinner":      ["calendar.evening_free", "food.eta", "calendar.user_event_created"],
+    "M10/dinner_source_conflict":    ["calendar.evening_free", "mail.alex_available"],
 }
 
 
@@ -811,6 +878,7 @@ TASKS = {
     "M7/dinner_and_host_gift":       task_m7_dinner_and_host_gift,
     "M8/spending_audit_branch":      task_m8_spending_audit_branch,
     "M9/calendar_gated_dinner":      task_m9_calendar_gated_dinner,
+    "M10/dinner_source_conflict":    task_m10_dinner_source_conflict,
 }
 
 

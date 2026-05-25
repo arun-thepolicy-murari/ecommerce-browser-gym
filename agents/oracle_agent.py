@@ -639,6 +639,49 @@ async def solve_m9_calendar_gated_dinner(ctx: BrowserCtx) -> None:
     await ctx.click("button[data-test-id='btn-send']")
 
 
+async def solve_m10_dinner_source_conflict(ctx: BrowserCtx) -> None:
+    """Reconcile the two sources. Calendar is always free, so the answer
+    hinges on Alex's email: if Alex can't make it, don't order and reply to
+    reschedule; otherwise order dinner and reply to confirm."""
+    # Read both sources before acting.
+    await ctx.goto("/calendar", reasoning="Check whether tomorrow evening is free.")
+    world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
+    alex = next(e for e in world["mail"]["inbox"].values()
+                if "alex@" in (e.get("sender") or ""))
+    await ctx.goto(f"/mail/message/{alex['id']}",
+                   reasoning="Read Alex's latest email for any change of plans.")
+    body = (alex.get("body") or "").lower()
+    conflict = any(w in body for w in
+                   ("another day", "can't make", "won't land",
+                    "can't do dinner", "reschedule"))
+
+    if conflict:
+        # Alex is unavailable -> do NOT order; reply to reschedule.
+        await ctx.click("a[data-test-id='btn-reply']")
+        await ctx.fill(
+            "textarea[data-test-id='input-compose-body']",
+            "No problem at all - let's find another day. Would Thursday "
+            "evening work for you instead?",
+        )
+        await ctx.click("button[data-test-id='btn-send']")
+        return
+
+    # Both clear -> order dinner, then confirm with Alex.
+    await ctx.goto("/food/restaurant/r_sushi",
+                   reasoning="Calendar free + Alex available - order dinner.")
+    await ctx.click("button[data-test-id='btn-add-d_salmon_roll']")
+    await ctx.goto("/food/cart")
+    await ctx.click("button[data-test-id='btn-place-food-order']")
+    await ctx.goto(f"/mail/message/{alex['id']}",
+                   reasoning="Reply to Alex to confirm tomorrow's dinner.")
+    await ctx.click("a[data-test-id='btn-reply']")
+    await ctx.fill(
+        "textarea[data-test-id='input-compose-body']",
+        "Confirmed - dinner tomorrow evening it is. See you then!",
+    )
+    await ctx.click("button[data-test-id='btn-send']")
+
+
 SOLVERS = {
     "A1/buy_wireless_mouse":     solve_a1_buy_wireless_mouse,
     "A2/filter_laptop":          solve_a2_filter_laptop,
@@ -662,4 +705,5 @@ SOLVERS = {
     "M7/dinner_and_host_gift":       solve_m7_dinner_and_host_gift,
     "M8/spending_audit_branch":      solve_m8_spending_audit_branch,
     "M9/calendar_gated_dinner":      solve_m9_calendar_gated_dinner,
+    "M10/dinner_source_conflict":    solve_m10_dinner_source_conflict,
 }
