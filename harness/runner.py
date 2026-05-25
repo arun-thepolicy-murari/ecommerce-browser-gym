@@ -117,6 +117,9 @@ class Trajectory:
     # success. Set once at episode end. This is the queryable, task-
     # agnostic failure key for the trajectory store.
     agent_failure_class: str | None = None
+    # Named UI perturbation in effect for this episode ("normal" if none), so
+    # the harvester can attribute failures to a variant.
+    ui_variant: str = "normal"
 
     def to_json(self) -> dict[str, Any]:
         return {
@@ -135,6 +138,7 @@ class Trajectory:
             "final_snapshot": self.final_snapshot,
             "verifier_result": self.verifier_result,
             "agent_failure_class": self.agent_failure_class,
+            "ui_variant": self.ui_variant,
             "video_path": self.video_path,
             "error": self.error,
         }
@@ -705,12 +709,14 @@ async def open_browser(
     return pw, browser, context, page
 
 
-async def reset_gym(server_url: str, task_id: str, seed: int) -> dict[str, Any]:
-    """Tell the backend to reset state for this task/seed."""
+async def reset_gym(server_url: str, task_id: str, seed: int,
+                    ui: str = "normal") -> dict[str, Any]:
+    """Tell the backend to reset state for this task/seed (+ optional named UI
+    perturbation, applied to every page of the episode)."""
     async with httpx.AsyncClient() as c:
         r = await c.post(
             f"{server_url}/_harness/reset",
-            json={"task_id": task_id, "seed": seed},
+            json={"task_id": task_id, "seed": seed, "ui": ui},
         )
         r.raise_for_status()
         return r.json()

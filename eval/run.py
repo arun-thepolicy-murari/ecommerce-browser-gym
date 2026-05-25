@@ -81,9 +81,10 @@ async def _run_one(*, agent_kind: str, task_id: str, seed: int,
                    server_url: str, headless: bool, record_video: bool,
                    out_traj_dir: Path, out_screens_dir: Path,
                    llm_model: str | None,
+                   ui: str = "normal",
                    use_llm_judge: bool = False) -> Trajectory:
-    # Reset the gym for this task
-    reset = await reset_gym(server_url, task_id, seed)
+    # Reset the gym for this task (+ optional named UI perturbation).
+    reset = await reset_gym(server_url, task_id, seed, ui=ui)
 
     pw, browser, ctx_browser, page = await open_browser(
         server_url=server_url, headless=headless,
@@ -112,6 +113,7 @@ async def _run_one(*, agent_kind: str, task_id: str, seed: int,
         task_brief=reset["task_brief"],
         task_difficulty=reset["task_difficulty"],
         task_category=reset["task_category"],
+        ui_variant=reset.get("ui_variant", ui),
     )
     bctx = BrowserCtx(
         page=page, server_url=server_url, trajectory=traj,
@@ -273,6 +275,10 @@ def main() -> None:
                     help="Disable Playwright video recording.")
     ap.add_argument("--model", default=None,
                     help="LLM model id (Anthropic) — overrides default.")
+    ap.add_argument("--ui", default="normal",
+                    help="Named UI perturbation(s), comma-separated, applied to "
+                         "every page (e.g. modal_interruption,low_contrast). "
+                         "Default 'normal' = clean.")
     ap.add_argument("--llm-judge", action="store_true",
                     help="On failures the rules can't classify, call an LLM "
                          "judge (Haiku) to pick a universal failure label. "
@@ -310,6 +316,7 @@ def main() -> None:
                 out_traj_dir=out_traj_dir,
                 out_screens_dir=out_screens_dir,
                 llm_model=args.model,
+                ui=args.ui,
                 use_llm_judge=args.llm_judge,
             ))
             v = traj.verifier_result

@@ -1,0 +1,60 @@
+{# Named UI perturbations, selected by SESSION.ui_variant (set at reset).
+   Each is DELIBERATE, DETERMINISTIC and FULLY FUNCTIONAL — every control still
+   works and every route resolves; the page is only harder to PERCEIVE or
+   SEQUENCE. This is the DOM-vs-pixel differentiator and a secondary
+   failure amplifier, never a defect. ui_variant may stack variants
+   comma-separated, e.g. "modal_interruption,low_contrast". #}
+{% set _ui = ui_variant|default('normal') %}
+
+{% if 'low_contrast' in _ui %}
+<style>
+  /* Readable but low-contrast text + faint buttons. Degrades pixel/visual
+     grounding; the accessibility tree (and thus SoM marks) is unchanged, so a
+     DOM/SoM agent is barely affected — a coordinate/vision agent suffers. */
+  body, .text-slate-900, .text-slate-800, .text-slate-700, .text-slate-600 {
+    color: #b9bdc6 !important;
+  }
+  button, a[class*="bg-"], [class*="bg-indigo"], [class*="bg-emerald"],
+  [class*="bg-amber"] { filter: contrast(0.5) brightness(1.18) !important; }
+  .border, [class*="border-"] { border-color: #eef0f3 !important; }
+</style>
+{% endif %}
+
+{% if 'small_targets' in _ui %}
+<style>
+  /* Critical action buttons rendered much smaller. Still clickable and still a
+     normal AX-tree button; harder for coordinate-based visual grounding. */
+  button[data-test-id^="btn-"], a[data-test-id^="btn-"],
+  button[data-test-id^="btn_"] {
+    transform: scale(0.62); transform-origin: left center;
+    font-size: 0.7rem !important; padding: 2px 6px !important;
+  }
+</style>
+{% endif %}
+
+{% if 'modal_interruption' in _ui %}
+{# A blocking promo modal that pops up on every page. It STEALS focus and
+   covers the page (pointer events blocked underneath), so the agent must
+   recognise it and click dismiss before it can act — and the mark list shifts
+   while it is up. Dismiss ALWAYS works and the page is fully usable after, so
+   this is a real interruption, never a dead-end. #}
+<div x-data="{ show: true }" x-show="show"
+     data-test-id="interrupt-modal" role="dialog" aria-modal="true"
+     aria-label="Promotional offer"
+     class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50">
+  <div class="bg-white rounded-xl shadow-2xl max-w-sm w-full mx-4 p-6 text-center">
+    <div class="text-3xl mb-2" aria-hidden="true">⚡</div>
+    <h2 class="text-lg font-bold text-slate-900 mb-1">Flash offer, just for you!</h2>
+    <p class="text-sm text-slate-600 mb-4">
+      Members save 15% for the next hour. Don't worry — you can pick up exactly
+      where you left off.
+    </p>
+    <button type="button" @click="show = false"
+            data-test-id="btn-dismiss-modal"
+            aria-label="Dismiss promotion and continue"
+            class="w-full bg-slate-800 text-white rounded-lg py-2.5 font-semibold hover:bg-slate-700">
+      No thanks — continue
+    </button>
+  </div>
+</div>
+{% endif %}

@@ -107,6 +107,11 @@ class Session:
     # the new apps (mail, +food/calendar) own their own isolated stores.
     world: "WorldState | None" = None
     initial_world: "WorldState | None" = None    # snapshot for cross-app verifiers
+    # Named UI perturbation(s) for this episode (comma-separated, e.g.
+    # "modal_interruption,decoy_clutter"). Deterministic + fully functional —
+    # every button still works; the page is just harder to perceive/sequence.
+    # Recorded in trajectory metadata so failures can be sliced by variant.
+    ui_variant: str = "normal"
 
 
 SESSION = Session()
@@ -161,7 +166,7 @@ def _state() -> GymState:
     return SESSION.current
 
 
-def _reset_inline(task_id: str, seed: int) -> None:
+def _reset_inline(task_id: str, seed: int, ui: str = "normal") -> None:
     built = make_task(task_id, seed)
     # Cross-app (category M) factories return a fully-built WorldState;
     # single-app factories return a GymState we wrap with default stores.
@@ -186,6 +191,7 @@ def _reset_inline(task_id: str, seed: int) -> None:
     SESSION.world = world
     SESSION.initial_world = copy.deepcopy(world)
     SESSION.suite = verifiers.build_suite(task_id)
+    SESSION.ui_variant = ui or "normal"
 
 
 def _world() -> WorldState:
@@ -222,6 +228,7 @@ def _ctx(request: Request, **extra: Any) -> dict[str, Any]:
         # active_app="mail" etc. via **extra, which overrides this default.
         "active_app": "shop",
         "mail_unread": mail_unread,
+        "ui_variant": SESSION.ui_variant,
         **extra,
     }
 
@@ -874,6 +881,7 @@ async def api_cancel_subscription(subscription_id: str):
 class HarnessResetRequest(BaseModel):
     task_id: str
     seed: int = 0
+    ui: str = "normal"
 
 
 class HarnessVerifyRequest(BaseModel):
@@ -890,12 +898,13 @@ def harness_tasks() -> dict[str, list[str]]:
 def harness_reset(req: HarnessResetRequest) -> dict[str, Any]:
     if req.task_id not in TASKS:
         raise HTTPException(404, "unknown task")
-    _reset_inline(req.task_id, req.seed)
+    _reset_inline(req.task_id, req.seed, ui=req.ui)
     s = _state()
     return {"ok": True, "task_id": s.task_id, "seed": s.seed,
             "task_brief": s.task_brief,
             "task_category": s.task_category,
             "task_difficulty": s.task_difficulty,
+            "ui_variant": SESSION.ui_variant,
             "current_user_id": s.current_user_id}
 
 

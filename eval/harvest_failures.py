@@ -312,7 +312,7 @@ async def _run_k(task_id: str, k: int, *, agent: str, model: str | None,
             agent_kind=agent, task_id=task_id, seed=seed,
             server_url=server_url, headless=True, record_video=False,
             out_traj_dir=traj_dir, out_screens_dir=Path("screenshots/harvest"),
-            llm_model=model,
+            llm_model=model, ui=ui_variant,
         )
         out.append(traj.to_json())
     return out
