@@ -556,6 +556,46 @@ class BrowserCtx:
             reasoning=reasoning, error=err, latency_ms=latency_ms,
         )
 
+    async def click_xy(self, x: int, y: int,
+                       reasoning: str = "") -> "StepRecord":
+        """Click at a RAW viewport pixel coordinate. No Set-of-Mark: the agent
+        judged this (x, y) from the screenshot itself, so this is where the
+        visual-grounding difficulty lives — an off-by-a-bit estimate clicks the
+        wrong element (or empty space)."""
+        t0 = time.monotonic()
+        err: str | None = None
+        try:
+            await self._animate_cursor_at_coord((x, y), "CLICK",
+                                                detail=f"({x},{y})")
+            await self.page.mouse.move(x, y)
+            await self.page.mouse.click(x, y)
+            await self.page.wait_for_load_state("load")
+        except Exception as e:
+            err = f"{type(e).__name__}: {e}"
+        latency_ms = int((time.monotonic() - t0) * 1000)
+        return await self._record(
+            "click_xy", {"x": int(x), "y": int(y)}, reasoning=reasoning,
+            error=err, latency_ms=latency_ms,
+        )
+
+    async def type_xy(self, x: int, y: int, text: str,
+                      reasoning: str = "") -> "StepRecord":
+        """Click at a raw (x, y) to focus, then type. Clearing existing content
+        is NOT automatic — send key('Control+a') first if needed."""
+        t0 = time.monotonic()
+        err: str | None = None
+        try:
+            await self._animate_cursor_at_coord((x, y), "FILL", detail=text)
+            await self.page.mouse.click(x, y)
+            await self.page.keyboard.type(text)
+        except Exception as e:
+            err = f"{type(e).__name__}: {e}"
+        latency_ms = int((time.monotonic() - t0) * 1000)
+        return await self._record(
+            "type_xy", {"x": int(x), "y": int(y), "value": text},
+            reasoning=reasoning, error=err, latency_ms=latency_ms,
+        )
+
     async def _animate_cursor_at_coord(self, coord: tuple[int, int],
                                        kind: str, detail: str = "") -> None:
         """Same as _animate_cursor but for direct pixel coords (no selector).

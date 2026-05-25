@@ -100,6 +100,8 @@ async def _run_one(*, agent_kind: str, task_id: str, seed: int,
         agent_name = "oracle"
     elif agent_kind == "pixel":
         agent_name = f"pixel[{llm_model or 'default'}]"
+    elif agent_kind == "pixel_coord":
+        agent_name = f"pixel_coord[{llm_model or 'default'}]"
     elif agent_kind == "openai":
         agent_name = f"openai[{llm_model or 'gpt-4o-mini'}]"
     elif agent_kind == "openai_pixel":
@@ -158,6 +160,12 @@ async def _run_one(*, agent_kind: str, task_id: str, seed: int,
             # No DOM/JSON to the agent. See agents/pixel_agent.py.
             from agents.pixel_agent import PixelBrowserAgent
             agent = PixelBrowserAgent(model=llm_model)
+            await agent.run(bctx, task_brief=reset["task_brief"])
+        elif agent_kind == "pixel_coord":
+            # Raw pixel-COORDINATE agent — plain screenshot, no Set-of-Mark.
+            # Acts via click_at(x, y); the agent must judge the location.
+            from agents.pixel_coord_agent import PixelCoordAgent
+            agent = PixelCoordAgent(model=llm_model)
             await agent.run(bctx, task_brief=reset["task_brief"])
         elif agent_kind == "openai":
             # GPT-backed DOM agent (function-calling). Default gpt-4o-mini —
@@ -260,11 +268,14 @@ def main() -> None:
         pass
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument(
-        "--agent", choices=["oracle", "llm", "pixel", "openai", "openai_pixel"],
+        "--agent",
+        choices=["oracle", "llm", "pixel", "pixel_coord", "openai",
+                 "openai_pixel"],
         required=True,
         help="oracle = hand-coded reference; llm = Anthropic DOM/JSON agent; "
              "openai = GPT DOM/JSON agent (default gpt-4o-mini); "
              "pixel = Anthropic SoM screenshots; "
+             "pixel_coord = Anthropic RAW-coordinate screenshots (no SoM); "
              "openai_pixel = GPT SoM screenshots + multi-tab (gpt-4o-mini)",
     )
     ap.add_argument("--tasks", default="all")
