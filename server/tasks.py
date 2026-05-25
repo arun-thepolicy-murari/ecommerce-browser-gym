@@ -280,6 +280,16 @@ BRIEFS = {
         "anything; just reply to Alex to sort out another day that works for "
         "us both."
     ),
+
+    "M11": (
+        "I need to clean up my pending orders. Go through my order-confirmation "
+        "emails and cancel the ones that are BOTH over $100 AND haven't shipped "
+        "yet — for each of those, open the order's email and reply asking to "
+        "cancel it. Leave everything else exactly as it is: don't touch any "
+        "order that has already shipped, and don't touch any order that's $100 "
+        "or under. Make sure you get every one that qualifies and nothing that "
+        "doesn't."
+    ),
 }
 
 
@@ -802,6 +812,60 @@ def task_m10_dinner_source_conflict(seed: int) -> "WorldState":
     return world
 
 
+# M11 — long-horizon reconciliation over MANY confusable order emails. The
+# agent must apply a TWO-condition filter (total > $100 AND not shipped) across
+# 8 lookalike confirmations and reply-cancel EXACTLY the qualifying ones. Three
+# trap types defeat a shortcut: shipped-but-expensive, cheap, and just-under
+# $100. Qualifying set = {ORD-4471, ORD-4474, ORD-4476}; everything else is a
+# skip. This targets compounding tracking errors: miss one, double-cancel, or
+# cancel a trap. Fixed + deterministic (env-correctness); the difficulty is the
+# 8-item filter + repeated cross-email actions, not seed noise.
+_M11_ORDERS = [
+    # (order_id, total, shipped, item)            -> qualifies?
+    ("ORD-4471", 129.99, False, "Mechanical Keyboard"),          # YES
+    ("ORD-4472",  45.00, False, "USB-C Cable (2-pack)"),         # no: cheap
+    ("ORD-4473", 210.00, True,  "27\" Studio Monitor"),          # no: shipped (trap)
+    ("ORD-4474", 156.50, False, "Anti-Fatigue Mat + Desk Lamp"), # YES
+    ("ORD-4475",  89.99, False, "Bluetooth Speaker"),            # no: cheap
+    ("ORD-4476", 340.00, False, "Standing Desk Converter"),      # YES
+    ("ORD-4477",  99.99, False, "1080p Webcam"),                 # no: just under (trap)
+    ("ORD-4478", 175.00, True,  "Noise-Cancelling Headphones"),  # no: shipped (trap)
+]
+
+
+def _m11_qualifies(total: float, shipped: bool) -> bool:
+    """The M11 filter: over $100 AND not yet shipped."""
+    return (total is not None) and total > 100.0 and not shipped
+
+
+def task_m11_cancel_unshipped_over_100(seed: int) -> "WorldState":
+    """LONG-HORIZON RECONCILIATION. Eight near-identical order-confirmation
+    emails; cancel (reply) EXACTLY those over $100 AND not shipped. Traps:
+    shipped-but-expensive, cheap, just-under-$100. Failure modes we hunt:
+    missed a qualifying cancel (lost track over 8 items) or cancelled a
+    non-qualifying one (skipped a condition)."""
+    from server.apps.mail.state import Email, SEED_DATE
+    world = _cross_app_world(seed, "M11/cancel_unshipped_over_100", "hard")
+    m = world.mail
+    for i, (oid, total, shipped, item) in enumerate(_M11_ORDERS):
+        eid = m.new_id()
+        status = "Shipped" if shipped else "Processing"
+        hh = 8 + i  # distinct timestamps so the inbox order is stable
+        m.inbox[eid] = Email(
+            id=eid, sender="orders@shopgym.com", to=m.account_email,
+            subject=f"Your ShopGym order {oid} is confirmed",
+            body=(f"Thanks for your order!\n\n"
+                  f"Order {oid}\n"
+                  f"Item: {item}\n"
+                  f"Order total: ${total:.2f}\n"
+                  f"Status: {status}\n\n"
+                  f"Questions? Just reply to this email."),
+            received_at=f"{SEED_DATE}T{hh:02d}:00:00",
+            received_label=f"{(hh-12) if hh>12 else hh}:00 {'PM' if hh>=12 else 'AM'}",
+            read=False, labels=["orders"], order_id=oid, amount_total=total)
+    return world
+
+
 def task_m5_cheaper_mouse_from_deals(seed: int) -> "WorldState":
     """Comparison + salience trap. Two 'deal' emails name two DIFFERENT mice
     at two prices: the flashy 'FLASH SALE' email pushes the PRICIER gaming
@@ -848,6 +912,7 @@ REQUIRED_FACTS = {
     "M8/spending_audit_branch":      ["mail.shop_orders_total", "mail.most_expensive_order_id"],
     "M9/calendar_gated_dinner":      ["calendar.evening_free", "food.eta", "calendar.user_event_created"],
     "M10/dinner_source_conflict":    ["calendar.evening_free", "mail.alex_available"],
+    "M11/cancel_unshipped_over_100": ["mail.qualifying_orders"],
 }
 
 
@@ -879,6 +944,7 @@ TASKS = {
     "M8/spending_audit_branch":      task_m8_spending_audit_branch,
     "M9/calendar_gated_dinner":      task_m9_calendar_gated_dinner,
     "M10/dinner_source_conflict":    task_m10_dinner_source_conflict,
+    "M11/cancel_unshipped_over_100": task_m11_cancel_unshipped_over_100,
 }
 
 

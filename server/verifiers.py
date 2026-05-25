@@ -1468,6 +1468,68 @@ def _suite_m10() -> TaskSuite:
     )
 
 
+def _suite_m11() -> TaskSuite:
+    """LONG-HORIZON RECONCILIATION over 8 confusable order emails. The agent
+    must reply-cancel EXACTLY the orders that are over $100 AND not shipped.
+    Ground truth (Q) is read from the SEEDED inbox; the agent's cancellations
+    (C) are read from sent emails (subject/body names the order id + 'cancel').
+    Success iff C == Q. Two precision milestones isolate the two failure
+    directions: missed a qualifying cancel (lost track over many items) vs.
+    cancelled a trap (shipped-but-expensive / cheap / just-under-$100)."""
+
+    def _all_orders(p: Probe) -> dict[str, tuple[float, bool]]:
+        iw = p.initial_world
+        mail = getattr(iw, "mail", None) if iw else None
+        out: dict[str, tuple[float, bool]] = {}
+        if mail is None:
+            return out
+        for e in mail.inbox.values():
+            oid = e.order_id or ""
+            if not oid.startswith("ORD-"):
+                continue
+            shipped = "status: shipped" in (e.body or "").lower()
+            out[oid] = (e.amount_total or 0.0, shipped)
+        return out
+
+    def _qualifying(p: Probe) -> set[str]:
+        return {oid for oid, (tot, shipped) in _all_orders(p).items()
+                if tot > 100.0 and not shipped}
+
+    def _cancelled(p: Probe) -> set[str]:
+        if p.world is None or getattr(p.world, "mail", None) is None:
+            return set()
+        out: set[str] = set()
+        for oid in _all_orders(p):
+            for se in p.world.mail.sent.values():
+                hay = ((se.subject or "") + " " + (se.body or ""))
+                if oid in hay and "cancel" in (se.body or "").lower():
+                    out.add(oid)
+                    break
+        return out
+
+    def _cancelled_all_qualifying(p: Probe) -> bool:
+        # Every order that SHOULD be cancelled was (no misses). Requires at
+        # least one qualifying order to exist (it always does here).
+        q = _qualifying(p)
+        return bool(q) and q.issubset(_cancelled(p))
+
+    def _cancelled_only_qualifying(p: Probe) -> bool:
+        # NOTHING that shouldn't be cancelled was (no traps hit, no extras).
+        return _cancelled(p).issubset(_qualifying(p))
+
+    return TaskSuite(
+        task_id="M11/cancel_unshipped_over_100",
+        milestones=[
+            Milestone("cancelled_all_qualifying", weight=0.5,
+                      check=_cancelled_all_qualifying,
+                      required_for_success=True),
+            Milestone("cancelled_only_qualifying", weight=0.5,
+                      check=_cancelled_only_qualifying,
+                      required_for_success=True),
+        ],
+    )
+
+
 # --------------------------------------------------------------------------- #
 # Registry
 # --------------------------------------------------------------------------- #
@@ -1496,6 +1558,7 @@ SUITE_FACTORIES = {
     "M8/spending_audit_branch":      _suite_m8,
     "M9/calendar_gated_dinner":      _suite_m9,
     "M10/dinner_source_conflict":    _suite_m10,
+    "M11/cancel_unshipped_over_100": _suite_m11,
 }
 
 

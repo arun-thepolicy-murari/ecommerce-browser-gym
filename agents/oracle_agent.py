@@ -682,6 +682,35 @@ async def solve_m10_dinner_source_conflict(ctx: BrowserCtx) -> None:
     await ctx.click("button[data-test-id='btn-send']")
 
 
+async def solve_m11_cancel_unshipped_over_100(ctx: BrowserCtx) -> None:
+    """Reconcile 8 order emails: reply-cancel exactly those over $100 AND not
+    shipped. Reads each order's total + status from the world, filters, and
+    replies to every qualifying one (and only those)."""
+    world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
+    inbox = (world.get("mail") or {}).get("inbox") or {}
+    # Build the qualifying list from the seeded emails.
+    qualifying = []
+    for e in inbox.values():
+        oid = e.get("order_id") or ""
+        if not oid.startswith("ORD-"):
+            continue
+        total = e.get("amount_total") or 0.0
+        shipped = "status: shipped" in (e.get("body") or "").lower()
+        if total > 100.0 and not shipped:
+            qualifying.append((e["id"], oid))
+    # Reply-cancel each qualifying order (and nothing else).
+    for eid, oid in qualifying:
+        await ctx.goto(f"/mail/message/{eid}",
+                       reasoning=f"Open order {oid} (over $100, not shipped).")
+        await ctx.click("a[data-test-id='btn-reply']")
+        await ctx.fill(
+            "textarea[data-test-id='input-compose-body']",
+            f"Please cancel order {oid}. It hasn't shipped yet and I'd like "
+            f"to cancel it. Thank you.",
+        )
+        await ctx.click("button[data-test-id='btn-send']")
+
+
 SOLVERS = {
     "A1/buy_wireless_mouse":     solve_a1_buy_wireless_mouse,
     "A2/filter_laptop":          solve_a2_filter_laptop,
@@ -706,4 +735,5 @@ SOLVERS = {
     "M8/spending_audit_branch":      solve_m8_spending_audit_branch,
     "M9/calendar_gated_dinner":      solve_m9_calendar_gated_dinner,
     "M10/dinner_source_conflict":    solve_m10_dinner_source_conflict,
+    "M11/cancel_unshipped_over_100": solve_m11_cancel_unshipped_over_100,
 }

@@ -207,6 +207,16 @@ def _chain_label(task_id: str, missed: list[str], fact_gap: list[str],
         if email:
             return "ordered_but_no_confirmation_reply"
         return "m10_noconflict_unexpected_partial"
+    if task_id == "M11/cancel_unshipped_over_100":
+        missed_some = "cancelled_all_qualifying" in m      # didn't cancel all it should
+        hit_extra = "cancelled_only_qualifying" in m       # cancelled something it shouldn't
+        if missed_some and hit_extra:
+            return "missed_a_qualifying_and_cancelled_a_trap"
+        if missed_some:
+            return "missed_a_qualifying_cancellation"       # lost track over 8 items
+        if hit_extra:
+            return "cancelled_a_shipped_or_cheap_order"      # skipped a filter condition
+        return "m11_unexpected_partial"
     return "missed:" + "+".join(missed) if missed else "no_required_missed"
 
 

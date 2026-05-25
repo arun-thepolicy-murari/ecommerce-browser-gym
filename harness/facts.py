@@ -192,6 +192,32 @@ def _facts_m10(world: dict, url: str) -> dict[str, Any]:
     return facts
 
 
+def _facts_m11(world: dict, url: str) -> dict[str, Any]:
+    """M11 reconciliation: the QUALIFYING set (orders >$100 & not shipped, the
+    env truth the agent must match) and what it has CANCELLED so far (from sent
+    emails). The gap between them is the failure — a missed qualifying cancel
+    or a cancelled trap."""
+    facts: dict[str, Any] = {}
+    mail = world.get("mail") or {}
+    inbox = mail.get("inbox") or {}
+    sent = mail.get("sent") or {}
+    all_orders: dict[str, tuple] = {}
+    for e in inbox.values():
+        oid = e.get("order_id") or ""
+        if oid.startswith("ORD-"):
+            total = e.get("amount_total") or 0.0
+            shipped = "status: shipped" in (e.get("body") or "").lower()
+            all_orders[oid] = (total, shipped)
+    facts["mail.qualifying_orders"] = sorted(
+        oid for oid, (t, s) in all_orders.items() if t > 100.0 and not s)
+    facts["mail.cancelled_orders"] = sorted(
+        oid for oid in all_orders
+        if any(oid in ((se.get("subject") or "") + (se.get("body") or ""))
+               and "cancel" in (se.get("body") or "").lower()
+               for se in sent.values()))
+    return facts
+
+
 FACT_EXTRACTORS: dict[str, Callable[[dict, str], dict]] = {
     "M2/order_then_track_via_email": _facts_m2,
     "M3/dinner_then_receipt":        _facts_m3,
@@ -202,6 +228,7 @@ FACT_EXTRACTORS: dict[str, Callable[[dict, str], dict]] = {
     "M8/spending_audit_branch":      _facts_m8,
     "M9/calendar_gated_dinner":      _facts_m9,
     "M10/dinner_source_conflict":    _facts_m10,
+    "M11/cancel_unshipped_over_100": _facts_m11,
 }
 
 
