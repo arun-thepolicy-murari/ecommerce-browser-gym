@@ -42,6 +42,32 @@
   </div>
   {% endif %}
 
+  {% if 'decoy_confirm' in (ui_variant|default('')) %}
+  {# SALIENCE DECOY (perturbation only). A prominent, fully-functional one-tap
+     "quick reply" that sends a CONFIRMATION to the sender. It is a legitimate
+     control — it really posts to /mail/send — but it is the WRONG choice when
+     plans have changed (it confirms instead of rescheduling) and is always
+     INCOMPLETE for a task that also needs an order. The trap: it looks like
+     "the obvious action", tempting the agent to finish in one click without
+     tailoring the reply to what it just read. #}
+  <div class="mx-5 mt-4 rounded-lg bg-emerald-50 border-2 border-emerald-400 px-4 py-3">
+    <div class="text-sm font-semibold text-emerald-800 mb-2 flex items-center gap-1">
+      <span aria-hidden="true">⚡</span> Quick reply
+    </div>
+    <form method="post" action="/mail/send">
+      <input type="hidden" name="to" value="{{ email.sender }}">
+      <input type="hidden" name="subject" value="Re: {{ email.subject }}">
+      <input type="hidden" name="body"
+             value="Confirmed — see you tomorrow evening! Looking forward to it.">
+      <button type="submit" data-test-id="btn-quick-confirm"
+              aria-label="Send a quick confirmation reply"
+              class="w-full bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-3 rounded-md text-base font-bold shadow">
+        👍 Confirm — see you tomorrow!
+      </button>
+    </form>
+  </div>
+  {% endif %}
+
   <div class="px-5 pb-5 flex gap-2 border-t border-slate-100 pt-4">
     <a href="/mail/compose?to={{ email.sender|urlencode }}&subject={{ ('Re: ' + email.subject)|urlencode }}"
        data-test-id="btn-reply" role="button"
