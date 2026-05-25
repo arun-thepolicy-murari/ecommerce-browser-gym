@@ -391,6 +391,11 @@ class PixelBrowserAgent:
     async def run(self, ctx: BrowserCtx, task_brief: str) -> None:
         messages: list[dict[str, Any]] = []
         last_action_result: str = ""
+        # The tool_result for the PREVIOUS action, carried forward and merged
+        # into the NEXT turn's user message so the assistant tool_use is
+        # immediately followed by a single user message that STARTS with its
+        # tool_result (required by extended-thinking + tool-use validation).
+        pending_tool_result: dict[str, Any] | None = None
 
         for turn in range(self.max_steps):
             # ─── OBSERVE: capture screenshot, extract marks, annotate ───
@@ -415,20 +420,22 @@ class PixelBrowserAgent:
                 f"Last action result: {last_action_result or '(this is your first turn)'}"
             )
 
-            messages.append({
-                "role": "user",
-                "content": [
-                    {
-                        "type": "image",
-                        "source": {
-                            "type": "base64",
-                            "media_type": "image/png",
-                            "data": b64,
-                        },
-                    },
-                    {"type": "text", "text": user_text},
-                ],
+            content_blocks: list[dict[str, Any]] = []
+            # The previous action's tool_result MUST be the first block of the
+            # user turn that follows the assistant's tool_use.
+            if pending_tool_result is not None:
+                content_blocks.append(pending_tool_result)
+                pending_tool_result = None
+            content_blocks.append({
+                "type": "image",
+                "source": {
+                    "type": "base64",
+                    "media_type": "image/png",
+                    "data": b64,
+                },
             })
+            content_blocks.append({"type": "text", "text": user_text})
+            messages.append({"role": "user", "content": content_blocks})
 
             # ─── THINK + ACT: call Claude with extended thinking ───
             try:
@@ -446,6 +453,15 @@ class PixelBrowserAgent:
             except Exception as e:
                 if self.verbose:
                     print(f"[pixel_agent] API error: {type(e).__name__}: {e}")
+                    # Dump the message structure so we can see the exact
+                    # tool_use/tool_result pairing that the API rejected.
+                    for i, mm in enumerate(messages):
+                        types = [b.get("type") for b in mm["content"]] \
+                            if isinstance(mm["content"], list) else ["<str>"]
+                        ids = [b.get("id") or b.get("tool_use_id") or ""
+                               for b in mm["content"]] \
+                            if isinstance(mm["content"], list) else [""]
+                        print(f"   msg[{i}] {mm['role']}: {list(zip(types, ids))}")
                 break
 
             # ─── PARSE the response ───
@@ -473,16 +489,19 @@ class PixelBrowserAgent:
                 + visible_text
             )
 
-            # Persist the full assistant turn for conversation continuity.
-            # We preserve ALL blocks (including thinking) — Anthropic
-            # requires thinking blocks to be passed back to maintain
-            # tool_use context.
-            messages.append({
-                "role": "assistant",
-                "content": [
-                    self._serialize_block(b) for b in resp.content
-                ],
-            })
+            # Persist the assistant turn for conversation continuity, keeping
+            # thinking blocks (Anthropic requires them passed back to maintain
+            # tool_use context) but TRUNCATING at the first tool_use. With
+            # extended thinking Claude sometimes emits MULTIPLE parallel
+            # tool_use blocks in one turn; we only dispatch + answer the first,
+            # so any extra tool_use would be left without a matching
+            # tool_result and the next request 400s. One action per turn.
+            assistant_content: list[dict[str, Any]] = []
+            for b in resp.content:
+                assistant_content.append(self._serialize_block(b))
+                if getattr(b, "type", None) == "tool_use":
+                    break
+            messages.append({"role": "assistant", "content": assistant_content})
 
             if tool_call is None:
                 if self.verbose:
@@ -566,17 +585,18 @@ class PixelBrowserAgent:
                 if self.verbose:
                     print(f"[pixel_agent] dispatch error: {last_action_result}")
 
-            # Append the tool_result so Claude can ground its next thinking
-            messages.append({
-                "role": "user",
-                "content": [
-                    {
-                        "type": "tool_result",
-                        "tool_use_id": tool_use_id,
-                        "content": last_action_result,
-                    },
-                ],
-            })
+            # Stash the tool_result; it is merged into the NEXT turn's user
+            # message (as its first block) instead of being a SEPARATE user
+            # message. Two consecutive user messages (tool_result, then the
+            # observation) intermittently tripped a 400 "tool_use ids were
+            # found without tool_result blocks immediately after" under
+            # extended thinking — a harness bug that mislabeled clean episodes
+            # as agent failures.
+            pending_tool_result = {
+                "type": "tool_result",
+                "tool_use_id": tool_use_id,
+                "content": last_action_result,
+            }
 
     @staticmethod
     def _serialize_block(block: Any) -> dict[str, Any]:
