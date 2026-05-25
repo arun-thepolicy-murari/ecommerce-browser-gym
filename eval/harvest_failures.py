@@ -217,6 +217,16 @@ def _chain_label(task_id: str, missed: list[str], fact_gap: list[str],
         if hit_extra:
             return "cancelled_a_shipped_or_cheap_order"      # skipped a filter condition
         return "m11_unexpected_partial"
+    if task_id == "M12/bulk_add_dense_grid":
+        missed_some = "added_all_qualifying" in m       # skipped a qualifying item
+        added_wrong = "added_only_qualifying" in m      # added a non-qualifying item
+        if missed_some and added_wrong:
+            return "missed_a_qualifying_and_added_a_wrong_item"
+        if missed_some:
+            return "missed_a_qualifying_add_in_the_crowd"
+        if added_wrong:
+            return "added_a_non_qualifying_item_misclick"
+        return "m12_unexpected_partial"
     return "missed:" + "+".join(missed) if missed else "no_required_missed"
 
 

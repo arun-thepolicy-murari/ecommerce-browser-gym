@@ -711,6 +711,22 @@ async def solve_m11_cancel_unshipped_over_100(ctx: BrowserCtx) -> None:
         await ctx.click("button[data-test-id='btn-send']")
 
 
+async def solve_m12_bulk_add_dense(ctx: BrowserCtx) -> None:
+    """On the dense Quick Order grid, add exactly the mice + keyboards via
+    their quick-add buttons. Targets by data-test-id, so it's precise where a
+    visual agent must disambiguate crowded generic 'Add' buttons. The 8 ids
+    are the electronics whose NAME contains mouse/keyboard (matches the
+    verifier's qualifying set); the Magic Trackpad is intentionally excluded."""
+    await ctx.goto("/bulk", reasoning="Open the Quick Order grid.")
+    qualifying = [
+        "p_mouse_wireless", "p_mouse_gaming", "p_mouse_ergonomic", "p_mouse_mini",
+        "p_kb_mech", "p_kb_wireless", "p_kb_mini", "p_kb_membrane",
+    ]
+    for pid in qualifying:
+        await ctx.click(f"button[data-test-id='btn-quickadd-{pid}']",
+                        reasoning=f"Add {pid} (a mouse or keyboard).")
+
+
 SOLVERS = {
     "A1/buy_wireless_mouse":     solve_a1_buy_wireless_mouse,
     "A2/filter_laptop":          solve_a2_filter_laptop,
@@ -736,4 +752,5 @@ SOLVERS = {
     "M9/calendar_gated_dinner":      solve_m9_calendar_gated_dinner,
     "M10/dinner_source_conflict":    solve_m10_dinner_source_conflict,
     "M11/cancel_unshipped_over_100": solve_m11_cancel_unshipped_over_100,
+    "M12/bulk_add_dense_grid":       solve_m12_bulk_add_dense,
 }

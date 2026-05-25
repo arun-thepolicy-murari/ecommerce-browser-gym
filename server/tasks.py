@@ -290,6 +290,14 @@ BRIEFS = {
         "or under. Make sure you get every one that qualifies and nothing that "
         "doesn't."
     ),
+
+    "M12": (
+        "You're on the Quick Order grid. Add EVERY mouse and EVERY keyboard "
+        "shown here to the cart by tapping its Add button — and nothing else. "
+        "Don't add laptops, monitors, chargers, smartwatches, trackpads, or "
+        "anything that isn't a mouse or a keyboard. Get every qualifying item, "
+        "and don't add a single one that doesn't qualify."
+    ),
 }
 
 
@@ -866,6 +874,26 @@ def task_m11_cancel_unshipped_over_100(seed: int) -> "WorldState":
     return world
 
 
+def task_m12_bulk_add_dense(seed: int) -> "GymState":
+    """BUTTON-DENSITY / SMALL-TARGET stress (tim's hypothesis). Shop-only: the
+    agent lands on the dense Quick Order grid (18 small tiles, generic "Add"
+    buttons) and must add EXACTLY the mice + keyboards (8 of 18), skipping
+    laptops/monitors/charger/smartwatch and the Magic Trackpad decoy. With the
+    Add controls generically labelled, a Set-of-Mark agent can't disambiguate
+    them from the manifest and must map Add->product visually -- which is where
+    small, crowded targets are predicted to cause mis-adds."""
+    return _base_state(seed, "M12/bulk_add_dense_grid", "hard", "M",
+                       with_login=True)
+
+
+# Per-task START PATH: where the harness drops the agent at episode start
+# (default "/"). M12 starts on the dense grid so the small-target stress is the
+# variable under test, not navigation.
+START_PATHS = {
+    "M12/bulk_add_dense_grid": "/bulk",
+}
+
+
 def task_m5_cheaper_mouse_from_deals(seed: int) -> "WorldState":
     """Comparison + salience trap. Two 'deal' emails name two DIFFERENT mice
     at two prices: the flashy 'FLASH SALE' email pushes the PRICIER gaming
@@ -945,6 +973,7 @@ TASKS = {
     "M9/calendar_gated_dinner":      task_m9_calendar_gated_dinner,
     "M10/dinner_source_conflict":    task_m10_dinner_source_conflict,
     "M11/cancel_unshipped_over_100": task_m11_cancel_unshipped_over_100,
+    "M12/bulk_add_dense_grid":       task_m12_bulk_add_dense,
 }
 
 

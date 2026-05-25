@@ -1,0 +1,42 @@
+{% extends "_layout.html" %}
+{% block title %}Quick Order{% endblock %}
+{% block content %}
+
+<nav class="breadcrumbs mb-3" data-test-id="breadcrumbs">
+  <a href="/" data-test-id="breadcrumb-home">Home</a>
+  <span class="separator">›</span>
+  <span class="font-medium text-slate-900">Quick Order</span>
+</nav>
+
+<h1 class="text-xl font-bold mb-1" data-test-id="bulk-title">Quick Order</h1>
+<p class="text-sm text-slate-500 mb-3">Tap <span class="font-semibold">Add</span> on any item to drop it straight in your cart.</p>
+
+{# A DENSE grid of small tiles. Each Add button is generically labelled "Add"
+   (no product name on the control), so a Set-of-Mark agent cannot tell the
+   buttons apart from the accessibility manifest alone — it must map each Add
+   to its product by VISUAL position. Under small_targets the tiles shrink and
+   the numbered marks crowd, which is exactly the perception stress we test. #}
+<div data-test-id="bulk-grid" class="grid grid-cols-4 sm:grid-cols-5 gap-1.5">
+  {% for p in products %}
+  <div data-test-id="bulk-tile-{{ p.id }}"
+       class="border border-slate-200 rounded p-1.5 flex flex-col items-center text-center">
+    <div class="text-2xl leading-none" aria-hidden="true">{{ p.image_emoji }}</div>
+    <div class="text-[11px] leading-tight font-medium text-slate-800 mt-1 h-8 overflow-hidden">{{ p.name }}</div>
+    <div class="text-[11px] text-slate-500 mb-1">${{ '%.2f'|format(p.base_price) }}</div>
+    <form method="post" action="/api/cart/add" class="w-full mt-auto">
+      <input type="hidden" name="product_id" value="{{ p.id }}">
+      <input type="hidden" name="redirect" value="/bulk">
+      <button type="submit" data-test-id="btn-quickadd-{{ p.id }}" aria-label="Add"
+              class="w-full bg-indigo-600 hover:bg-indigo-500 text-white rounded text-[11px] py-0.5 font-semibold">
+        Add
+      </button>
+    </form>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="mt-4 text-sm">
+  <a href="/cart" data-test-id="link-view-cart" class="text-indigo-600 hover:underline">View cart ({{ cart_count }})</a>
+</div>
+
+{% endblock %}

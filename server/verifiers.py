@@ -1530,6 +1530,41 @@ def _suite_m11() -> TaskSuite:
     )
 
 
+def _suite_m12() -> TaskSuite:
+    """BUTTON-DENSITY / SMALL-TARGET stress. The dense Quick Order grid has a
+    generic 'Add' button per item; the agent must add EXACTLY the mice +
+    keyboards and nothing else. Cart must equal the qualifying set. Two
+    precision milestones split the failure directions: missed a qualifying add
+    (skipped one in the crowd) vs. added a non-qualifying item (mis-mapped a
+    crowded Add button to the wrong product -- the predicted small-target
+    mis-click)."""
+
+    def _qualifying(p: Probe) -> set[str]:
+        return {pid for pid, pr in p.state.products.items()
+                if "mouse" in pr.name.lower() or "keyboard" in pr.name.lower()}
+
+    def _cart(p: Probe) -> set[str]:
+        return {it.product_id for it in p.state.cart.items}
+
+    def _added_all_qualifying(p: Probe) -> bool:
+        q = _qualifying(p)
+        return bool(q) and q.issubset(_cart(p))
+
+    def _added_only_qualifying(p: Probe) -> bool:
+        c = _cart(p)
+        return bool(c) and c.issubset(_qualifying(p))
+
+    return TaskSuite(
+        task_id="M12/bulk_add_dense_grid",
+        milestones=[
+            Milestone("added_all_qualifying", weight=0.5,
+                      check=_added_all_qualifying, required_for_success=True),
+            Milestone("added_only_qualifying", weight=0.5,
+                      check=_added_only_qualifying, required_for_success=True),
+        ],
+    )
+
+
 # --------------------------------------------------------------------------- #
 # Registry
 # --------------------------------------------------------------------------- #
@@ -1559,6 +1594,7 @@ SUITE_FACTORIES = {
     "M9/calendar_gated_dinner":      _suite_m9,
     "M10/dinner_source_conflict":    _suite_m10,
     "M11/cancel_unshipped_over_100": _suite_m11,
+    "M12/bulk_add_dense_grid":       _suite_m12,
 }
 
 

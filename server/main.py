@@ -65,7 +65,7 @@ from pydantic import BaseModel, Field
 
 from server import mutations, verifiers
 from server.state import GymState, flash, log_action
-from server.tasks import TASKS, make_task
+from server.tasks import TASKS, make_task, START_PATHS
 from server.apps.world import WorldState
 from server.apps.mail.state import make_mailstate
 from server.apps.mail import routes as mail_routes
@@ -245,6 +245,19 @@ async def home(request: Request):
         s.products.values(), key=lambda p: -p.rating,
     )[:12]
     return templates.TemplateResponse(request, "home.html", _ctx(request, featured=featured))
+
+
+@app.get("/bulk", response_class=HTMLResponse)
+async def bulk_order(request: Request):
+    """Dense 'Quick Order' grid — every electronics item as a small tile with a
+    generically-labelled Add button. The button-density + small targets are a
+    deliberate perception stress (used by M12 + the small_targets variant)."""
+    s = _state()
+    prods = sorted(
+        (p for p in s.products.values() if p.category == "electronics"),
+        key=lambda p: p.name,
+    )
+    return templates.TemplateResponse(request, "bulk.html", _ctx(request, products=prods))
 
 
 # --- Sort helpers for search/category pages --------------------------------
@@ -905,6 +918,7 @@ def harness_reset(req: HarnessResetRequest) -> dict[str, Any]:
             "task_category": s.task_category,
             "task_difficulty": s.task_difficulty,
             "ui_variant": SESSION.ui_variant,
+            "start_path": START_PATHS.get(s.task_id, "/"),
             "current_user_id": s.current_user_id}
 
 

@@ -135,10 +135,11 @@ async def _run_one(*, agent_kind: str, task_id: str, seed: int,
     # and keyboard presses. The DOM agent has navigate() and would
     # emit navigate("/") as its first action anyway — pre-loading
     # just saves it that step.
+    start_path = reset.get("start_path", "/")
     try:
-        await page.goto(f"{server_url}/", wait_until="load")
+        await page.goto(f"{server_url}{start_path}", wait_until="load")
     except Exception as e:
-        print(f"[runner] WARNING: failed to pre-load {server_url}/: {e}")
+        print(f"[runner] WARNING: failed to pre-load {server_url}{start_path}: {e}")
 
     # Initial snapshot — captured AFTER pre-navigation so initial_url
     # reflects the actual starting page (typically /), not about:blank.
