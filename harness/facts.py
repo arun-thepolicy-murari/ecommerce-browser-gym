@@ -218,6 +218,35 @@ def _facts_m11(world: dict, url: str) -> dict[str, Any]:
     return facts
 
 
+def _facts_m13(world: dict, url: str) -> dict[str, Any]:
+    """M13 conjunctive boundary-trap: qualifying = CHARGED (amount_total) > $50
+    AND not shipped AND not gift; plus what's been cancelled. The gap reveals
+    the failure (cancelled a charged<=$50 'subtotal trap' / the gift / a
+    shipped order, or missed a required cancel)."""
+    facts: dict[str, Any] = {}
+    mail = world.get("mail") or {}
+    inbox = mail.get("inbox") or {}
+    sent = mail.get("sent") or {}
+    all_orders: dict[str, tuple] = {}
+    for e in inbox.values():
+        oid = e.get("order_id") or ""
+        if oid.startswith("ORD-"):
+            charged = e.get("amount_total") or 0.0
+            body = (e.get("body") or "").lower()
+            shipped = "status: shipped" in body
+            is_gift = "gift note" in body
+            all_orders[oid] = (charged, shipped, is_gift)
+    facts["mail.qualifying_orders"] = sorted(
+        oid for oid, (c, s, g) in all_orders.items()
+        if c > 50.0 and not s and not g)
+    facts["mail.cancelled_orders"] = sorted(
+        oid for oid in all_orders
+        if any(oid in ((se.get("subject") or "") + (se.get("body") or ""))
+               and "cancel" in (se.get("body") or "").lower()
+               for se in sent.values()))
+    return facts
+
+
 FACT_EXTRACTORS: dict[str, Callable[[dict, str], dict]] = {
     "M2/order_then_track_via_email": _facts_m2,
     "M3/dinner_then_receipt":        _facts_m3,
@@ -229,6 +258,7 @@ FACT_EXTRACTORS: dict[str, Callable[[dict, str], dict]] = {
     "M9/calendar_gated_dinner":      _facts_m9,
     "M10/dinner_source_conflict":    _facts_m10,
     "M11/cancel_unshipped_over_100": _facts_m11,
+    "M13/order_cleanup_audit":       _facts_m13,
 }
 
 

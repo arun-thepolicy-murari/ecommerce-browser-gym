@@ -217,6 +217,18 @@ def _chain_label(task_id: str, missed: list[str], fact_gap: list[str],
         if hit_extra:
             return "cancelled_a_shipped_or_cheap_order"      # skipped a filter condition
         return "m11_unexpected_partial"
+    if task_id == "M13/order_cleanup_audit":
+        missed_some = "cancelled_all_required" in m       # skipped a real cancel
+        cancelled_wrong = "cancelled_only_required" in m  # cancelled a skip
+        if missed_some and cancelled_wrong:
+            return "missed_a_required_and_cancelled_a_skip"
+        if cancelled_wrong:
+            # The headline trap: cancelled a charged<=$50 item (read the
+            # subtotal not the charged total), or the gift, or a shipped order.
+            return "cancelled_on_subtotal_or_gift_not_charged"
+        if missed_some:
+            return "missed_a_required_cancellation_over_14_items"
+        return "m13_unexpected_partial"
     if task_id == "M12/bulk_add_dense_grid":
         missed_some = "added_all_qualifying" in m       # skipped a qualifying item
         added_wrong = "added_only_qualifying" in m      # added a non-qualifying item

@@ -1565,6 +1565,66 @@ def _suite_m12() -> TaskSuite:
     )
 
 
+def _suite_m13() -> TaskSuite:
+    """CONJUNCTIVE BOUNDARY-TRAP reconciliation. Cancel exactly the orders that
+    are UNSHIPPED AND CHARGED > $50 (amount_total = charged) AND NOT the gift.
+    Ground truth (Q) is read from the seeded inbox; cancellations (C) from sent
+    emails. Success iff C == Q over 14 items. Two precision milestones split
+    the failure directions, and the harvester pins the cause (read subtotal
+    instead of charged / cancelled the gift / missed one)."""
+
+    def _all_orders(p: Probe) -> dict[str, tuple[float, bool, bool]]:
+        # oid -> (charged, shipped, is_gift)
+        iw = p.initial_world
+        mail = getattr(iw, "mail", None) if iw else None
+        out: dict[str, tuple[float, bool, bool]] = {}
+        if mail is None:
+            return out
+        for e in mail.inbox.values():
+            oid = e.order_id or ""
+            if not oid.startswith("ORD-"):
+                continue
+            body = (e.body or "").lower()
+            shipped = "status: shipped" in body
+            is_gift = "gift note" in body
+            out[oid] = (e.amount_total or 0.0, shipped, is_gift)
+        return out
+
+    def _qualifying(p: Probe) -> set[str]:
+        return {oid for oid, (chg, shipped, gift) in _all_orders(p).items()
+                if chg > 50.0 and not shipped and not gift}
+
+    def _cancelled(p: Probe) -> set[str]:
+        if p.world is None or getattr(p.world, "mail", None) is None:
+            return set()
+        out: set[str] = set()
+        for oid in _all_orders(p):
+            for se in p.world.mail.sent.values():
+                hay = (se.subject or "") + " " + (se.body or "")
+                if oid in hay and "cancel" in (se.body or "").lower():
+                    out.add(oid)
+                    break
+        return out
+
+    def _cancelled_all_required(p: Probe) -> bool:
+        q = _qualifying(p)
+        return bool(q) and q.issubset(_cancelled(p))
+
+    def _cancelled_only_required(p: Probe) -> bool:
+        # No skips cancelled: not a charged<=$50 trap, not shipped, not the gift.
+        return _cancelled(p).issubset(_qualifying(p))
+
+    return TaskSuite(
+        task_id="M13/order_cleanup_audit",
+        milestones=[
+            Milestone("cancelled_all_required", weight=0.5,
+                      check=_cancelled_all_required, required_for_success=True),
+            Milestone("cancelled_only_required", weight=0.5,
+                      check=_cancelled_only_required, required_for_success=True),
+        ],
+    )
+
+
 # --------------------------------------------------------------------------- #
 # Registry
 # --------------------------------------------------------------------------- #
@@ -1595,6 +1655,7 @@ SUITE_FACTORIES = {
     "M10/dinner_source_conflict":    _suite_m10,
     "M11/cancel_unshipped_over_100": _suite_m11,
     "M12/bulk_add_dense_grid":       _suite_m12,
+    "M13/order_cleanup_audit":       _suite_m13,
 }
 
 

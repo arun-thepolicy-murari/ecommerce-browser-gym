@@ -727,6 +727,36 @@ async def solve_m12_bulk_add_dense(ctx: BrowserCtx) -> None:
                         reasoning=f"Add {pid} (a mouse or keyboard).")
 
 
+async def solve_m13_order_cleanup_audit(ctx: BrowserCtx) -> None:
+    """Reconcile 14 order emails: reply-cancel exactly those that are unshipped
+    AND CHARGED > $50 (amount_total = charged, NOT the subtotal) AND not the
+    gift. Reads each order's charged/status/gift from the world and replies to
+    every qualifying one (and only those)."""
+    world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
+    inbox = (world.get("mail") or {}).get("inbox") or {}
+    qualifying = []
+    for e in inbox.values():
+        oid = e.get("order_id") or ""
+        if not oid.startswith("ORD-"):
+            continue
+        charged = e.get("amount_total") or 0.0
+        body = (e.get("body") or "").lower()
+        shipped = "status: shipped" in body
+        is_gift = "gift note" in body
+        if charged > 50.0 and not shipped and not is_gift:
+            qualifying.append((e["id"], oid))
+    for eid, oid in qualifying:
+        await ctx.goto(f"/mail/message/{eid}",
+                       reasoning=f"Open {oid} (charged > $50, unshipped, not a gift).")
+        await ctx.click("a[data-test-id='btn-reply']")
+        await ctx.fill(
+            "textarea[data-test-id='input-compose-body']",
+            f"Please cancel order {oid} — I was charged over $50 and it hasn't "
+            f"shipped. Thank you.",
+        )
+        await ctx.click("button[data-test-id='btn-send']")
+
+
 SOLVERS = {
     "A1/buy_wireless_mouse":     solve_a1_buy_wireless_mouse,
     "A2/filter_laptop":          solve_a2_filter_laptop,
@@ -753,4 +783,5 @@ SOLVERS = {
     "M10/dinner_source_conflict":    solve_m10_dinner_source_conflict,
     "M11/cancel_unshipped_over_100": solve_m11_cancel_unshipped_over_100,
     "M12/bulk_add_dense_grid":       solve_m12_bulk_add_dense,
+    "M13/order_cleanup_audit":       solve_m13_order_cleanup_audit,
 }

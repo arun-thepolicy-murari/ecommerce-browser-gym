@@ -298,6 +298,18 @@ BRIEFS = {
         "anything that isn't a mouse or a keyboard. Get every qualifying item, "
         "and don't add a single one that doesn't qualify."
     ),
+
+    "M13": (
+        "Help me clean up my pending orders. Each order email shows a Subtotal "
+        "and a Total Charged (the Total Charged is after my 10% member "
+        "discount). Cancel every order that hasn't shipped yet AND that I was "
+        "CHARGED more than $50 for — judge by the amount actually charged, not "
+        "the subtotal — by replying to that order's email to cancel it. One "
+        "exception: leave the GIFT order for Sarah alone, even if it qualifies "
+        "(I still want it sent). Don't touch shipped orders, anything charged "
+        "$50 or less, or Sarah's gift. Get every order that qualifies and "
+        "nothing that doesn't."
+    ),
 }
 
 
@@ -894,6 +906,86 @@ START_PATHS = {
 }
 
 
+# M13 — CONJUNCTIVE BOUNDARY-TRAP reconciliation (the engineered breaker).
+# 14 near-identical order emails; cancel each that is UNSHIPPED AND CHARGED
+# (NOT subtotal) > $50, EXCEPT the gift for Sarah. Three independent error
+# sources stacked so p^N collapses:
+#   1. FIELD-SALIENCE x14: each email shows BOTH Subtotal and Total Charged
+#      (charged = subtotal * 0.9). Several items sit in the trap band
+#      subtotal in ($50, $55.56): the subtotal says CANCEL (>$50) but the
+#      charged says SKIP (<$50). The lazy read picks subtotal -> wrong.
+#   2. NEGATIVE CONSTRAINT: Sarah's gift (ORD-7006) is unshipped + charged
+#      $67.50 (qualifies) but must be SPARED.
+#   3. CONJUNCTION: exact-set verifier over 14 items -> a single wrong
+#      field-read or missed exception fails the whole task.
+# Correct cancels = {7001, 7004, 7008, 7011, 7014} (charged>50, unshipped,
+# not gift). Everything else is a skip (4 charged-under-$50 traps, 2 shipped,
+# 2 cheap, 1 gift).
+_M13_ORDERS = [
+    # (order_id, subtotal, shipped, is_gift, item)  charged=0.9*subtotal
+    ("ORD-7001",  70.00, False, False, "LED Desk Lamp"),        # charged 63.00 -> CANCEL
+    ("ORD-7002",  52.00, False, False, "USB-C Hub"),            # charged 46.80 -> skip (TRAP)
+    ("ORD-7003",  90.00, True,  False, "Monitor Stand"),        # charged 81.00 shipped -> skip
+    ("ORD-7004", 120.00, False, False, "Anti-Fatigue Mat"),     # charged 108.00 -> CANCEL
+    ("ORD-7005",  54.00, False, False, "Braided Cable Kit"),    # charged 48.60 -> skip (TRAP)
+    ("ORD-7006",  75.00, False, True,  "Leather Journal"),      # charged 67.50 GIFT -> skip (EXCEPT)
+    ("ORD-7007",  40.00, False, False, "Notebook Set"),         # charged 36.00 -> skip (cheap)
+    ("ORD-7008",  62.00, False, False, "1080p Webcam"),         # charged 55.80 -> CANCEL
+    ("ORD-7009", 110.00, True,  False, "Standing Desk"),        # charged 99.00 shipped -> skip
+    ("ORD-7010",  53.00, False, False, "XL Mouse Pad"),         # charged 47.70 -> skip (TRAP)
+    ("ORD-7011",  88.00, False, False, "Mechanical Keyboard"),  # charged 79.20 -> CANCEL
+    ("ORD-7012",  30.00, False, False, "Phone Stand"),          # charged 27.00 -> skip (cheap)
+    ("ORD-7013",  55.00, False, False, "Laptop Sleeve"),        # charged 49.50 -> skip (TRAP)
+    ("ORD-7014",  58.00, False, False, "Headphone Hook"),       # charged 52.20 -> CANCEL
+]
+
+
+def _m13_charged(subtotal: float) -> float:
+    """Total charged after the 10% member discount."""
+    return round(subtotal * 0.9, 2)
+
+
+def _m13_should_cancel(subtotal: float, shipped: bool, is_gift: bool) -> bool:
+    """The M13 rule: CHARGED (not subtotal) > $50 AND not shipped AND NOT the
+    gift exception."""
+    return (_m13_charged(subtotal) > 50.0) and not shipped and not is_gift
+
+
+def task_m13_order_cleanup_audit(seed: int) -> "WorldState":
+    """Conjunctive boundary-trap reconciliation. Cancel unshipped orders
+    CHARGED > $50 (charged shown alongside subtotal; trap band subtotal
+    $50-$55.56), EXCEPT Sarah's gift. Exact-set verifier over 14 items.
+    Correct cancels = {ORD-7001, 7004, 7008, 7011, 7014}."""
+    from server.apps.mail.state import Email, SEED_DATE
+    world = _cross_app_world(seed, "M13/order_cleanup_audit", "hard")
+    m = world.mail
+    for i, (oid, subtotal, shipped, is_gift, item) in enumerate(_M13_ORDERS):
+        eid = m.new_id()
+        charged = _m13_charged(subtotal)
+        status = "Shipped" if shipped else "Processing"
+        hh = 8 + i
+        gift_line = ("\nGift note: Happy birthday, Sarah! Hope you love it. xx"
+                     if is_gift else "")
+        m.inbox[eid] = Email(
+            id=eid, sender="orders@shopgym.com", to=m.account_email,
+            subject=f"Your ShopGym order {oid} is confirmed",
+            body=(f"Thanks for your order!\n\n"
+                  f"Order {oid}\n"
+                  f"Item: {item}\n"
+                  f"Subtotal: ${subtotal:.2f}\n"
+                  f"Member discount: -10%\n"
+                  f"Total charged: ${charged:.2f}\n"
+                  f"Status: {status}{gift_line}\n\n"
+                  f"Questions? Just reply to this email."),
+            received_at=f"{SEED_DATE}T{hh:02d}:00:00",
+            received_label=f"{(hh-12) if hh>12 else hh}:00 {'PM' if hh>=12 else 'AM'}",
+            # No "gift" label on purpose — the gift status lives only in the
+            # body ("Gift note: ...Sarah"), so the exception requires READING.
+            read=False, labels=["orders"],
+            order_id=oid, amount_total=charged)
+    return world
+
+
 def task_m5_cheaper_mouse_from_deals(seed: int) -> "WorldState":
     """Comparison + salience trap. Two 'deal' emails name two DIFFERENT mice
     at two prices: the flashy 'FLASH SALE' email pushes the PRICIER gaming
@@ -941,6 +1033,7 @@ REQUIRED_FACTS = {
     "M9/calendar_gated_dinner":      ["calendar.evening_free", "food.eta", "calendar.user_event_created"],
     "M10/dinner_source_conflict":    ["calendar.evening_free", "mail.alex_available"],
     "M11/cancel_unshipped_over_100": ["mail.qualifying_orders"],
+    "M13/order_cleanup_audit":       ["mail.qualifying_orders"],
 }
 
 
@@ -974,6 +1067,7 @@ TASKS = {
     "M10/dinner_source_conflict":    task_m10_dinner_source_conflict,
     "M11/cancel_unshipped_over_100": task_m11_cancel_unshipped_over_100,
     "M12/bulk_add_dense_grid":       task_m12_bulk_add_dense,
+    "M13/order_cleanup_audit":       task_m13_order_cleanup_audit,
 }
 
 
