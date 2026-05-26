@@ -662,8 +662,22 @@ class BrowserCtx:
         clock (flushing any now-due scheduled events) then records a turn. The
         leading tick is what lets the ORACLE advance time (it has no
         turn-start tick like the agent loop does); for the agent it's a
-        harmless no-op since the turn already ticked."""
+        harmless no-op since the turn already ticked.
+
+        After ticking, RELOAD the active tab so an event the tick just
+        delivered server-side (a new email / price change) actually appears in
+        the screenshot the agent sees next. Our app pages are server-rendered
+        and do NOT live-update, so an agent that sits on a page and waits would
+        otherwise never see the arrival — it would wait forever for content it
+        structurally cannot see (the rendered page is frozen at navigation
+        time). Reloading on `wait` specifically is safe: the agent only waits
+        when it has no UI action to take, so there is no in-progress form/scroll
+        state to clobber, and it makes 'wait then re-check' actually work."""
         await self.tick()
+        try:
+            await self.page.reload(wait_until="domcontentloaded")
+        except Exception:
+            pass
         return await self._record("wait", {}, reasoning=reasoning, latency_ms=0)
 
     async def _record(self, kind: str, args: dict[str, Any],

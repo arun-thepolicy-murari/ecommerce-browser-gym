@@ -450,10 +450,11 @@ def main() -> None:
                     help="explicit comma-separated seeds (overrides --k); e.g. "
                          "'1,3,5,7' to harvest only the busy M9 branch")
     ap.add_argument("--agent", default="openai",
-                    choices=["openai", "openai_pixel", "llm", "pixel",
-                             "pixel_coord", "qwen"],
+                    choices=["openai", "openai_pixel", "openai_coord", "llm",
+                             "pixel", "pixel_coord", "qwen"],
                     help="weak agent to harvest (default openai = gpt-4o-mini "
                          "DOM; openai_pixel = gpt-4o-mini SoM/pixel; "
+                         "openai_coord = GPT raw-coordinate (no SoM); "
                          "pixel_coord = Anthropic raw-coordinate, no SoM)")
     ap.add_argument("--model", default=None,
                     help="model id (default gpt-4o-mini for openai)")

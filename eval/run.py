@@ -106,6 +106,8 @@ async def _run_one(*, agent_kind: str, task_id: str, seed: int,
         agent_name = f"openai[{llm_model or 'gpt-4o-mini'}]"
     elif agent_kind == "openai_pixel":
         agent_name = f"openai_pixel[{llm_model or 'gpt-4o-mini'}]"
+    elif agent_kind == "openai_coord":
+        agent_name = f"openai_coord[{llm_model or 'gpt-4o-mini'}]"
     elif agent_kind == "qwen":
         agent_name = f"qwen[{llm_model or 'qwen-vl-plus'}]"
     else:
@@ -181,6 +183,13 @@ async def _run_one(*, agent_kind: str, task_id: str, seed: int,
             # cross-app journey. Default gpt-4o-mini.
             from agents.openai_pixel_agent import OpenAIPixelAgent
             agent = OpenAIPixelAgent(model=llm_model)
+            await agent.run(bctx, task_brief=reset["task_brief"])
+        elif agent_kind == "openai_coord":
+            # GPT RAW-coordinate agent + multi-tab — plain screenshot, no SoM,
+            # acts via click_at(x, y). The OpenAI twin of pixel_coord, for a
+            # cross-model leaderboard on the SAME (raw grounding) modality.
+            from agents.openai_coord_agent import OpenAICoordAgent
+            agent = OpenAICoordAgent(model=llm_model)
             await agent.run(bctx, task_brief=reset["task_brief"])
         elif agent_kind == "qwen":
             # Qwen-VL (cheap, widely-used) via an OpenAI-compatible endpoint —
@@ -278,13 +287,14 @@ def main() -> None:
     ap.add_argument(
         "--agent",
         choices=["oracle", "llm", "pixel", "pixel_coord", "openai",
-                 "openai_pixel", "qwen"],
+                 "openai_pixel", "openai_coord", "qwen"],
         required=True,
         help="oracle = hand-coded reference; llm = Anthropic DOM/JSON agent; "
              "openai = GPT DOM/JSON agent (default gpt-4o-mini); "
              "pixel = Anthropic SoM screenshots; "
              "pixel_coord = Anthropic RAW-coordinate screenshots (no SoM); "
-             "openai_pixel = GPT SoM screenshots + multi-tab (gpt-4o-mini)",
+             "openai_pixel = GPT SoM screenshots + multi-tab (gpt-4o-mini); "
+             "openai_coord = GPT RAW-coordinate (no SoM) + multi-tab",
     )
     ap.add_argument("--tasks", default="all")
     ap.add_argument("--seeds", default="0")
