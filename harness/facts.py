@@ -274,6 +274,26 @@ def _facts_m14(world: dict, url: str) -> dict[str, Any]:
     return facts
 
 
+def _facts_m15(world: dict, url: str) -> dict[str, Any]:
+    """M15 async price-watch — 4-level facts. ``alert_delivered`` (env truth),
+    ``alert_visible`` (on the alert's message page now), and the alerted product
+    + new price recorded ONLY when the alert email is READ, so coverage = the
+    agent actually opened it. 'used' (bought that mouse at that price) is checked
+    by the verifier on the placed order."""
+    facts: dict[str, Any] = {}
+    inbox = (world.get("mail") or {}).get("inbox") or {}
+    for e in inbox.values():
+        if "price-drop" not in (e.get("labels") or []):
+            continue
+        facts["mail.alert_delivered"] = True
+        if e.get("id") and e["id"] in (url or ""):
+            facts["mail.alert_visible"] = e.get("product_id")
+        if e.get("read"):
+            facts["mail.alerted_product_id"] = e.get("product_id")
+            facts["mail.alerted_new_price"] = e.get("amount_total")
+    return facts
+
+
 FACT_EXTRACTORS: dict[str, Callable[[dict, str], dict]] = {
     "M2/order_then_track_via_email": _facts_m2,
     "M3/dinner_then_receipt":        _facts_m3,
@@ -287,6 +307,7 @@ FACT_EXTRACTORS: dict[str, Callable[[dict, str], dict]] = {
     "M11/cancel_unshipped_over_100": _facts_m11,
     "M13/order_cleanup_audit":       _facts_m13,
     "M14/return_then_refund":        _facts_m14,
+    "M15/inbox_price_watch":         _facts_m15,
 }
 
 

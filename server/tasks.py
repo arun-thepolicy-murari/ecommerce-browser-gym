@@ -310,6 +310,15 @@ BRIEFS = {
         "item is on its way back."
     ),
 
+    "M15": (
+        "I'm waiting on a price-drop alert for a mouse I've had my eye on. A "
+        "deals email is going to land in my inbox naming the exact mouse and "
+        "its new sale price — it isn't there yet, so keep watching the inbox. "
+        "As soon as it arrives, read which mouse it is and the new price, then "
+        "go buy exactly that one mouse (and only that one) at the new price, "
+        "using my default address and payment. Don't order any other mouse."
+    ),
+
     "M13": (
         "Help me clean up my pending orders. Each order email shows a Subtotal "
         "and a Total Charged (the Total Charged is after my 10% member "
@@ -918,6 +927,9 @@ START_PATHS = {
     # return; the async refund + Mail tab is the skill under test, not finding
     # the order.
     "M14/return_then_refund": "/account/orders",
+    # M15 starts on the inbox so the agent is watching when the price-drop
+    # alert lands (step 4) — the async wait is the skill under test.
+    "M15/inbox_price_watch": "/mail",
 }
 
 
@@ -1078,6 +1090,42 @@ def task_m14_return_then_refund(seed: int) -> "WorldState":
     return world
 
 
+# M15 paired price-drop constants. The alert names the Ergonomic Mouse and its
+# NEW price; the paired ShopPriceChanged drops the SAME product's price in the
+# shop at the SAME step, so the new price is genuinely obtainable. There are 5
+# mice in the catalog, so "buy the alerted one" is a real disambiguation.
+_M15_PID = "p_mouse_ergonomic"
+_M15_PNAME = "Wireless Ergonomic Mouse"
+_M15_OLD_PRICE = 49.99
+_M15_NEW_PRICE = 34.99
+_M15_FIRE_STEP = 4
+
+
+def task_m15_inbox_price_watch(seed: int) -> "WorldState":
+    """ASYNC inbox-driven + stale-state. Start on /mail with no alert yet. At
+    step 4 a PAIR fires: PriceDropAlert -> Mail (names ONE mouse + a new price)
+    AND ShopPriceChanged -> Shop (that product's price actually drops). The
+    agent must wait for the alert, read which mouse + new price, and buy exactly
+    that mouse at the NEW price. Traps: buying before the alert lands (the
+    product page still shows the old price -> a provably stale order line),
+    buying the wrong mouse, or buying extra mice."""
+    from server.apps import scheduler as _sched
+    world = _cross_app_world(seed, "M15/inbox_price_watch", "hard")
+    payload = {"product_id": _M15_PID, "product_name": _M15_PNAME,
+               "new_price": _M15_NEW_PRICE, "old_price": _M15_OLD_PRICE}
+    # The email (Mail) and the real price mutation (Shop) — a paired absolute
+    # event at the same step. Ids sort so delivery order is deterministic.
+    _sched.schedule_absolute(
+        world.schedule, id="se_pricedrop_mail", fire_at_step=_M15_FIRE_STEP,
+        emit_type="PriceDropAlert", source_app="shop", target_app="mail",
+        payload=dict(payload))
+    _sched.schedule_absolute(
+        world.schedule, id="se_pricedrop_shop", fire_at_step=_M15_FIRE_STEP,
+        emit_type="ShopPriceChanged", source_app="shop", target_app="shop",
+        payload=dict(payload))
+    return world
+
+
 def task_m5_cheaper_mouse_from_deals(seed: int) -> "WorldState":
     """Comparison + salience trap. Two 'deal' emails name two DIFFERENT mice
     at two prices: the flashy 'FLASH SALE' email pushes the PRICIER gaming
@@ -1127,6 +1175,7 @@ REQUIRED_FACTS = {
     "M11/cancel_unshipped_over_100": ["mail.qualifying_orders"],
     "M13/order_cleanup_audit":       ["mail.qualifying_orders"],
     "M14/return_then_refund":        ["mail.rma_code", "mail.refund_amount"],
+    "M15/inbox_price_watch":         ["mail.alerted_product_id", "mail.alerted_new_price"],
 }
 
 
@@ -1162,6 +1211,7 @@ TASKS = {
     "M12/bulk_add_dense_grid":       task_m12_bulk_add_dense,
     "M13/order_cleanup_audit":       task_m13_order_cleanup_audit,
     "M14/return_then_refund":        task_m14_return_then_refund,
+    "M15/inbox_price_watch":         task_m15_inbox_price_watch,
 }
 
 

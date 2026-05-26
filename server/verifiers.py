@@ -1709,6 +1709,103 @@ def _suite_m14() -> TaskSuite:
     )
 
 
+def _suite_m15() -> TaskSuite:
+    """ASYNC price-watch + stale-state. A PriceDropAlert email lands at step 4
+    naming ONE mouse + a new price; its pair drops that mouse's price in the
+    shop. Buy exactly that mouse at the NEW price. The 4 levels:
+      delivered -> alert_delivered (env truth, bus.has_delivered) [weight 0]
+      (shop)    -> price_dropped_in_shop (the paired mutation fired) [weight 0]
+      read      -> opened_alert_email (the agent noticed the async arrival)
+      used      -> ordered_correct_mouse_only + ordered_at_dropped_price
+    An agent that buys before step 4 gets the stale (old) unit price and fails
+    ordered_at_dropped_price; one that buys the wrong mouse fails
+    ordered_correct_mouse_only."""
+    from server.apps import bus as _bus
+
+    _ALL_MICE = {"p_mouse_wireless", "p_mouse_gaming", "p_mouse_ergonomic",
+                 "p_mouse_mini", "p_mouse_trackpad"}
+
+    def _alert_email(p: Probe):
+        mail = getattr(p.world, "mail", None) if p.world else None
+        if mail is None:
+            return None
+        for e in mail.inbox.values():
+            if "price-drop" in (e.labels or []) \
+                    or "alerts@" in (e.sender or "").lower():
+                return e
+        return None
+
+    def _alerted_pid(p: Probe):
+        e = _alert_email(p)
+        return e.product_id if e is not None else None
+
+    def _alerted_price(p: Probe):
+        e = _alert_email(p)
+        return e.amount_total if e is not None else None
+
+    def _alert_delivered(p: Probe) -> bool:
+        return p.world is not None and _bus.has_delivered(p.world, "PriceDropAlert")
+
+    def _price_dropped_in_shop(p: Probe) -> bool:
+        pid = _alerted_pid(p)
+        price = _alerted_price(p)
+        if not pid or price is None:
+            return False
+        prod = p.state.products.get(pid)
+        return prod is not None and abs(prod.base_price - price) < 0.01
+
+    def _opened_alert_email(p: Probe) -> bool:
+        e = _alert_email(p)
+        return e is not None and e.read
+
+    def _ordered_correct_mouse_only(p: Probe) -> bool:
+        """An order contains the alerted mouse AND no OTHER mouse (resists
+        buying the wrong/extra mouse)."""
+        pid = _alerted_pid(p)
+        if not pid:
+            return False
+        others = _ALL_MICE - {pid}
+        found = False
+        for o in p.state.orders.values():
+            pids = {it.product_id for it in o.items}
+            if pids & others:
+                return False
+            if pid in pids:
+                found = True
+        return found
+
+    def _ordered_at_dropped_price(p: Probe) -> bool:
+        """The alerted mouse's order line carries the NEW price — not the stale
+        pre-drop price an early buyer would have locked in."""
+        pid = _alerted_pid(p)
+        price = _alerted_price(p)
+        if not pid or price is None:
+            return False
+        for o in p.state.orders.values():
+            for it in o.items:
+                if it.product_id == pid:
+                    return abs(it.unit_price - price) < 0.01
+        return False
+
+    return TaskSuite(
+        task_id="M15/inbox_price_watch",
+        milestones=[
+            Milestone("alert_delivered", weight=0.0,
+                      check=_alert_delivered, required_for_success=False),
+            Milestone("price_dropped_in_shop", weight=0.0,
+                      check=_price_dropped_in_shop, required_for_success=False),
+            Milestone("opened_alert_email", weight=0.2,
+                      check=_opened_alert_email, required_for_success=True),
+            Milestone("ordered_correct_mouse_only", weight=0.4,
+                      check=_ordered_correct_mouse_only,
+                      required_for_success=True),
+            Milestone("ordered_at_dropped_price", weight=0.4,
+                      check=_ordered_at_dropped_price,
+                      required_for_success=True),
+        ],
+    )
+
+
 # --------------------------------------------------------------------------- #
 # Registry
 # --------------------------------------------------------------------------- #
@@ -1741,6 +1838,7 @@ SUITE_FACTORIES = {
     "M12/bulk_add_dense_grid":       _suite_m12,
     "M13/order_cleanup_audit":       _suite_m13,
     "M14/return_then_refund":        _suite_m14,
+    "M15/inbox_price_watch":         _suite_m15,
 }
 
 

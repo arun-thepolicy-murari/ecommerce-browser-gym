@@ -796,6 +796,35 @@ async def solve_m14_return_then_refund(ctx: BrowserCtx) -> None:
     await ctx.click("button[data-test-id='btn-send']")
 
 
+async def solve_m15_inbox_price_watch(ctx: BrowserCtx) -> None:
+    """Wait on the inbox for the price-drop alert (fires at step 4), read which
+    mouse + new price it names, then buy exactly that mouse at the new price."""
+    # 1) Wait for the async alert to land (poll the world; the absolute event
+    #    fires once the clock reaches step 4 — each wait ticks it forward).
+    pid = None
+    for _ in range(8):
+        world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
+        alert = next(
+            (e for e in world["mail"]["inbox"].values()
+             if "price-drop" in (e.get("labels") or [])), None)
+        if alert is not None:
+            pid = alert["product_id"]
+            await ctx.goto(f"/mail/message/{alert['id']}",
+                           reasoning="Open the price-drop alert to read the "
+                                     "mouse and its new price.")
+            break
+        await ctx.wait(reasoning="Wait for the price-drop alert to arrive.")
+    # 2) Buy exactly the alerted mouse — its price is now the dropped one.
+    await ctx.goto(f"/product/{pid}",
+                   reasoning="Buy the alerted mouse at the new (dropped) price.")
+    await ctx.click("button[data-test-id='btn-add-to-cart']")
+    await ctx.click("a[data-test-id='link-cart']")
+    await ctx.click("a[data-test-id='btn-proceed-checkout']")
+    await ctx.click("a[data-test-id='btn-continue-payment']")
+    await ctx.click("a[data-test-id='btn-continue-review']")
+    await ctx.click("button[data-test-id='btn-place-order']")
+
+
 SOLVERS = {
     "A1/buy_wireless_mouse":     solve_a1_buy_wireless_mouse,
     "A2/filter_laptop":          solve_a2_filter_laptop,
@@ -824,4 +853,5 @@ SOLVERS = {
     "M12/bulk_add_dense_grid":       solve_m12_bulk_add_dense,
     "M13/order_cleanup_audit":       solve_m13_order_cleanup_audit,
     "M14/return_then_refund":        solve_m14_return_then_refund,
+    "M15/inbox_price_watch":         solve_m15_inbox_price_watch,
 }

@@ -33,6 +33,7 @@ class Email:
     tracking_url: str | None = None
     amount_total: float | None = None
     eta: str | None = None
+    product_id: str | None = None     # a product this email is about (price alerts)
 
 
 @dataclass

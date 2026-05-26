@@ -7,7 +7,7 @@ production wiring here never interferes with test isolation.
 
 from __future__ import annotations
 
-from server.apps import bus
+from server.apps import bus, shop_hooks
 from server.apps.mail import inbound
 
 
@@ -16,3 +16,7 @@ def register_default_subscribers() -> None:
     bus.subscribe("ShopOrderPlaced", inbound.deliver_shop_order_confirmation)
     # Async deliveries fired by the scheduler (server.apps.scheduler):
     bus.subscribe("RefundApproved", inbound.deliver_refund_approved)
+    # Paired price-drop (M15): the email lands in Mail AND the shop price
+    # actually drops — same step, two targets.
+    bus.subscribe("PriceDropAlert", inbound.deliver_price_drop_alert)
+    bus.subscribe("ShopPriceChanged", shop_hooks.apply_shop_price_change)

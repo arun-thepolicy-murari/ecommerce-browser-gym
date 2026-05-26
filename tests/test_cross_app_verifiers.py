@@ -18,7 +18,7 @@ from server.state import log_action
 from server.tasks import make_task
 from server.verifiers import Probe, build_suite
 from server.apps.world import WorldState
-from server.apps import bus, shop_hooks
+from server.apps import bus, scheduler, shop_hooks
 from server.apps import wiring as apps_wiring
 from server.apps.mail import mutations as mail_mut
 from server.apps.food import mutations as food_mut
@@ -177,6 +177,70 @@ def test_m3_missing_subscriber_chain_not_credited():
     assert "opened_receipt_email" in res["missed_milestones"]
     # The order itself still placed, so partial credit remains.
     assert "food_order_placed" not in res["missed_milestones"]
+
+
+# --------------------------------------------------------------------------- #
+# M15 (async): wait for the price-drop alert -> buy that mouse at the new price
+# --------------------------------------------------------------------------- #
+
+def _flush_pricedrop(sim: _CrossSim):
+    """Advance the scheduler clock past the alert's fire step so the PAIR fires
+    (PriceDropAlert -> Mail + ShopPriceChanged -> Shop), then return the alert
+    email."""
+    scheduler.advance_and_flush(sim.world, 4)
+    return next(e for e in sim.world.mail.inbox.values()
+                if "price-drop" in (e.labels or []))
+
+
+def test_m15_paired_event_fires_and_drops_shop_price():
+    """The injector's PAIR genuinely touches both apps: the email lands in Mail
+    AND the shop price actually drops (so the new price is obtainable and a
+    pre-drop buyer is provably stale)."""
+    sim = _CrossSim("M15/inbox_price_watch")
+    assert not bus.has_delivered(sim.world, "PriceDropAlert")  # not yet at step 0
+    alert = _flush_pricedrop(sim)
+    assert bus.has_delivered(sim.world, "PriceDropAlert")
+    assert bus.has_delivered(sim.world, "ShopPriceChanged")
+    assert alert.product_id == "p_mouse_ergonomic"
+    assert sim.shop.products["p_mouse_ergonomic"].base_price == 34.99
+
+
+def test_m15_full_path_scores_one():
+    sim = _CrossSim("M15/inbox_price_watch")
+    alert = _flush_pricedrop(sim)
+    sim.go(f"/mail/message/{alert.id}")
+    sim.do(lambda: mail_mut.mark_read(sim.world.mail, alert.id))
+    sim.do(lambda: mutations.add_to_cart(sim.shop, "p_mouse_ergonomic", 1))
+    final = sim.do(lambda: mutations.place_order(sim.shop, "pay_visa"))
+    assert final["success"] is True
+    assert final["score"] == 1.0
+
+
+def test_m15_wrong_mouse_fails_required_milestone():
+    sim = _CrossSim("M15/inbox_price_watch")
+    alert = _flush_pricedrop(sim)
+    sim.do(lambda: mail_mut.mark_read(sim.world.mail, alert.id))
+    sim.do(lambda: mutations.add_to_cart(sim.shop, "p_mouse_mini", 1))
+    res = sim.do(lambda: mutations.place_order(sim.shop, "pay_visa"))
+    assert res["success"] is False
+    assert "ordered_correct_mouse_only" in res["missed_milestones"]
+
+
+def test_m15_buying_before_drop_is_stale_price():
+    """An agent that buys the right mouse BEFORE the alert lands locks in the
+    old $49.99 — the order line is provably stale and the new-price milestone
+    must miss."""
+    sim = _CrossSim("M15/inbox_price_watch")
+    # Buy at step 0, before the price drop (base_price still 49.99).
+    sim.do(lambda: mutations.add_to_cart(sim.shop, "p_mouse_ergonomic", 1))
+    sim.do(lambda: mutations.place_order(sim.shop, "pay_visa"))
+    placed = next(iter(sim.shop.orders.values()))
+    assert placed.items[0].unit_price == 49.99
+    # Now the alert lands and the agent reads it — too late, order is stale.
+    alert = _flush_pricedrop(sim)
+    res = sim.do(lambda: mail_mut.mark_read(sim.world.mail, alert.id))
+    assert res["success"] is False
+    assert "ordered_at_dropped_price" in res["missed_milestones"]
 
 
 # --------------------------------------------------------------------------- #

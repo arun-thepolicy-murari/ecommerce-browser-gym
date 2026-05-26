@@ -75,6 +75,38 @@ def deliver_shop_order_confirmation(world: "WorldState",
     )
 
 
+def deliver_price_drop_alert(world: "WorldState", event: "WorldEvent") -> None:
+    """PriceDropAlert -> a deals email naming ONE product + its NEW price.
+    Delivered ABSOLUTELY by the scheduler (e.g. step 4) WHILE the agent waits
+    on the inbox. Its pair, ShopPriceChanged, drops the same product's price in
+    the shop at the same step, so the new price is genuinely obtainable and an
+    agent that bought earlier is provably stale. The agent must read which
+    product + new price off THIS email and buy that exact one at the new
+    price."""
+    mail = world.mail
+    if mail is None:
+        return
+    p = event.payload
+    name = p.get("product_name", "")
+    newp = p.get("new_price", 0.0)
+    oldp = p.get("old_price", 0.0)
+    eid = mail.new_id()
+    mail.inbox[eid] = Email(
+        id=eid, sender="alerts@shopgym.com", to=mail.account_email,
+        subject=f"Price drop: {name} is now ${newp:.2f}",
+        body=(
+            f"Good news — a item on your watchlist just dropped in price.\n\n"
+            f"{name}\n"
+            f"  Was: ${oldp:.2f}\n"
+            f"  Now: ${newp:.2f}\n\n"
+            f"This price is live in the shop now. Grab it while it lasts!\n"
+        ),
+        received_at=f"{SEED_DATE}T13:00:00", received_label="now",
+        read=False, labels=["price-drop"],
+        product_id=p.get("product_id"), amount_total=newp,
+    )
+
+
 def deliver_refund_approved(world: "WorldState", event: "WorldEvent") -> None:
     """RefundApproved -> a refund-approved email. Delivered ASYNCHRONOUSLY by
     the scheduler a few steps AFTER the agent files the return — so the agent
