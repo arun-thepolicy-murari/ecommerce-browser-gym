@@ -641,6 +641,31 @@ class BrowserCtx:
 
     # --------- internal: probe + record after each action ---------
 
+    async def tick(self) -> dict[str, Any]:
+        """Advance the deterministic async clock to the current step and flush
+        any scheduled events now due (emails / price-changes / notifications
+        arriving ON TIME). Call at the START of each agent turn, BEFORE the
+        screenshot, so the observation reflects events that just arrived — and
+        so the verifier never sees an event the screenshot didn't show. No-op
+        for single-app tasks (no schedule) or when the clock hasn't moved."""
+        step = len(self.trajectory.steps)
+        try:
+            return self.http.post(
+                f"{self.server_url}/_harness/tick", json={"step": step},
+            ).json()
+        except Exception:
+            return {}
+
+    async def wait(self, reasoning: str = "") -> "StepRecord":
+        """A 'let time pass' action — wait for an async event (a new email /
+        notification) to arrive instead of taking a UI action. Advances the
+        clock (flushing any now-due scheduled events) then records a turn. The
+        leading tick is what lets the ORACLE advance time (it has no
+        turn-start tick like the agent loop does); for the agent it's a
+        harmless no-op since the turn already ticked."""
+        await self.tick()
+        return await self._record("wait", {}, reasoning=reasoning, latency_ms=0)
+
     async def _record(self, kind: str, args: dict[str, Any],
                       reasoning: str = "",
                       error: str | None = None,

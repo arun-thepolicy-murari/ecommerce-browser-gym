@@ -137,6 +137,21 @@ TOOLS_COORD = [
         },
     },
     {
+        "name": "wait",
+        "description": (
+            "Let time pass WITHOUT taking a UI action — use this to wait for "
+            "something to arrive that you cannot make happen yourself (a new "
+            "email, a notification, a status/price update). After waiting, "
+            "re-check the relevant tab (e.g. switch to Mail) to see if it "
+            "arrived yet."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {"reason": {"type": "string"}},
+            "required": [],
+        },
+    },
+    {
         "name": "finish",
         "description": (
             "End the episode. Call ONLY after the visible page confirms the "
@@ -227,14 +242,25 @@ class PixelCoordAgent:
     Pass ``model`` to override the default. Set ANTHROPIC_API_KEY in env.
     """
 
-    def __init__(self, model: str | None = None, max_steps: int = 50,
-                 verbose: bool = True, thinking_budget: int = 4000):
+    def __init__(self, model: str | None = None, max_steps: int | None = None,
+                 verbose: bool = True, thinking_budget: int = 4000,
+                 eval_mode: bool | None = None):
         from anthropic import Anthropic
         self.client = Anthropic()
         self.model = model or os.getenv(
             "ANTHROPIC_MODEL", "claude-sonnet-4-5-20250929",
         )
-        self.max_steps = max_steps
+        # Step budget. Default 50, overridable via AGENT_MAX_STEPS env var so a
+        # run can be given an effectively-unlimited cap (to separate genuine
+        # premature-completion failures from step-budget exhaustion).
+        self.max_steps = (max_steps if max_steps is not None
+                          else int(os.getenv("AGENT_MAX_STEPS", "50")))
+        # Benchmark eval mode: when ON, the agent's observation does NOT include
+        # fired-milestone names or the running score (which would leak signals
+        # like "the refund email was delivered"). Default from AGENT_EVAL_MODE
+        # env (set =1 for leaderboard runs). The trajectory still records them.
+        self.eval_mode = (eval_mode if eval_mode is not None
+                          else os.getenv("AGENT_EVAL_MODE", "0") == "1")
         self.verbose = verbose
         self.thinking_budget = thinking_budget
 
@@ -264,6 +290,10 @@ class PixelCoordAgent:
         pending_tool_result: dict[str, Any] | None = None
 
         for turn in range(self.max_steps):
+            # ── TICK the async clock BEFORE observing, so any event scheduled
+            # for this step (a new email / price change) has arrived and shows
+            # up in the screenshot the agent is about to act on. ──
+            await ctx.tick()
             # ── OBSERVE: plain screenshot of the active tab (NO annotation) ──
             raw_png = await ctx.page.screenshot(full_page=False)
             b64 = base64.standard_b64encode(raw_png).decode("ascii")
@@ -377,6 +407,8 @@ class PixelCoordAgent:
                 elif kind == "close_tab":
                     step_record = await ctx.close_tab(
                         int(args["index"]), reasoning=args.get("reason", ""))
+                elif kind == "wait":
+                    step_record = await ctx.wait(reasoning=args.get("reason", ""))
                 elif kind == "finish":
                     if self.verbose:
                         print(f"[coord_agent] finishing: {args.get('reason', '')}")
@@ -398,6 +430,10 @@ class PixelCoordAgent:
                     last_action_result = (
                         f"ERROR: {step_record.action_error}. "
                         f"URL is now {step_record.url_after}.")
+                elif self.eval_mode:
+                    # Benchmark mode: do NOT leak milestone names / score.
+                    last_action_result = (
+                        f"OK ({kind}). URL is now {step_record.url_after}.")
                 else:
                     last_action_result = (
                         f"OK ({kind}). URL is now {step_record.url_after}. "

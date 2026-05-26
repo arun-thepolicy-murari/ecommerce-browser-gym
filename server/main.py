@@ -76,6 +76,7 @@ from server.apps.calendar import routes as calendar_routes
 from server.apps import wiring as apps_wiring
 from server.apps import shop_hooks
 from server.apps import bus
+from server.apps import scheduler
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -958,12 +959,37 @@ def harness_verify(req: HarnessVerifyRequest) -> dict[str, Any]:
         raise HTTPException(409, "no active episode")
     s = _state()
     s.step = req.step
+    # NOTE: verify only READS. The async scheduler is advanced separately at
+    # /_harness/tick (start of each turn, before the screenshot) so the agent's
+    # observation and this verifier see the SAME world — never an event the
+    # screenshot didn't show.
     probe = verifiers.Probe(
         state=s, url=req.url, initial_state=SESSION.initial,
         world=SESSION.world, initial_world=SESSION.initial_world,
         active_tab_url=req.url,
     )
     return SESSION.suite.evaluate(probe, req.step)
+
+
+class HarnessTickRequest(BaseModel):
+    step: int = 0
+
+
+@app.post("/_harness/tick")
+def harness_tick(req: HarnessTickRequest) -> dict[str, Any]:
+    """Advance the deterministic clock to ``step`` and flush any scheduled async
+    events now due (delivered via the bus). The harness calls this at the START
+    of each agent turn, BEFORE the screenshot, so the agent's observation + the
+    verifier see the same post-flush world. No-op for single-app episodes (no
+    schedule) or when ``step`` <= the current clock."""
+    if SESSION.world is None:
+        return {"now": 0, "fired": []}
+    fired = scheduler.advance_and_flush(SESSION.world, req.step)
+    return {
+        "now": SESSION.world.schedule.now,
+        "fired": [{"type": e.type, "target_app": e.target_app, "step": e.step}
+                  for e in fired],
+    }
 
 
 @app.post("/_harness/classify_failure")

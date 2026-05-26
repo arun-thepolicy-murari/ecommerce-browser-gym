@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING, Any, Optional
 
 from server.state import GymState
 from server.apps.bus import WorldEvent
+from server.apps.scheduler import ScheduleState
 
 if TYPE_CHECKING:                      # Phase-2 stores; not imported at runtime
     from server.apps.mail.state import MailState
@@ -38,6 +39,11 @@ class WorldState:
     food: Optional["FoodState"] = None
     calendar: Optional["CalendarState"] = None
     events: list[WorldEvent] = field(default_factory=list)   # append-only
+    # Deterministic async event injector — scheduled future cross-app effects
+    # (emails/price-changes/notifications) that fire on the step clock, not on
+    # the agent's action. Task factories seed ``schedule.queue``; the harness
+    # ticks the clock at each step boundary (see server.apps.scheduler).
+    schedule: ScheduleState = field(default_factory=ScheduleState)
 
     # ----- episode metadata: single source of truth is the shop store ----- #
     @property
@@ -73,4 +79,5 @@ class WorldState:
                 self.calendar.to_json() if self.calendar is not None else None
             ),
             "events": [asdict(e) for e in self.events],
+            "schedule": self.schedule.to_json(),
         }
