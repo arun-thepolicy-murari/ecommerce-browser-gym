@@ -32,3 +32,29 @@ def create_event(cal: CalendarState, *, title: str, day: str,
         start=start or "00:00", end=end or "00:00", source="user",
     )
     return {"ok": True, "event_id": eid, "title": title, "day": day}
+
+
+def update_event(cal: CalendarState, event_id: str, *, start: str = "",
+                 end: str = "", title: str = "") -> dict[str, Any]:
+    """Move/retitle an existing event IN PLACE — the same event keeps its id.
+    This is the path an agent takes to push a reminder to a new time WITHOUT
+    leaving the old one behind (the M16 'don't over-keep' negative action)."""
+    e = cal.events.get(event_id)
+    if e is None:
+        return {"ok": False, "error": "no such event"}
+    if start:
+        e.start = start
+    if end:
+        e.end = end
+    if title.strip():
+        e.title = title.strip()
+    return {"ok": True, "event_id": event_id, "start": e.start, "end": e.end}
+
+
+def delete_event(cal: CalendarState, event_id: str) -> dict[str, Any]:
+    """Remove an event entirely. The other way to avoid an over-kept stale
+    reminder: delete the old one and create a fresh one at the new time."""
+    if event_id not in cal.events:
+        return {"ok": False, "error": "no such event"}
+    removed = cal.events.pop(event_id)
+    return {"ok": True, "event_id": event_id, "title": removed.title}

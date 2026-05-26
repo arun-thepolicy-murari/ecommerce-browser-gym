@@ -825,6 +825,63 @@ async def solve_m15_inbox_price_watch(ctx: BrowserCtx) -> None:
     await ctx.click("button[data-test-id='btn-place-order']")
 
 
+async def solve_m16_coordinated_dinner_delay(ctx: BrowserCtx) -> None:
+    """Order dinner, add a reminder + tell the guest at the first ETA; when the
+    async DeliveryDelayed notice arrives, MOVE the reminder to the new ETA
+    (leaving exactly one event) and tell the guest the new time."""
+    # 1) Order the sushi (its ETA is 7:00 PM).
+    await ctx.goto("/food/restaurant/r_sushi", reasoning="Order tonight's dinner.")
+    await ctx.click("button[data-test-id='btn-add-d_salmon_roll']")
+    await ctx.goto("/food/cart")
+    await ctx.click("button[data-test-id='btn-place-food-order']")
+    # 2) Add the delivery reminder at the FIRST ETA (7:00 PM -> 19:00).
+    await ctx.goto("/calendar/new",
+                   reasoning="Add a reminder for the delivery ETA.")
+    await ctx.fill("input[data-test-id='input-event-title']", "Dinner delivery")
+    await ctx.fill("input[data-test-id='input-event-start']", "19:00")
+    await ctx.fill("input[data-test-id='input-event-end']", "19:30")
+    await ctx.click("button[data-test-id='btn-save-event']")
+    # 3) Tell Alex the first time.
+    world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
+    alex = next(e for e in world["mail"]["inbox"].values()
+                if "alex@" in (e.get("sender") or ""))
+    await ctx.goto(f"/mail/message/{alex['id']}",
+                   reasoning="Let Alex know the delivery time.")
+    await ctx.click("a[data-test-id='btn-reply']")
+    await ctx.fill("textarea[data-test-id='input-compose-body']",
+                   "Dinner's on the way — should arrive around 7:00 PM!")
+    await ctx.click("button[data-test-id='btn-send']")
+    # 4) Wait for the async delay notice (fires a few steps after the order).
+    notice = None
+    for _ in range(8):
+        world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
+        notice = next((e for e in world["mail"]["inbox"].values()
+                       if "delivery" in (e.get("labels") or [])), None)
+        if notice is not None:
+            break
+        await ctx.wait(reasoning="Wait for any delivery-delay notice.")
+    # 5) Read the delay notice (new ETA 8:00 PM).
+    await ctx.goto(f"/mail/message/{notice['id']}",
+                   reasoning="Read the delay notice for the new ETA.")
+    # 6) MOVE the existing reminder to the new ETA (NOT a second event).
+    world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
+    ev_id = next(eid for eid, ev in world["calendar"]["events"].items()
+                 if ev.get("source") == "user")
+    await ctx.goto(f"/calendar/edit/{ev_id}",
+                   reasoning="Push the existing reminder to the new ETA.")
+    await ctx.fill("input[data-test-id='input-edit-start']", "20:00")
+    await ctx.fill("input[data-test-id='input-edit-end']", "20:30")
+    await ctx.click("button[data-test-id='btn-update-event']")
+    # 7) Tell Alex the NEW time.
+    await ctx.goto(f"/mail/message/{alex['id']}",
+                   reasoning="Update Alex with the new delivery time.")
+    await ctx.click("a[data-test-id='btn-reply']")
+    await ctx.fill("textarea[data-test-id='input-compose-body']",
+                   "Quick update — the kitchen pushed it back, so it'll now "
+                   "arrive around 8:00 PM instead.")
+    await ctx.click("button[data-test-id='btn-send']")
+
+
 SOLVERS = {
     "A1/buy_wireless_mouse":     solve_a1_buy_wireless_mouse,
     "A2/filter_laptop":          solve_a2_filter_laptop,
@@ -854,4 +911,5 @@ SOLVERS = {
     "M13/order_cleanup_audit":       solve_m13_order_cleanup_audit,
     "M14/return_then_refund":        solve_m14_return_then_refund,
     "M15/inbox_price_watch":         solve_m15_inbox_price_watch,
+    "M16/coordinated_dinner_delay":  solve_m16_coordinated_dinner_delay,
 }

@@ -294,6 +294,31 @@ def _facts_m15(world: dict, url: str) -> dict[str, Any]:
     return facts
 
 
+def _facts_m16(world: dict, url: str) -> dict[str, Any]:
+    """M16 async dinner-delay — 4-level facts. The first ETA (from the food
+    order), the delay-notice delivery/visible/read levels (new ETA recorded only
+    when READ), and the agent's current calendar reminder time + count (the
+    negative-action signal: count==1 at the new time is correct, count>1 is the
+    over-keep failure). 'used' is checked by the verifier on final state."""
+    facts: dict[str, Any] = {}
+    for o in ((world.get("food") or {}).get("orders") or {}).values():
+        facts["food.initial_eta"] = o.get("eta_label")
+    for e in ((world.get("mail") or {}).get("inbox") or {}).values():
+        if "delivery" not in (e.get("labels") or []):
+            continue
+        facts["mail.delay_delivered"] = True
+        if e.get("id") and e["id"] in (url or ""):
+            facts["mail.delay_visible"] = e.get("eta")
+        if e.get("read"):
+            facts["mail.new_eta"] = e.get("eta")
+    user_evs = [ev for ev in ((world.get("calendar") or {}).get("events") or {}).values()
+                if ev.get("source") == "user"]
+    if user_evs:
+        facts["calendar.user_event_time"] = user_evs[0].get("start")
+        facts["calendar.user_event_count"] = len(user_evs)
+    return facts
+
+
 FACT_EXTRACTORS: dict[str, Callable[[dict, str], dict]] = {
     "M2/order_then_track_via_email": _facts_m2,
     "M3/dinner_then_receipt":        _facts_m3,
@@ -308,6 +333,7 @@ FACT_EXTRACTORS: dict[str, Callable[[dict, str], dict]] = {
     "M13/order_cleanup_audit":       _facts_m13,
     "M14/return_then_refund":        _facts_m14,
     "M15/inbox_price_watch":         _facts_m15,
+    "M16/coordinated_dinner_delay":  _facts_m16,
 }
 
 

@@ -1806,6 +1806,86 @@ def _suite_m15() -> TaskSuite:
     )
 
 
+def _suite_m16() -> TaskSuite:
+    """HERO async branch-flip + NEGATIVE action. Order dinner, reminder + guest
+    note at the first ETA; a DeliveryDelayed notice then pushes the ETA later,
+    so the agent must move the reminder to the new ETA (leaving exactly ONE
+    delivery event) AND tell the guest the new time. The 4 levels:
+      delivered -> delivery_delayed_delivered (env truth) [weight 0]
+      read      -> noticed_delay (opened the delay notice)
+      used      -> calendar_reflects_new_eta_only (the negative action: one
+                   user event, at the new 20:00 — not two, not the stale 19:00)
+                   + emailed_guest_new_eta (told the guest the new time)
+    food_order_placed is a required weight-0 gate (no order -> nothing to
+    coordinate)."""
+    from server.apps import bus as _bus
+
+    _NEW_24H = "20:00"
+    _NEW_TOKENS = ("8:00", "8 pm", "8pm", "20:00")
+
+    def _food_ordered(p: Probe) -> bool:
+        food = getattr(p.world, "food", None) if p.world else None
+        return food is not None and len(food.orders) >= 1
+
+    def _delay_delivered(p: Probe) -> bool:
+        return p.world is not None and _bus.has_delivered(p.world, "DeliveryDelayed")
+
+    def _delay_email(p: Probe):
+        mail = getattr(p.world, "mail", None) if p.world else None
+        if mail is None:
+            return None
+        for e in mail.inbox.values():
+            if "delivery" in (e.labels or []) \
+                    or "delivery@" in (e.sender or "").lower():
+                return e
+        return None
+
+    def _noticed_delay(p: Probe) -> bool:
+        e = _delay_email(p)
+        return e is not None and e.read
+
+    def _user_events(p: Probe) -> list:
+        cal = getattr(p.world, "calendar", None) if p.world else None
+        if cal is None:
+            return []
+        return [e for e in cal.events.values() if e.source == "user"]
+
+    def _calendar_reflects_new_eta_only(p: Probe) -> bool:
+        """Exactly ONE agent-created event, at the NEW ETA. Catches both the
+        over-keep (two events) and the never-updated (one event still at the
+        old 19:00) failures."""
+        evs = _user_events(p)
+        return len(evs) == 1 and evs[0].start == _NEW_24H
+
+    def _emailed_guest_new_eta(p: Probe) -> bool:
+        mail = getattr(p.world, "mail", None) if p.world else None
+        if mail is None:
+            return False
+        for se in mail.sent.values():
+            to = (se.to or "").lower()
+            body = (se.body or "").lower()
+            if "alex" in to and any(t in body for t in _NEW_TOKENS):
+                return True
+        return False
+
+    return TaskSuite(
+        task_id="M16/coordinated_dinner_delay",
+        milestones=[
+            Milestone("food_order_placed", weight=0.0,
+                      check=_food_ordered, required_for_success=True),
+            Milestone("delivery_delayed_delivered", weight=0.0,
+                      check=_delay_delivered, required_for_success=False),
+            Milestone("noticed_delay", weight=0.2,
+                      check=_noticed_delay, required_for_success=True),
+            Milestone("calendar_reflects_new_eta_only", weight=0.4,
+                      check=_calendar_reflects_new_eta_only,
+                      required_for_success=True),
+            Milestone("emailed_guest_new_eta", weight=0.4,
+                      check=_emailed_guest_new_eta, required_for_success=True),
+        ],
+    )
+
+
 # --------------------------------------------------------------------------- #
 # Registry
 # --------------------------------------------------------------------------- #
@@ -1839,6 +1919,7 @@ SUITE_FACTORIES = {
     "M13/order_cleanup_audit":       _suite_m13,
     "M14/return_then_refund":        _suite_m14,
     "M15/inbox_price_watch":         _suite_m15,
+    "M16/coordinated_dinner_delay":  _suite_m16,
 }
 
 

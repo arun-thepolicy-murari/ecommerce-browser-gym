@@ -66,3 +66,42 @@ async def create(
         return RedirectResponse("/calendar", 303)
     _deps["flash"](world.shop, "error", r.get("error", "Could not add event."))
     return RedirectResponse("/calendar/new", 303)
+
+
+@router.get("/edit/{event_id}", response_class=HTMLResponse)
+async def edit_event(request: Request, event_id: str):
+    cal = _deps["get_world"]().calendar
+    event = cal.events.get(event_id)
+    return _render(request, "calendar/edit_event.html", calendar=cal,
+                   event=event, today=TODAY, tomorrow=TOMORROW)
+
+
+@router.post("/update")
+async def update(
+    request: Request,
+    event_id: str = Form(""),
+    title: str = Form(""),
+    start: str = Form(""),
+    end: str = Form(""),
+):
+    world = _deps["get_world"]()
+    r = C.update_event(world.calendar, event_id, start=start, end=end,
+                       title=title)
+    if r.get("ok"):
+        _deps["flash"](world.shop, "success", "Updated your calendar event.")
+        return RedirectResponse("/calendar", 303)
+    _deps["flash"](world.shop, "error", r.get("error", "Could not update."))
+    return RedirectResponse(f"/calendar/edit/{event_id}", 303)
+
+
+@router.post("/delete")
+async def delete(request: Request, event_id: str = Form("")):
+    world = _deps["get_world"]()
+    r = C.delete_event(world.calendar, event_id)
+    if r.get("ok"):
+        _deps["flash"](world.shop, "success",
+                       f"Removed '{r['title']}' from your calendar.")
+    else:
+        _deps["flash"](world.shop, "error",
+                       r.get("error", "Could not remove event."))
+    return RedirectResponse("/calendar", 303)

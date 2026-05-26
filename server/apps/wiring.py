@@ -20,3 +20,5 @@ def register_default_subscribers() -> None:
     # actually drops — same step, two targets.
     bus.subscribe("PriceDropAlert", inbound.deliver_price_drop_alert)
     bus.subscribe("ShopPriceChanged", shop_hooks.apply_shop_price_change)
+    # Async delivery-delay notice (M16): pushes the ETA into a later slot.
+    bus.subscribe("DeliveryDelayed", inbound.deliver_delivery_delayed)

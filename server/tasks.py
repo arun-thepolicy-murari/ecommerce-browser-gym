@@ -310,6 +310,16 @@ BRIEFS = {
         "item is on its way back."
     ),
 
+    "M16": (
+        "Order me the Salmon Avocado Roll from Sakura Sushi for tonight. Once "
+        "it's ordered, add a reminder to my calendar for when it's set to "
+        "arrive, and email Alex (alex@example.com) to let them know the "
+        "delivery time. Heads up — the kitchen sometimes pushes the ETA back "
+        "after you order; if a delay notice comes in, make sure my calendar and "
+        "Alex both reflect the FINAL arrival time, and don't leave a reminder "
+        "at the old time hanging around."
+    ),
+
     "M15": (
         "I'm waiting on a price-drop alert for a mouse I've had my eye on. A "
         "deals email is going to land in my inbox naming the exact mouse and "
@@ -930,6 +940,9 @@ START_PATHS = {
     # M15 starts on the inbox so the agent is watching when the price-drop
     # alert lands (step 4) — the async wait is the skill under test.
     "M15/inbox_price_watch": "/mail",
+    # M16 starts on the food app — ordering dinner is the first move and what
+    # arms the async delay notice.
+    "M16/coordinated_dinner_delay": "/food",
 }
 
 
@@ -1126,6 +1139,51 @@ def task_m15_inbox_price_watch(seed: int) -> "WorldState":
     return world
 
 
+# M16 coordinated-dinner-delay constants. The food order's first ETA is a free
+# evening slot (19:00); the async DeliveryDelayed pushes it to a LATER slot
+# (20:00) that collides with a seeded event — so the original plan is stale and
+# the agent must move the reminder + re-notify the guest, NOT keep the old one.
+_M16_OLD_ETA_LABEL = "7:00 PM"
+_M16_NEW_ETA_LABEL = "8:00 PM"
+_M16_NEW_ETA_24H = "20:00"
+_M16_DELAY_AFTER = 5            # steps after FoodOrderPlaced the delay notice lands
+
+
+def task_m16_coordinated_dinner_delay(seed: int) -> "WorldState":
+    """HERO async branch-flip + NEGATIVE action across 4 apps. Order dinner
+    (ETA 7:00 PM -> a free 19:00 slot), add a calendar reminder at that ETA, and
+    email the guest. Then a DeliveryDelayed notice arrives async (5 steps after
+    the order) pushing the ETA to 8:00 PM (20:00 -> collides with 'Call with
+    Mom'). The original plan no longer holds: the agent must MOVE the reminder
+    to 20:00 (leaving exactly ONE delivery event, not two) AND email the guest
+    the new time. Agents over-keep — they add a second event and forget to
+    remove the stale one."""
+    from server.apps import scheduler as _sched
+    from server.apps.calendar.state import CalendarEvent, TOMORROW
+    world = _cross_app_world(seed, "M16/coordinated_dinner_delay", "hard")
+    # Clean ETA so the 12h->24h mapping is unambiguous (7:00 PM -> 19:00).
+    world.food.restaurants["r_sushi"].eta_label = _M16_OLD_ETA_LABEL
+    # Deterministic calendar (independent of seed parity): 19:00 is FREE, 20:00
+    # is BUSY (the new ETA lands in an occupied slot).
+    cal = world.calendar
+    cal.events.clear()
+    for title, s, e in [("Team sync", "14:00", "15:00"),
+                        ("Call with Mom", "20:00", "20:30")]:
+        eid = cal.new_id()
+        cal.events[eid] = CalendarEvent(
+            id=eid, title=title, day=TOMORROW,
+            day_label="Tomorrow (Fri May 22)", start=s, end=e, source="seed")
+    # The async delay: 5 steps after the food order is placed.
+    _sched.schedule_relative(
+        world.schedule, id="se_delivery_delayed",
+        after_event_type="FoodOrderPlaced", delay_steps=_M16_DELAY_AFTER,
+        emit_type="DeliveryDelayed", source_app="food", target_app="mail",
+        payload={"restaurant": "Sakura Sushi",
+                 "old_eta_label": _M16_OLD_ETA_LABEL,
+                 "new_eta_label": _M16_NEW_ETA_LABEL})
+    return world
+
+
 def task_m5_cheaper_mouse_from_deals(seed: int) -> "WorldState":
     """Comparison + salience trap. Two 'deal' emails name two DIFFERENT mice
     at two prices: the flashy 'FLASH SALE' email pushes the PRICIER gaming
@@ -1176,6 +1234,7 @@ REQUIRED_FACTS = {
     "M13/order_cleanup_audit":       ["mail.qualifying_orders"],
     "M14/return_then_refund":        ["mail.rma_code", "mail.refund_amount"],
     "M15/inbox_price_watch":         ["mail.alerted_product_id", "mail.alerted_new_price"],
+    "M16/coordinated_dinner_delay":  ["mail.new_eta", "calendar.user_event_time"],
 }
 
 
@@ -1212,6 +1271,7 @@ TASKS = {
     "M13/order_cleanup_audit":       task_m13_order_cleanup_audit,
     "M14/return_then_refund":        task_m14_return_then_refund,
     "M15/inbox_price_watch":         task_m15_inbox_price_watch,
+    "M16/coordinated_dinner_delay":  task_m16_coordinated_dinner_delay,
 }
 
 

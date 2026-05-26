@@ -75,6 +75,35 @@ def deliver_shop_order_confirmation(world: "WorldState",
     )
 
 
+def deliver_delivery_delayed(world: "WorldState", event: "WorldEvent") -> None:
+    """DeliveryDelayed -> a 'your delivery is running late' email with a NEW
+    ETA. Delivered ASYNCHRONOUSLY by the scheduler a few steps AFTER the agent
+    places the food order, so the agent's original plan (calendar reminder +
+    guest note at the FIRST ETA) is now stale: it must move the reminder to the
+    new ETA, NOT keep the old one, and tell the guest the new time."""
+    mail = world.mail
+    if mail is None:
+        return
+    p = event.payload
+    new_eta = p.get("new_eta_label", "")
+    old_eta = p.get("old_eta_label", "")
+    eid = mail.new_id()
+    mail.inbox[eid] = Email(
+        id=eid, sender="delivery@foodapp.com", to=mail.account_email,
+        subject=f"Update: your {p.get('restaurant', '')} delivery is running late",
+        body=(
+            f"Sorry — your order from {p.get('restaurant', '')} is running "
+            f"behind.\n\n"
+            f"  Original ETA: {old_eta}\n"
+            f"  NEW ETA:      {new_eta}\n\n"
+            f"Thanks for your patience.\n"
+        ),
+        received_at=f"{SEED_DATE}T18:45:00", received_label="now",
+        read=False, labels=["delivery"],
+        eta=new_eta,
+    )
+
+
 def deliver_price_drop_alert(world: "WorldState", event: "WorldEvent") -> None:
     """PriceDropAlert -> a deals email naming ONE product + its NEW price.
     Delivered ABSOLUTELY by the scheduler (e.g. step 4) WHILE the agent waits

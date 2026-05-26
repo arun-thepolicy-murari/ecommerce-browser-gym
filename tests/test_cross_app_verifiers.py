@@ -22,6 +22,7 @@ from server.apps import bus, scheduler, shop_hooks
 from server.apps import wiring as apps_wiring
 from server.apps.mail import mutations as mail_mut
 from server.apps.food import mutations as food_mut
+from server.apps.calendar import mutations as cal_mut
 
 
 @pytest.fixture(autouse=True)
@@ -241,6 +242,89 @@ def test_m15_buying_before_drop_is_stale_price():
     res = sim.do(lambda: mail_mut.mark_read(sim.world.mail, alert.id))
     assert res["success"] is False
     assert "ordered_at_dropped_price" in res["missed_milestones"]
+
+
+# --------------------------------------------------------------------------- #
+# M16 (hero async branch-flip + negative action): order dinner -> delay notice
+# -> move the reminder to the new ETA (one event) + tell the guest
+# --------------------------------------------------------------------------- #
+
+def _order_dinner(sim: _CrossSim) -> None:
+    food_mut.add_dish(sim.world.food, restaurant_id="r_sushi",
+                      dish_id="d_salmon_roll", quantity=1)
+    food_mut.place_food_order(sim.world)        # emits FoodOrderPlaced (step 0)
+
+
+def _fire_delay(sim: _CrossSim):
+    """Advance the clock past the delay's due step (FoodOrderPlaced.step + 5)
+    so DeliveryDelayed fires, then return the delay-notice email."""
+    scheduler.advance_and_flush(sim.world, 6)
+    return next(e for e in sim.world.mail.inbox.values()
+                if "delivery" in (e.labels or []))
+
+
+def _tell_alex(sim: _CrossSim, body: str) -> None:
+    mail_mut.send_email(sim.world.mail, to="alex@example.com",
+                        subject="Dinner delivery", body=body)
+
+
+def test_m16_delay_fires_only_after_food_order():
+    """Relative trigger: no FoodOrderPlaced -> the delay never fires; once the
+    order is placed it fires delay_steps later."""
+    sim = _CrossSim("M16/coordinated_dinner_delay")
+    scheduler.advance_and_flush(sim.world, 6)     # clock moves, but no trigger yet
+    assert not bus.has_delivered(sim.world, "DeliveryDelayed")
+    _order_dinner(sim)
+    scheduler.advance_and_flush(sim.world, 12)
+    assert bus.has_delivered(sim.world, "DeliveryDelayed")
+
+
+def test_m16_full_path_scores_one():
+    sim = _CrossSim("M16/coordinated_dinner_delay")
+    _order_dinner(sim)
+    # First plan at the original ETA (19:00).
+    r = cal_mut.create_event(sim.world.calendar, title="Dinner delivery",
+                             day="2026-05-22", start="19:00", end="19:30")
+    notice = _fire_delay(sim)
+    sim.do(lambda: mail_mut.mark_read(sim.world.mail, notice.id))
+    # Branch-flip: MOVE the same event to the new ETA (not a second one).
+    cal_mut.update_event(sim.world.calendar, r["event_id"], start="20:00",
+                         end="20:30")
+    _tell_alex(sim, "Update — it'll now arrive around 8:00 PM.")
+    final = sim._probe()
+    assert final["success"] is True
+    assert final["score"] == 1.0
+
+
+def test_m16_over_keep_two_events_fails():
+    """The negative action: leaving the old 19:00 reminder AND adding a new
+    20:00 one -> two user events -> the calendar milestone misses."""
+    sim = _CrossSim("M16/coordinated_dinner_delay")
+    _order_dinner(sim)
+    cal_mut.create_event(sim.world.calendar, title="Dinner delivery",
+                         day="2026-05-22", start="19:00", end="19:30")
+    notice = _fire_delay(sim)
+    sim.do(lambda: mail_mut.mark_read(sim.world.mail, notice.id))
+    cal_mut.create_event(sim.world.calendar, title="Dinner delivery (new)",
+                         day="2026-05-22", start="20:00", end="20:30")
+    _tell_alex(sim, "Update — it'll now arrive around 8:00 PM.")
+    res = sim._probe()
+    assert res["success"] is False
+    assert "calendar_reflects_new_eta_only" in res["missed_milestones"]
+
+
+def test_m16_reminder_never_moved_fails():
+    """Reading the delay but leaving the reminder at the stale 19:00 -> miss."""
+    sim = _CrossSim("M16/coordinated_dinner_delay")
+    _order_dinner(sim)
+    cal_mut.create_event(sim.world.calendar, title="Dinner delivery",
+                         day="2026-05-22", start="19:00", end="19:30")
+    notice = _fire_delay(sim)
+    sim.do(lambda: mail_mut.mark_read(sim.world.mail, notice.id))
+    _tell_alex(sim, "Update — it'll now arrive around 8:00 PM.")
+    res = sim._probe()
+    assert res["success"] is False
+    assert "calendar_reflects_new_eta_only" in res["missed_milestones"]
 
 
 # --------------------------------------------------------------------------- #
