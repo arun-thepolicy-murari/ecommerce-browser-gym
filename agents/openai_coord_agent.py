@@ -87,7 +87,8 @@ class OpenAICoordAgent:
             messages.append({"role": "user", "content": [
                 {"type": "text", "text": user_text},
                 {"type": "image_url",
-                 "image_url": {"url": f"data:image/png;base64,{b64}"}},
+                 "image_url": {"url": f"data:image/png;base64,{b64}",
+                               "detail": "high"}},
             ]})
 
             # ── THINK + ACT ──

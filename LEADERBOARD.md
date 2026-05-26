@@ -24,15 +24,25 @@
 
 | Model (raw-coord) | M15 pass · avg | M16 pass · avg | **Overall pass · avg** |
 |---|---|---|---|
-| **claude-haiku-4-5** | 0/3 · **0.80** | **1/3** · **0.60** | **1/6 · 0.70** |
-| gpt-5 | 0/3 · 0.20 | 0/3 · 0.07 | 0/6 · 0.13 |
-| gpt-4.1 | 0/3 · 0.20 | 0/3 · 0.00 | 0/6 · 0.10 |
-| gpt-5.1 | 0/3 · 0.20 | 0/3 · 0.00 | 0/6 · 0.10 |
-| gpt-4.1-mini | 0/3 · 0.13 | 0/3 · 0.00 | 0/6 · 0.07 |
+| **claude-haiku-4-5** | **3/3 · 1.00** | **1/3 · 0.60** | **4/6 · 0.80** |
+| gpt-5 | 0/3 · 0.00 | 0/3 · 0.07 | 0/6 · 0.03 |
+| gpt-4.1 | 0/3 · 0.00 | 0/3 · 0.00 | 0/6 · 0.00 |
+| gpt-5.1 | 0/3 · 0.00 | 0/3 · 0.00 | 0/6 · 0.00 |
+| gpt-4.1-mini | 0/3 · 0.00 | 0/3 · 0.00 | 0/6 · 0.00 |
 | gpt-4o-mini | 0/3 · 0.00 | 0/3 · 0.00 | 0/6 · 0.00 |
 
 `pass` = verifier success (all required milestones + aggregate ≥ 0.999);
 `avg` = mean weighted milestone score (partial credit).
+
+**M15 verifier note (corrected):** the M15 alert's *subject line* already names
+the mouse + new price, so opening the email isn't strictly necessary to do the
+task. `opened_alert_email` was therefore changed to **informational (weight 0,
+not required)** — M15 is now graded purely on the OUTCOME (right mouse at the new
+price, 0.5 + 0.5). This flipped **Haiku from 0/3 → 3/3** (it was buying correctly
+all along, reading the price off the subject) and left every GPT model at 0/3
+(they never completed a purchase, so the outcome milestones never fired). The
+GPT avg fell to ~0.00 because their only prior partial credit was the now-zero
+`opened_alert_email`.
 
 ## Headline
 

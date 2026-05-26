@@ -1794,12 +1794,17 @@ def _suite_m15() -> TaskSuite:
                       check=_alert_delivered, required_for_success=False),
             Milestone("price_dropped_in_shop", weight=0.0,
                       check=_price_dropped_in_shop, required_for_success=False),
-            Milestone("opened_alert_email", weight=0.2,
-                      check=_opened_alert_email, required_for_success=True),
-            Milestone("ordered_correct_mouse_only", weight=0.4,
+            # INFORMATIONAL (not required, weight 0): the alert's subject line
+            # already names the mouse + new price, so an agent can do the real
+            # task by reading the inbox list without OPENING the email. We grade
+            # the OUTCOME (right mouse at the new price), not whether the email
+            # was opened — opening is recorded for the coverage metric only.
+            Milestone("opened_alert_email", weight=0.0,
+                      check=_opened_alert_email, required_for_success=False),
+            Milestone("ordered_correct_mouse_only", weight=0.5,
                       check=_ordered_correct_mouse_only,
                       required_for_success=True),
-            Milestone("ordered_at_dropped_price", weight=0.4,
+            Milestone("ordered_at_dropped_price", weight=0.5,
                       check=_ordered_at_dropped_price,
                       required_for_success=True),
         ],

@@ -217,6 +217,19 @@ def test_m15_full_path_scores_one():
     assert final["score"] == 1.0
 
 
+def test_m15_outcome_without_opening_email_is_success():
+    """The alert's SUBJECT line already names the mouse + new price, so buying
+    the right mouse at the dropped price WITHOUT opening the email is full
+    success — opening the email is informational, not required. (This is the
+    Haiku case: it read the subject from the inbox list and ordered correctly.)"""
+    sim = _CrossSim("M15/inbox_price_watch")
+    _flush_pricedrop(sim)                       # alert delivered + price dropped; left UNREAD
+    sim.do(lambda: mutations.add_to_cart(sim.shop, "p_mouse_ergonomic", 1))
+    final = sim.do(lambda: mutations.place_order(sim.shop, "pay_visa"))
+    assert final["success"] is True
+    assert final["score"] == 1.0
+
+
 def test_m15_wrong_mouse_fails_required_milestone():
     sim = _CrossSim("M15/inbox_price_watch")
     alert = _flush_pricedrop(sim)
