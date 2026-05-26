@@ -1635,10 +1635,31 @@ def _suite_m14() -> TaskSuite:
     plus the return itself. refund_email_delivered is weight 0 (an env-truth
     gate for the async-recovery metric, not scored)."""
     from server.apps import bus as _bus
+    import re as _re
+
+    def _support_rma(p: Probe):
+        """The RMA code from the seeded support email (env truth)."""
+        mail = getattr(p.initial_world, "mail", None) if p.initial_world else None
+        if mail is None:
+            return None
+        for e in mail.inbox.values():
+            if "support@" in (e.sender or "").lower():
+                m = _re.search(r"RMA-\d+", e.body or "")
+                return m.group(0) if m else None
+        return None
 
     def _return_mouse_only(p: Probe) -> bool:
         return any(r.order_id == "ORD-RET-1" and r.item_ids == ["ln_mouse"]
                    and r.refund_method == "original_payment"
+                   for r in p.state.returns.values())
+
+    def _return_quotes_rma(p: Probe) -> bool:
+        """The agent carried the RMA from the support email INTO the return's
+        notes (the cross-tab transfer IN)."""
+        rma = _support_rma(p)
+        if not rma:
+            return False
+        return any(r.order_id == "ORD-RET-1" and rma in (r.notes or "")
                    for r in p.state.returns.values())
 
     def _refund_delivered(p: Probe) -> bool:
@@ -1673,13 +1694,15 @@ def _suite_m14() -> TaskSuite:
     return TaskSuite(
         task_id="M14/return_then_refund",
         milestones=[
-            Milestone("return_filed_mouse_only", weight=0.3,
+            Milestone("return_filed_mouse_only", weight=0.25,
                       check=_return_mouse_only, required_for_success=True),
+            Milestone("return_quotes_rma", weight=0.15,
+                      check=_return_quotes_rma, required_for_success=True),
             Milestone("refund_email_delivered", weight=0.0,
                       check=_refund_delivered, required_for_success=False),
             Milestone("opened_refund_email", weight=0.2,
                       check=_opened_refund_email, required_for_success=True),
-            Milestone("replied_confirming_refund", weight=0.5,
+            Milestone("replied_confirming_refund", weight=0.4,
                       check=_replied_confirming_refund,
                       required_for_success=True),
         ],

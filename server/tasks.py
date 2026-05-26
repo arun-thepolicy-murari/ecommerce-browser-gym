@@ -302,10 +302,12 @@ BRIEFS = {
     "M14": (
         "The Wireless Mouse from order ORD-RET-1 arrived defective. Start a "
         "return for JUST the mouse (leave the speaker), refunded to my original "
-        "payment. After you file it, a refund-approval email will come through "
-        "to my inbox — it won't be there immediately, so keep an eye out. Once "
-        "it lands, open it and REPLY confirming the exact refund amount they "
-        "gave me and that the item is on its way back."
+        "payment. Support already emailed me a return-authorization code — find "
+        "that email and put the code in the return's Notes when you file. After "
+        "you file it, a refund-approval email will come through to my inbox — it "
+        "won't be there immediately, so keep an eye out. Once it lands, open it "
+        "and REPLY confirming the exact refund amount they gave me and that the "
+        "item is on its way back."
     ),
 
     "M13": (
@@ -1002,6 +1004,12 @@ def task_m13_order_cleanup_audit(seed: int) -> "WorldState":
 # M14 refund constant: the mouse ($29.99) minus a 15% restocking fee. The
 # agent must reply with THIS (25.49), not the $29.99 sticker.
 _M14_REFUND = round(29.99 * 0.85, 2)
+# Return-authorization code that lives ONLY in a support email — the agent must
+# read it in Mail and carry it into the return form's notes BEFORE filing. The
+# cross-tab transfer (in) that complements the async refund amount (out). Since
+# an HTML form loses its input on same-tab navigation, the efficient path is to
+# keep the form tab open and open Mail in a second tab.
+_M14_RMA = "RMA-4417"
 
 
 def task_m14_return_then_refund(seed: int) -> "WorldState":
@@ -1046,6 +1054,20 @@ def task_m14_return_then_refund(seed: int) -> "WorldState":
         tax=round(109.98 * 0.085, 2), shipping=5.99,
         total=round(109.98 * 1.085 + 5.99, 2),
         promo_code=None, payment_id=pay.id, status="delivered", shipments=[sh])
+    # Support email holding the return-authorization code the form's notes need.
+    from server.apps.mail.state import Email, SEED_DATE
+    m = world.mail
+    eid = m.new_id()
+    m.inbox[eid] = Email(
+        id=eid, sender="support@shopgym.com", to=m.account_email,
+        subject="Your return authorization for ORD-RET-1",
+        body=(f"Hi Alice,\n\nThanks for reaching out about order ORD-RET-1. "
+              f"You're approved to start the return.\n\n"
+              f"Return authorization code: {_M14_RMA}\n\n"
+              f"Please enter this code in the Notes field when you file the "
+              f"return so we can match it up.\n\n- ShopGym Support"),
+        received_at=f"{SEED_DATE}T09:00:00", received_label="9:00 AM",
+        read=False, labels=["support"])
     # The async refund: 3 steps after ReturnFiled, an approval email lands.
     _sched.schedule_relative(
         world.schedule, id="se_refund", after_event_type="ReturnFiled",
@@ -1104,7 +1126,7 @@ REQUIRED_FACTS = {
     "M10/dinner_source_conflict":    ["calendar.evening_free", "mail.alex_available"],
     "M11/cancel_unshipped_over_100": ["mail.qualifying_orders"],
     "M13/order_cleanup_audit":       ["mail.qualifying_orders"],
-    "M14/return_then_refund":        ["mail.refund_amount"],
+    "M14/return_then_refund":        ["mail.rma_code", "mail.refund_amount"],
 }
 
 

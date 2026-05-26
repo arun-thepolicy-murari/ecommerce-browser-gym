@@ -254,16 +254,23 @@ def _facts_m14(world: dict, url: str) -> dict[str, Any]:
     when the email is READ (so coverage = the agent actually opened it, never a
     fact it couldn't have seen). 'used' is checked by the verifier on the
     reply."""
+    import re
     facts: dict[str, Any] = {}
     inbox = (world.get("mail") or {}).get("inbox") or {}
     for e in inbox.values():
-        if "refunds@" in (e.get("sender") or "").lower():
+        sender = (e.get("sender") or "").lower()
+        if "support@" in sender and e.get("read"):
+            # The RMA carried IN from the support email (recorded only when the
+            # agent has actually opened it).
+            m = re.search(r"RMA-\d+", e.get("body", "") or "")
+            if m:
+                facts["mail.rma_code"] = m.group(0)
+        if "refunds@" in sender:
             facts["mail.refund_delivered"] = True
             if e.get("id") and e["id"] in (url or ""):
                 facts["mail.refund_visible"] = e.get("amount_total")
             if e.get("read"):
                 facts["mail.refund_amount"] = e.get("amount_total")
-            break
     return facts
 
 

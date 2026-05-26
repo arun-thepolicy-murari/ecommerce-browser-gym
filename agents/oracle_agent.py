@@ -758,19 +758,29 @@ async def solve_m13_order_cleanup_audit(ctx: BrowserCtx) -> None:
 
 
 async def solve_m14_return_then_refund(ctx: BrowserCtx) -> None:
-    """File the mouse-only return, WAIT for the async refund email (arrives 3
-    steps after filing), open it, and reply confirming the exact refund."""
-    # File the return for the mouse only, refund to original payment.
+    """Read the RMA from the support email, file the mouse-only return (RMA in
+    notes), WAIT for the async refund email (arrives 3 steps after filing),
+    open it, and reply confirming the exact refund."""
+    import re
+    # 1) Read the return-authorization code from the support email.
+    world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
+    support = next(e for e in world["mail"]["inbox"].values()
+                   if "support@" in (e.get("sender") or "").lower())
+    m = re.search(r"RMA-\d+", support.get("body", ""))
+    rma = m.group(0) if m else ""
+    # 2) File the return for the mouse only, RMA in notes, refund to original.
     await ctx.goto("/account/returns/new?order_id=ORD-RET-1",
                    reasoning="Open the return form for the defective mouse.")
     await ctx.check("input[data-test-id='cb-return-item-ln_mouse']")
     await ctx.select("select[data-test-id='select-return-reason']", "defective")
     await ctx.click("input[data-test-id='radio-refund-original']")
+    await ctx.fill("textarea[data-test-id='textarea-return-notes']",
+                   f"Return authorization: {rma}")
     await ctx.click("button[data-test-id='btn-submit-return']")
-    # Wait for the async refund-approval email (fires 3 steps after filing).
+    # 3) Wait for the async refund-approval email (fires 3 steps after filing).
     for _ in range(4):
         await ctx.wait(reasoning="Wait for the refund-approval email to arrive.")
-    # Read the exact refund amount off the email, then reply confirming it.
+    # 4) Read the exact refund amount off the email, then reply confirming it.
     world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
     refund_email = next(
         e for e in world["mail"]["inbox"].values()
