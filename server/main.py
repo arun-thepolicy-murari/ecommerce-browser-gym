@@ -857,6 +857,12 @@ async def api_create_return(
         s, order_id=order_id, item_ids=item_ids,
         reason=reason, refund_method=refund_method, notes=notes,
     )
+    # Cross-app TRIGGER: a successfully-filed return is what a scheduled async
+    # "refund approved" email resolves its due step against (server.apps.
+    # scheduler). Emits a ReturnFiled WorldEvent into the log; no subscriber.
+    if r.get("ok") and SESSION.world is not None:
+        shop_hooks.emit_return_filed(
+            SESSION.world, return_id=r.get("return_id", ""), order_id=order_id)
     return RedirectResponse("/account/returns", 303)
 
 

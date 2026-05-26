@@ -299,6 +299,15 @@ BRIEFS = {
         "and don't add a single one that doesn't qualify."
     ),
 
+    "M14": (
+        "The Wireless Mouse from order ORD-RET-1 arrived defective. Start a "
+        "return for JUST the mouse (leave the speaker), refunded to my original "
+        "payment. After you file it, a refund-approval email will come through "
+        "to my inbox — it won't be there immediately, so keep an eye out. Once "
+        "it lands, open it and REPLY confirming the exact refund amount they "
+        "gave me and that the item is on its way back."
+    ),
+
     "M13": (
         "Help me clean up my pending orders. Each order email shows a Subtotal "
         "and a Total Charged (the Total Charged is after my 10% member "
@@ -903,6 +912,10 @@ def task_m12_bulk_add_dense(seed: int) -> "GymState":
 # variable under test, not navigation.
 START_PATHS = {
     "M12/bulk_add_dense_grid": "/bulk",
+    # M14 lands on the orders list so the agent can find ORD-RET-1 and file the
+    # return; the async refund + Mail tab is the skill under test, not finding
+    # the order.
+    "M14/return_then_refund": "/account/orders",
 }
 
 
@@ -986,6 +999,63 @@ def task_m13_order_cleanup_audit(seed: int) -> "WorldState":
     return world
 
 
+# M14 refund constant: the mouse ($29.99) minus a 15% restocking fee. The
+# agent must reply with THIS (25.49), not the $29.99 sticker.
+_M14_REFUND = round(29.99 * 0.85, 2)
+
+
+def task_m14_return_then_refund(seed: int) -> "WorldState":
+    """ASYNC north-star. A delivered order (mouse + speaker); file a return for
+    the mouse only, then a RefundApproved email arrives 3 steps LATER (fired by
+    the scheduler off the ReturnFiled trigger, independent of the agent) with
+    the EXACT refund ($25.49 = $29.99 - 15% restocking, NOT the sticker). The
+    agent must notice it arrive (switch to Mail) and reply confirming that exact
+    amount. Tests async-handling + cross-tab exact-value transfer."""
+    from server.apps import scheduler as _sched
+    world = _cross_app_world(seed, "M14/return_then_refund", "hard")
+    shop = world.shop
+    alice = shop.users["u_alice"]
+    addr = list(alice.addresses.values())[0]
+    pay = list(alice.payment_methods.values())[0]
+    items = [
+        OrderItem(id="ln_mouse", product_id="p_mouse_wireless",
+                  product_name="Wireless Mouse", variant_id=None,
+                  variant_label="", quantity=1, unit_price=29.99,
+                  gift_wrap=False, gift_message="",
+                  ship_to_address_id=addr.id, scheduled_delivery=None),
+        OrderItem(id="ln_speaker", product_id="p_speaker",
+                  product_name="Bluetooth Speaker", variant_id=None,
+                  variant_label="", quantity=1, unit_price=79.99,
+                  gift_wrap=False, gift_message="",
+                  ship_to_address_id=addr.id, scheduled_delivery=None),
+    ]
+    sh = Shipment(
+        id="sh_ret1", tracking_number="1Z999AA10000000001", carrier="UPS",
+        item_ids=[i.id for i in items], status="delivered",
+        estimated_delivery=(
+            datetime.now(timezone.utc) - timedelta(days=2)).date().isoformat(),
+        events=[
+            ShipmentEvent("2024-02-01T10:00:00Z", "label_created",
+                          "Distribution Center", "Shipping label created"),
+            ShipmentEvent("2024-02-03T14:20:00Z", "delivered",
+                          "Brooklyn, NY", "Delivered to mailbox"),
+        ])
+    shop.orders["ORD-RET-1"] = Order(
+        id="ORD-RET-1", user_id="u_alice", placed_at="2024-02-01T09:30:00Z",
+        items=items, subtotal=109.98, discount=0.0,
+        tax=round(109.98 * 0.085, 2), shipping=5.99,
+        total=round(109.98 * 1.085 + 5.99, 2),
+        promo_code=None, payment_id=pay.id, status="delivered", shipments=[sh])
+    # The async refund: 3 steps after ReturnFiled, an approval email lands.
+    _sched.schedule_relative(
+        world.schedule, id="se_refund", after_event_type="ReturnFiled",
+        delay_steps=3, emit_type="RefundApproved", source_app="shop",
+        target_app="mail",
+        payload={"order_id": "ORD-RET-1", "refund_amount": _M14_REFUND,
+                 "refund_method": "original payment"})
+    return world
+
+
 def task_m5_cheaper_mouse_from_deals(seed: int) -> "WorldState":
     """Comparison + salience trap. Two 'deal' emails name two DIFFERENT mice
     at two prices: the flashy 'FLASH SALE' email pushes the PRICIER gaming
@@ -1034,6 +1104,7 @@ REQUIRED_FACTS = {
     "M10/dinner_source_conflict":    ["calendar.evening_free", "mail.alex_available"],
     "M11/cancel_unshipped_over_100": ["mail.qualifying_orders"],
     "M13/order_cleanup_audit":       ["mail.qualifying_orders"],
+    "M14/return_then_refund":        ["mail.refund_amount"],
 }
 
 
@@ -1068,6 +1139,7 @@ TASKS = {
     "M11/cancel_unshipped_over_100": task_m11_cancel_unshipped_over_100,
     "M12/bulk_add_dense_grid":       task_m12_bulk_add_dense,
     "M13/order_cleanup_audit":       task_m13_order_cleanup_audit,
+    "M14/return_then_refund":        task_m14_return_then_refund,
 }
 
 

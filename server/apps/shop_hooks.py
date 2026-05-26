@@ -30,3 +30,15 @@ def emit_shop_order_placed(world: "WorldState", order_id: str) -> None:
             "tracking_url": f"/account/orders/{order_id}/track",
         },
     )
+
+
+def emit_return_filed(world: "WorldState", *, return_id: str,
+                      order_id: str) -> None:
+    """Emit ReturnFiled — a pure TRIGGER event (target_app=shop, no subscriber).
+    It lands in ``world.events`` so a scheduled relative event (e.g. a refund-
+    approved email N steps later) can resolve its due step against it. The
+    async refund itself is delivered by the scheduler, not here."""
+    bus.emit(
+        world, type="ReturnFiled", source_app="shop", target_app="shop",
+        payload={"return_id": return_id, "order_id": order_id},
+    )

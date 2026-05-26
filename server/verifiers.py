@@ -1625,6 +1625,67 @@ def _suite_m13() -> TaskSuite:
     )
 
 
+def _suite_m14() -> TaskSuite:
+    """ASYNC return -> refund. File the return for the mouse only; a
+    RefundApproved email arrives 3 steps later (scheduler) with the exact
+    refund; reply confirming that exact amount. The 4 levels:
+      delivered  -> refund_email_delivered (env truth, bus.has_delivered)
+      read       -> opened_refund_email (the agent NOTICED the async arrival)
+      used       -> replied_confirming_refund (exact amount in the reply)
+    plus the return itself. refund_email_delivered is weight 0 (an env-truth
+    gate for the async-recovery metric, not scored)."""
+    from server.apps import bus as _bus
+
+    def _return_mouse_only(p: Probe) -> bool:
+        return any(r.order_id == "ORD-RET-1" and r.item_ids == ["ln_mouse"]
+                   and r.refund_method == "original_payment"
+                   for r in p.state.returns.values())
+
+    def _refund_delivered(p: Probe) -> bool:
+        return p.world is not None and _bus.has_delivered(p.world, "RefundApproved")
+
+    def _refund_email(p: Probe):
+        mail = getattr(p.world, "mail", None) if p.world else None
+        if mail is None:
+            return None
+        for e in mail.inbox.values():
+            if "refunds@" in (e.sender or "").lower():
+                return e
+        return None
+
+    def _opened_refund_email(p: Probe) -> bool:
+        e = _refund_email(p)
+        return e is not None and e.read
+
+    def _replied_confirming_refund(p: Probe) -> bool:
+        mail = getattr(p.world, "mail", None) if p.world else None
+        e = _refund_email(p)
+        if mail is None or e is None or e.amount_total is None:
+            return False
+        needle = f"{e.amount_total:.2f}"           # the EXACT refund amount
+        for se in mail.sent.values():
+            body = se.body or ""
+            to = (se.to or "").lower()
+            if needle in body and "refund" in to:
+                return True
+        return False
+
+    return TaskSuite(
+        task_id="M14/return_then_refund",
+        milestones=[
+            Milestone("return_filed_mouse_only", weight=0.3,
+                      check=_return_mouse_only, required_for_success=True),
+            Milestone("refund_email_delivered", weight=0.0,
+                      check=_refund_delivered, required_for_success=False),
+            Milestone("opened_refund_email", weight=0.2,
+                      check=_opened_refund_email, required_for_success=True),
+            Milestone("replied_confirming_refund", weight=0.5,
+                      check=_replied_confirming_refund,
+                      required_for_success=True),
+        ],
+    )
+
+
 # --------------------------------------------------------------------------- #
 # Registry
 # --------------------------------------------------------------------------- #
@@ -1656,6 +1717,7 @@ SUITE_FACTORIES = {
     "M11/cancel_unshipped_over_100": _suite_m11,
     "M12/bulk_add_dense_grid":       _suite_m12,
     "M13/order_cleanup_audit":       _suite_m13,
+    "M14/return_then_refund":        _suite_m14,
 }
 
 

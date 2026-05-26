@@ -247,6 +247,26 @@ def _facts_m13(world: dict, url: str) -> dict[str, Any]:
     return facts
 
 
+def _facts_m14(world: dict, url: str) -> dict[str, Any]:
+    """M14 async refund — 4-level facts so a failure is unambiguously the
+    agent's: ``delivered`` (the refund email exists), ``visible`` (the agent is
+    ON its message page right now), and ``mail.refund_amount`` recorded ONLY
+    when the email is READ (so coverage = the agent actually opened it, never a
+    fact it couldn't have seen). 'used' is checked by the verifier on the
+    reply."""
+    facts: dict[str, Any] = {}
+    inbox = (world.get("mail") or {}).get("inbox") or {}
+    for e in inbox.values():
+        if "refunds@" in (e.get("sender") or "").lower():
+            facts["mail.refund_delivered"] = True
+            if e.get("id") and e["id"] in (url or ""):
+                facts["mail.refund_visible"] = e.get("amount_total")
+            if e.get("read"):
+                facts["mail.refund_amount"] = e.get("amount_total")
+            break
+    return facts
+
+
 FACT_EXTRACTORS: dict[str, Callable[[dict, str], dict]] = {
     "M2/order_then_track_via_email": _facts_m2,
     "M3/dinner_then_receipt":        _facts_m3,
@@ -259,6 +279,7 @@ FACT_EXTRACTORS: dict[str, Callable[[dict, str], dict]] = {
     "M10/dinner_source_conflict":    _facts_m10,
     "M11/cancel_unshipped_over_100": _facts_m11,
     "M13/order_cleanup_audit":       _facts_m13,
+    "M14/return_then_refund":        _facts_m14,
 }
 
 

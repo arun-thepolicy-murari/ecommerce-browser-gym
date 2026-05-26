@@ -14,3 +14,5 @@ from server.apps.mail import inbound
 def register_default_subscribers() -> None:
     bus.subscribe("FoodOrderPlaced", inbound.deliver_food_receipt)
     bus.subscribe("ShopOrderPlaced", inbound.deliver_shop_order_confirmation)
+    # Async deliveries fired by the scheduler (server.apps.scheduler):
+    bus.subscribe("RefundApproved", inbound.deliver_refund_approved)

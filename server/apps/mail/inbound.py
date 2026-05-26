@@ -73,3 +73,32 @@ def deliver_shop_order_confirmation(world: "WorldState",
         order_id=p.get("order_id"), amount_total=p.get("total"),
         tracking_url=p.get("tracking_url"),
     )
+
+
+def deliver_refund_approved(world: "WorldState", event: "WorldEvent") -> None:
+    """RefundApproved -> a refund-approved email. Delivered ASYNCHRONOUSLY by
+    the scheduler a few steps AFTER the agent files the return — so the agent
+    must notice it arrive (e.g. by switching to the Mail tab) and act on the
+    EXACT refund amount (which is the order amount minus a restocking fee, NOT
+    the sticker price)."""
+    mail = world.mail
+    if mail is None:
+        return
+    p = event.payload
+    amt = p.get("refund_amount", 0.0)
+    eid = mail.new_id()
+    mail.inbox[eid] = Email(
+        id=eid, sender="refunds@shopgym.com", to=mail.account_email,
+        subject=f"Your refund for {p.get('order_id', '')} is approved",
+        body=(
+            f"Good news — your return for order {p.get('order_id', '')} has "
+            f"been approved.\n\n"
+            f"Refund amount: ${amt:.2f}\n"
+            f"Refund method: {p.get('refund_method', 'original payment')}\n\n"
+            f"Please REPLY to this email to confirm the refund amount and that "
+            f"the item is on its way back.\n"
+        ),
+        received_at=f"{SEED_DATE}T14:20:00", received_label="now",
+        read=False, labels=["refunds"],
+        order_id=p.get("order_id"), amount_total=amt,
+    )

@@ -757,6 +757,35 @@ async def solve_m13_order_cleanup_audit(ctx: BrowserCtx) -> None:
         await ctx.click("button[data-test-id='btn-send']")
 
 
+async def solve_m14_return_then_refund(ctx: BrowserCtx) -> None:
+    """File the mouse-only return, WAIT for the async refund email (arrives 3
+    steps after filing), open it, and reply confirming the exact refund."""
+    # File the return for the mouse only, refund to original payment.
+    await ctx.goto("/account/returns/new?order_id=ORD-RET-1",
+                   reasoning="Open the return form for the defective mouse.")
+    await ctx.check("input[data-test-id='cb-return-item-ln_mouse']")
+    await ctx.select("select[data-test-id='select-return-reason']", "defective")
+    await ctx.click("input[data-test-id='radio-refund-original']")
+    await ctx.click("button[data-test-id='btn-submit-return']")
+    # Wait for the async refund-approval email (fires 3 steps after filing).
+    for _ in range(4):
+        await ctx.wait(reasoning="Wait for the refund-approval email to arrive.")
+    # Read the exact refund amount off the email, then reply confirming it.
+    world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
+    refund_email = next(
+        e for e in world["mail"]["inbox"].values()
+        if "refunds@" in (e.get("sender") or "").lower())
+    amt = refund_email["amount_total"]
+    await ctx.goto(f"/mail/message/{refund_email['id']}",
+                   reasoning="Open the refund-approval email.")
+    await ctx.click("a[data-test-id='btn-reply']")
+    await ctx.fill(
+        "textarea[data-test-id='input-compose-body']",
+        f"Confirmed — the refund of ${amt:.2f} is correct, and the mouse is on "
+        f"its way back to you. Thanks!")
+    await ctx.click("button[data-test-id='btn-send']")
+
+
 SOLVERS = {
     "A1/buy_wireless_mouse":     solve_a1_buy_wireless_mouse,
     "A2/filter_laptop":          solve_a2_filter_laptop,
@@ -784,4 +813,5 @@ SOLVERS = {
     "M11/cancel_unshipped_over_100": solve_m11_cancel_unshipped_over_100,
     "M12/bulk_add_dense_grid":       solve_m12_bulk_add_dense,
     "M13/order_cleanup_audit":       solve_m13_order_cleanup_audit,
+    "M14/return_then_refund":        solve_m14_return_then_refund,
 }
