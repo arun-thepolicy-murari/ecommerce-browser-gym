@@ -106,6 +106,8 @@ async def _run_one(*, agent_kind: str, task_id: str, seed: int,
         agent_name = f"openai[{llm_model or 'gpt-4o-mini'}]"
     elif agent_kind == "openai_pixel":
         agent_name = f"openai_pixel[{llm_model or 'gpt-4o-mini'}]"
+    elif agent_kind == "qwen":
+        agent_name = f"qwen[{llm_model or 'qwen-vl-plus'}]"
     else:
         agent_name = f"llm[{llm_model or 'default'}]"
     traj = Trajectory(
@@ -179,6 +181,12 @@ async def _run_one(*, agent_kind: str, task_id: str, seed: int,
             # cross-app journey. Default gpt-4o-mini.
             from agents.openai_pixel_agent import OpenAIPixelAgent
             agent = OpenAIPixelAgent(model=llm_model)
+            await agent.run(bctx, task_brief=reset["task_brief"])
+        elif agent_kind == "qwen":
+            # Qwen-VL (cheap, widely-used) via an OpenAI-compatible endpoint —
+            # SoM + multi-tab + async. Needs QWEN_BASE_URL + QWEN_API_KEY.
+            from agents.qwen_agent import QwenAgent
+            agent = QwenAgent(model=llm_model)
             await agent.run(bctx, task_brief=reset["task_brief"])
         else:
             from agents.llm_agent import LLMBrowserAgent
@@ -270,7 +278,7 @@ def main() -> None:
     ap.add_argument(
         "--agent",
         choices=["oracle", "llm", "pixel", "pixel_coord", "openai",
-                 "openai_pixel"],
+                 "openai_pixel", "qwen"],
         required=True,
         help="oracle = hand-coded reference; llm = Anthropic DOM/JSON agent; "
              "openai = GPT DOM/JSON agent (default gpt-4o-mini); "

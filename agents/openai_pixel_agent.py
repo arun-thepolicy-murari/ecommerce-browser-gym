@@ -55,6 +55,13 @@ _TAB_TOOLS = [
      "input_schema": {"type": "object", "properties": {
          "index": {"type": "integer"}, "reason": {"type": "string"}},
          "required": ["index"]}},
+    {"name": "wait",
+     "description": ("Let time pass WITHOUT a UI action — use this to wait for "
+                     "something to arrive that you can't make happen yourself "
+                     "(a new email, a notification, a price/status update). "
+                     "After waiting, re-check the relevant tab (e.g. Mail)."),
+     "input_schema": {"type": "object", "properties": {
+         "reason": {"type": "string"}}, "required": []}},
 ]
 
 
@@ -115,12 +122,21 @@ class OpenAIPixelAgent:
     """gpt-4o-mini pixel/SoM agent with multi-tab tools."""
 
     def __init__(self, model: str | None = None, max_steps: int = 50,
-                 verbose: bool = True):
+                 verbose: bool = True, base_url: str | None = None,
+                 api_key: str | None = None, eval_mode: bool | None = None):
         from openai import OpenAI
-        self.client = OpenAI()                     # reads OPENAI_API_KEY
+        # base_url lets this same agent drive any OpenAI-COMPATIBLE endpoint —
+        # incl. Qwen via DashScope / OpenRouter (set OPENAI_BASE_URL + the
+        # provider key). Defaults to OpenAI proper.
+        base = base_url or os.getenv("OPENAI_BASE_URL") or None
+        key = api_key or os.getenv("OPENAI_API_KEY")
+        self.client = OpenAI(base_url=base, api_key=key)
         self.model = model or os.getenv("OPENAI_MODEL", "gpt-5.4")
         self.max_steps = max_steps
         self.verbose = verbose
+        # No reward leakage in benchmark runs (AGENT_EVAL_MODE=1).
+        self.eval_mode = (eval_mode if eval_mode is not None
+                          else os.getenv("AGENT_EVAL_MODE", "0") == "1")
 
     async def run(self, ctx: BrowserCtx, task_brief: str) -> None:
         messages: list[dict[str, Any]] = [
@@ -130,6 +146,9 @@ class OpenAIPixelAgent:
         last_result = "(this is your first turn)"
 
         for turn in range(self.max_steps):
+            # ── TICK the async clock BEFORE observing (events scheduled for
+            # this step arrive + show in the screenshot the agent acts on). ──
+            await ctx.tick()
             # ── OBSERVE: marks + annotated screenshot + manifest + tabs ──
             marks = await extract_marks(ctx.page)
             raw_png = await ctx.page.screenshot(full_page=False)
@@ -214,6 +233,8 @@ class OpenAIPixelAgent:
                 elif kind == "close_tab":
                     rec = await ctx.close_tab(int(args["index"]),
                                               reasoning=args.get("reason", ""))
+                elif kind == "wait":
+                    rec = await ctx.wait(reasoning=args.get("reason", ""))
                 elif kind == "finish":
                     if self.verbose:
                         print(f"[openai_pixel] finishing: {args.get('reason', '')}")
@@ -230,6 +251,8 @@ class OpenAIPixelAgent:
                     if rec.action_error:
                         last_result = (f"ERROR: {rec.action_error}. "
                                        f"URL now {rec.url_after}.")
+                    elif self.eval_mode:
+                        last_result = f"OK ({kind}). URL now {rec.url_after}."
                     else:
                         last_result = (
                             f"OK ({kind}). URL now {rec.url_after}. "

@@ -451,7 +451,7 @@ def main() -> None:
                          "'1,3,5,7' to harvest only the busy M9 branch")
     ap.add_argument("--agent", default="openai",
                     choices=["openai", "openai_pixel", "llm", "pixel",
-                             "pixel_coord"],
+                             "pixel_coord", "qwen"],
                     help="weak agent to harvest (default openai = gpt-4o-mini "
                          "DOM; openai_pixel = gpt-4o-mini SoM/pixel; "
                          "pixel_coord = Anthropic raw-coordinate, no SoM)")
