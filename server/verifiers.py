@@ -2101,9 +2101,9 @@ def _suite_m23() -> TaskSuite:
                   Veggie Burger AND totals < $40 — combines Priya's diet + Alex's
                   budget; resisting the salient Classic Cheeseburger default)
       CONFLICT+CASCADE -> meeting_after_3pm_free (a user calendar event starting
-                  at/after 16:00 — the only free after-3 PM slot once Dana's
-                  constraint lands; catches not-moved-from-1 PM and the busy
-                  15:00-16:00 block)
+                  at EXACTLY 16:00 — the unique free after-3 PM slot once Dana's
+                  constraint lands; catches not-moved-from-1 PM, the form's 19:00
+                  default which is now a busy slot, and any other wrong time)
       RECIPIENT-> notified_dana (a sent email to dana@ with the final 4 PM time —
                   a FRESH compose, since Dana is not in the inbox; replying to the
                   manager misroutes)
@@ -2128,9 +2128,11 @@ def _suite_m23() -> TaskSuite:
         cal = getattr(p.world, "calendar", None) if p.world else None
         if cal is None:
             return False
-        # The only free slot satisfying 'after 3 PM' (the busy block is
-        # 15:00-16:00) is 16:00+. A user event there clears both constraints.
-        return any(e.source == "user" and (e.start or "") >= "16:00"
+        # The calendar is busy 15:00-16:00 and 17:00-22:00, so the UNIQUE free
+        # slot after 3 PM is 16:00-17:00. The lunch must start at exactly 16:00
+        # (4 PM) — this rejects the new-event form's 19:00 default (a busy slot)
+        # and any other time, and makes the 4 PM notify time unambiguous.
+        return any(e.source == "user" and (e.start or "") == "16:00"
                    for e in cal.events.values())
 
     def _sent_with_time_to(p: Probe, who: str) -> bool:

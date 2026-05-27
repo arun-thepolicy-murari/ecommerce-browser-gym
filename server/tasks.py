@@ -1413,11 +1413,12 @@ def task_m23_offsite_keeps_moving(seed: int) -> "WorldState":
                 include the Veggie Burger, NOT just the salient Classic
                 Cheeseburger), Alex caps food at < $40 total, Sam can only meet
                 after 1 PM.
-      CONFLICT: the calendar already has 'Quarterly Review' 15:00-16:00, so a
-                valid after-the-constraints slot must thread the busy block.
+      CONFLICT: the calendar is busy 15:00-16:00 and 17:00-22:00, so the ONLY
+                free slot after 3 PM is 16:00-17:00 -> the lunch must be at 16:00
+                (4 PM), unambiguously.
       CASCADE : an async manager email (step 5) swaps Sam out for Dana, who can
                 ONLY do after 3 PM. This INVALIDATES any 1 PM slot already booked
-                (must move to 16:00, the first free after-3 PM slot) AND changes
+                (must move to the unique free after-3 PM slot, 16:00) AND changes
                 the notify target.
       RECIPIENT: Dana is NOT in the inbox, so the agent must COMPOSE FRESH to
                 dana@ (its address is in the manager email). Replying to that
@@ -1445,15 +1446,21 @@ def task_m23_offsite_keeps_moving(seed: int) -> "WorldState":
             id=eid, sender=sender, to=m.account_email, subject=subj, body=body,
             received_at=f"{SEED_DATE}T09:00:00", received_label="9:00 AM",
             read=False, labels=[])
-    # Calendar: one busy block (15:00-16:00). 13:00 is free (valid after-1 PM
-    # slot pre-cascade); 16:00 is the first free after-3 PM slot post-cascade.
+    # Calendar busy blocks engineered so the slot is UNAMBIGUOUS:
+    #   - 13:00 is free (a valid after-1 PM slot pre-cascade — the lure),
+    #   - 15:00-16:00 and 17:00-22:00 are busy,
+    #   so the ONLY free slot after 3 PM is 16:00-17:00 -> the lunch must be at
+    #   16:00 (4 PM). (Note the new-event form defaults to 19:00, which is now a
+    #   busy slot — so an agent that doesn't set the time lands on a conflict.)
     cal = world.calendar
     cal.events.clear()
-    eid = cal.new_id()
-    cal.events[eid] = CalendarEvent(
-        id=eid, title="Quarterly Review", day=TOMORROW,
-        day_label="Tomorrow (Fri May 22)", start="15:00", end="16:00",
-        source="seed")
+    for title, s, e in [("Quarterly Review", "15:00", "16:00"),
+                        ("Budget Review", "17:00", "19:00"),
+                        ("Investor Call", "19:00", "22:00")]:
+        eid = cal.new_id()
+        cal.events[eid] = CalendarEvent(
+            id=eid, title=title, day=TOMORROW,
+            day_label="Tomorrow (Fri May 22)", start=s, end=e, source="seed")
     # Async attendee swap: Sam -> Dana (after 3 PM only), lands mid-task.
     _sched.schedule_absolute(
         world.schedule, id="se_m23_swap", fire_at_step=5,

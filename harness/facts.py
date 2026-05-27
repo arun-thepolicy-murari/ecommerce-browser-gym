@@ -400,7 +400,7 @@ def _facts_m23(world: dict, url: str) -> dict[str, Any]:
             if m:
                 facts["mail.dana_address"] = m.group(0)
     for ev in ((world.get("calendar") or {}).get("events") or {}).values():
-        if ev.get("source") == "user" and (ev.get("start") or "") >= "16:00":
+        if ev.get("source") == "user" and (ev.get("start") or "") == "16:00":
             facts["calendar.final_slot"] = ev.get("start")
     return facts
 

@@ -830,6 +830,27 @@ def test_m23_notified_manager_not_dana_fails():
     assert "notified_dana" in res["missed_milestones"]
 
 
+def test_m23_wrong_slot_and_wrong_time_fails():
+    """Verifier-fix regression: booking a DIFFERENT after-3 PM slot (19:00 — the
+    form default, now a busy slot) and telling everyone '7 PM' consistently must
+    miss BOTH the calendar milestone (only 16:00 is the unique valid slot) and
+    the notify milestones (the stated time isn't the required 4 PM). Guards
+    against the earlier ambiguity that wrongly credited an alternate slot."""
+    sim = _CrossSim("M23/offsite_keeps_moving")
+    scheduler.advance_and_flush(sim.world, 5)
+    _m23_lunch(sim, veggie=True, classic_qty=1)
+    cal_mut.create_event(sim.world.calendar, title="Team Lunch",
+                         day="2026-05-22", start="19:00", end="20:00")
+    for who in ("dana@example.com", "priya@example.com", "alex@example.com"):
+        mail_mut.send_email(sim.world.mail, to=who, subject="Lunch",
+                            body="Confirmed: team lunch at 7:00 PM today.")
+    res = sim._probe()
+    assert res["success"] is False
+    assert "meeting_after_3pm_free" in res["missed_milestones"]
+    assert "notified_dana" in res["missed_milestones"]
+    assert "notified_attendees" in res["missed_milestones"]
+
+
 # --------------------------------------------------------------------------- #
 # Backward-compat: probe.state still aliases the shop GymState
 # --------------------------------------------------------------------------- #
