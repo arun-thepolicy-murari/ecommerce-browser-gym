@@ -99,6 +99,9 @@ async def apply_coupon(request: Request, code: str = Form("")):
     r = M.apply_coupon(world.market, code)
     if r.get("ok"):
         _deps["flash"](world.shop, "success", f"Coupon {r['code']} applied.")
+    elif r.get("error") == "expired":
+        _deps["flash"](world.shop, "error",
+                       r.get("message", "That coupon has expired."))
     elif r.get("error") == "min_subtotal_not_met":
         _deps["flash"](world.shop, "error",
                        f"That coupon needs a subtotal of at least "

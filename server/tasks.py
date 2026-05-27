@@ -310,6 +310,15 @@ BRIEFS = {
         "item is on its way back."
     ),
 
+    "M19": (
+        "I need a Mechanical Keyboard AND a Wireless Mouse — buy the pair from "
+        "whichever store is cheaper, use a ValueMart coupon to bring the price "
+        "down, and keep the total UNDER $125. Heads up: my inbox has a couple of "
+        "ValueMart coupon codes and ONE OF THEM HAS EXPIRED — check which one "
+        "actually works at checkout and use that. Don't go over $125, and don't "
+        "buy from the pricier store."
+    ),
+
     "M18": (
         "I need to buy a Studio Laptop 14 AND a Mechanical Keyboard — get the "
         "pair from whichever of my two stores (ShopGym or ValueMart) is cheaper "
@@ -970,6 +979,9 @@ START_PATHS = {
     # M18 starts on the Shop — the agent compares, commits to ShopGym (initially
     # cheaper), and the async flip lands as it reaches checkout.
     "M18/async_coupon_flip": "/",
+    # M19 starts on the Shop — compare, then read the coupon emails + use the
+    # one that isn't expired on ValueMart, under budget.
+    "M19/coupon_minefield": "/",
 }
 
 
@@ -1211,6 +1223,43 @@ def task_m16_coordinated_dinner_delay(seed: int) -> "WorldState":
     return world
 
 
+def task_m19_coupon_minefield(seed: int) -> "WorldState":
+    """COUPON MINEFIELD (decoy + validity reasoning + conjunctive budget). Buy a
+    keyboard + mouse from the cheaper store, under a $125 budget, using a VALID
+    coupon. The inbox advertises TWO ValueMart codes: VALUEMART50 (50% off — the
+    salient decoy, but EXPIRED, so the store rejects it) and VALUE10 (10% off —
+    valid). Engineered so the coupon is load-bearing for the BUDGET:
+      ShopGym keyboard+mouse = $149.98          -> over budget (pricier store)
+      ValueMart no coupon     = $134.98          -> over budget
+      ValueMart + VALUE10      = $121.48          -> UNDER $125  (the only valid path)
+      ValueMart + VALUEMART50  = (would be $67)   -> REJECTED (expired)
+    So the agent must resist the salient 50% code, discover it's expired, fall
+    back to the 10%, and stay under budget. Traps: assuming/using the expired
+    50%, giving up after it's rejected, busting the budget, or the wrong store."""
+    from server.apps.mail.state import Email, SEED_DATE
+    from server.apps.market.state import MarketCoupon
+    world = _cross_app_world(seed, "M19/coupon_minefield", "hard")
+    # The salient EXPIRED decoy (VALUE10 is already seeded as the valid 10%).
+    world.market.coupons["VALUEMART50"] = MarketCoupon(
+        code="VALUEMART50", percent_off=0.50, expired=True,
+        description="50% off (expired)")
+    m = world.mail
+    rows = [
+        ("VALUEMART50", 50, "HUGE: 50% off everything at ValueMart!", "08:00:00", "8:00 AM"),
+        ("VALUE10", 10, "Your ValueMart member coupon", "08:05:00", "8:05 AM"),
+    ]
+    for code, pct, subj, tm, label in rows:
+        eid = m.new_id()
+        m.inbox[eid] = Email(
+            id=eid, sender="deals@valuemart.com", to=m.account_email,
+            subject=subj,
+            body=(f"Use code {code} at ValueMart checkout for {pct}% off your "
+                  f"entire order!\n"),
+            received_at=f"{SEED_DATE}T{tm}", received_label=label,
+            read=False, labels=["deals"])
+    return world
+
+
 def task_m18_async_coupon_flip(seed: int) -> "WorldState":
     """ASYNC COUPON-FLIP (attacks sunk-cost / linear execution). Buy a laptop +
     keyboard from the cheaper of the two stores. Initial math: ShopGym with
@@ -1330,6 +1379,7 @@ REQUIRED_FACTS = {
     "M16/coordinated_dinner_delay":  ["mail.new_eta", "calendar.user_event_time"],
     "M17/cross_retailer_cheaper":    ["mail.coupon_code", "market.monitor_price"],
     "M18/async_coupon_flip":         ["mail.flip_coupon_code"],
+    "M19/coupon_minefield":          ["mail.valid_coupon_code"],
 }
 
 
@@ -1369,6 +1419,7 @@ TASKS = {
     "M16/coordinated_dinner_delay":  task_m16_coordinated_dinner_delay,
     "M17/cross_retailer_cheaper":    task_m17_cross_retailer_cheaper,
     "M18/async_coupon_flip":         task_m18_async_coupon_flip,
+    "M19/coupon_minefield":          task_m19_coupon_minefield,
 }
 
 

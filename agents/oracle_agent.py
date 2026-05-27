@@ -882,6 +882,31 @@ async def solve_m16_coordinated_dinner_delay(ctx: BrowserCtx) -> None:
     await ctx.click("button[data-test-id='btn-send']")
 
 
+async def solve_m19_coupon_minefield(ctx: BrowserCtx) -> None:
+    """Read the coupon emails, buy keyboard+mouse on ValueMart (the cheaper
+    store), try the salient 50% code (rejected — expired), fall back to the
+    valid VALUE10, and place the order under the $125 budget ($121.48)."""
+    world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
+    deals = [e for e in world["mail"]["inbox"].values()
+             if "deals@valuemart.com" in (e.get("sender") or "").lower()]
+    for e in deals:
+        await ctx.goto(f"/mail/message/{e['id']}",
+                       reasoning="Read this ValueMart coupon email.")
+    # ValueMart is cheaper; add the keyboard + mouse.
+    await ctx.goto("/market/product/vm_kb_mech",
+                   reasoning="ValueMart keyboard (cheaper store).")
+    await ctx.click("button[data-test-id='market-btn-add-to-cart']")
+    await ctx.goto("/market/product/vm_mouse_wireless")
+    await ctx.click("button[data-test-id='market-btn-add-to-cart']")
+    await ctx.goto("/market/cart")
+    # The flashy 50% code is expired -> rejected; fall back to the valid 10%.
+    await ctx.fill("input[data-test-id='market-input-coupon']", "VALUEMART50")
+    await ctx.click("button[data-test-id='market-btn-apply-coupon']")
+    await ctx.fill("input[data-test-id='market-input-coupon']", "VALUE10")
+    await ctx.click("button[data-test-id='market-btn-apply-coupon']")
+    await ctx.click("button[data-test-id='market-btn-place-order']")
+
+
 async def solve_m18_async_coupon_flip(ctx: BrowserCtx) -> None:
     """Gold 'noticed-the-flip-and-switched' trajectory. Commit to ShopGym
     (initially cheaper with TECH20) -> reaching its checkout fires the async
@@ -980,4 +1005,5 @@ SOLVERS = {
     "M16/coordinated_dinner_delay":  solve_m16_coordinated_dinner_delay,
     "M17/cross_retailer_cheaper":    solve_m17_cross_retailer_cheaper,
     "M18/async_coupon_flip":         solve_m18_async_coupon_flip,
+    "M19/coupon_minefield":          solve_m19_coupon_minefield,
 }

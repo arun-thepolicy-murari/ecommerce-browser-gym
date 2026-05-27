@@ -1891,6 +1891,53 @@ def _suite_m16() -> TaskSuite:
     )
 
 
+def _suite_m19() -> TaskSuite:
+    """COUPON MINEFIELD. Buy keyboard + mouse on the cheaper store (ValueMart)
+    with the VALID coupon (VALUE10), under a $125 budget — resisting the salient
+    but EXPIRED VALUEMART50. Positive end-state checks:
+      env gate -> valuemart50_is_expired (the decoy really is expired)
+      used     -> ordered_keyboard_and_mouse_valuemart + applied_value10
+                  (rejected the expired 50%, used the valid 10%) + under_budget
+                  (the coupon is load-bearing: no-coupon ValueMart busts $125)."""
+    _GEAR = {"vm_kb_mech", "vm_mouse_wireless"}
+    _BUDGET = 125.0
+
+    def _vm_gear_orders(p: Probe) -> list:
+        mk = getattr(p.world, "market", None) if p.world else None
+        if mk is None:
+            return []
+        return [o for o in mk.orders.values()
+                if _GEAR.issubset({it.product_id for it in o.items})]
+
+    def _ordered_kb_mouse_vm(p: Probe) -> bool:
+        return len(_vm_gear_orders(p)) >= 1
+
+    def _applied_value10(p: Probe) -> bool:
+        return any(o.coupon_code == "VALUE10" for o in _vm_gear_orders(p))
+
+    def _under_budget(p: Probe) -> bool:
+        return any(o.total <= _BUDGET for o in _vm_gear_orders(p))
+
+    def _vm50_expired(p: Probe) -> bool:
+        mk = getattr(p.world, "market", None) if p.world else None
+        c = mk.coupons.get("VALUEMART50") if mk else None
+        return c is not None and c.expired
+
+    return TaskSuite(
+        task_id="M19/coupon_minefield",
+        milestones=[
+            Milestone("valuemart50_is_expired", weight=0.0,
+                      check=_vm50_expired, required_for_success=False),
+            Milestone("ordered_keyboard_and_mouse_valuemart", weight=0.4,
+                      check=_ordered_kb_mouse_vm, required_for_success=True),
+            Milestone("applied_value10", weight=0.3,
+                      check=_applied_value10, required_for_success=True),
+            Milestone("under_budget", weight=0.3,
+                      check=_under_budget, required_for_success=True),
+        ],
+    )
+
+
 def _suite_m18() -> TaskSuite:
     """ASYNC COUPON-FLIP. Initially ShopGym (TECH20) is cheaper; an async
     FLASH-SALE email then announces VALUEMART30 (30%), making ValueMart the
@@ -2048,6 +2095,7 @@ SUITE_FACTORIES = {
     "M16/coordinated_dinner_delay":  _suite_m16,
     "M17/cross_retailer_cheaper":    _suite_m17,
     "M18/async_coupon_flip":         _suite_m18,
+    "M19/coupon_minefield":          _suite_m19,
 }
 
 

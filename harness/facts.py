@@ -319,6 +319,29 @@ def _facts_m16(world: dict, url: str) -> dict[str, Any]:
     return facts
 
 
+def _facts_m19(world: dict, url: str) -> dict[str, Any]:
+    """M19 coupon minefield — which coupon codes the agent saw (recorded when
+    the email is READ), separating the valid VALUE10 from the expired decoy
+    VALUEMART50. 'used' (buy with VALUE10 under budget) is checked by the
+    verifier."""
+    import re
+    facts: dict[str, Any] = {}
+    for e in ((world.get("mail") or {}).get("inbox") or {}).values():
+        if "deals@valuemart.com" not in (e.get("sender") or "").lower():
+            continue
+        if not e.get("read"):
+            continue
+        m = re.search(r"VALUE\w+", e.get("body", "") or "")
+        if not m:
+            continue
+        code = m.group(0)
+        if code == "VALUE10":
+            facts["mail.valid_coupon_code"] = "VALUE10"
+        elif code == "VALUEMART50":
+            facts["mail.expired_coupon_seen"] = "VALUEMART50"
+    return facts
+
+
 def _facts_m18(world: dict, url: str) -> dict[str, Any]:
     """M18 async coupon-flip — the flip email's delivery (env truth) + the new
     coupon code recorded ONLY when the agent READS the flash-sale email (so
@@ -374,6 +397,7 @@ FACT_EXTRACTORS: dict[str, Callable[[dict, str], dict]] = {
     "M16/coordinated_dinner_delay":  _facts_m16,
     "M17/cross_retailer_cheaper":    _facts_m17,
     "M18/async_coupon_flip":         _facts_m18,
+    "M19/coupon_minefield":          _facts_m19,
 }
 
 

@@ -68,6 +68,9 @@ def apply_coupon(market: MarketState, code: str) -> dict[str, Any]:
     c = market.coupons.get(code)
     if c is None:
         return {"ok": False, "error": "That coupon code isn't valid at ValueMart."}
+    if c.expired:
+        return {"ok": False, "error": "expired",
+                "message": f"Coupon {code} has expired."}
     if market.cart.subtotal() < c.min_subtotal:
         return {"ok": False, "error": "min_subtotal_not_met",
                 "min_subtotal": c.min_subtotal}

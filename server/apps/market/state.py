@@ -62,6 +62,7 @@ class MarketCoupon:
     percent_off: float                 # 0.10 == 10% off
     min_subtotal: float = 0.0
     description: str = ""
+    expired: bool = False              # a decoy code the store rejects at checkout
 
 
 @dataclass
@@ -107,7 +108,7 @@ class MarketState:
         'which store is cheaper' math can never drift between them."""
         discount = 0.0
         c = self.coupons.get((coupon_code or "").upper()) if coupon_code else None
-        if c is not None and subtotal >= c.min_subtotal:
+        if c is not None and not c.expired and subtotal >= c.min_subtotal:
             discount = round(subtotal * c.percent_off, 2)
         delivery = self.delivery_for(subtotal)
         total = round(subtotal - discount + delivery, 2)

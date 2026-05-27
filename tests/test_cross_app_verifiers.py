@@ -446,6 +446,47 @@ def test_m18_valuemart_without_flip_coupon_fails():
 
 
 # --------------------------------------------------------------------------- #
+# M19 (coupon minefield): reject the expired 50%, use the valid 10%, under budget
+# --------------------------------------------------------------------------- #
+
+def _buy_kbmouse_valuemart(sim: _CrossSim, coupon: str | None = None) -> None:
+    market_mut.add_to_cart(sim.world.market, product_id="vm_kb_mech")
+    market_mut.add_to_cart(sim.world.market, product_id="vm_mouse_wireless")
+    if coupon:
+        market_mut.apply_coupon(sim.world.market, coupon)
+    market_mut.place_order(sim.world)
+
+
+def test_m19_full_path_valid_coupon_under_budget():
+    sim = _CrossSim("M19/coupon_minefield")
+    _buy_kbmouse_valuemart(sim, coupon="VALUE10")
+    res = sim._probe()
+    assert res["success"] is True
+    assert res["score"] == 1.0
+
+
+def test_m19_expired_coupon_is_rejected():
+    """The salient 50% code is expired -> the store rejects it and applies
+    nothing (so the agent must fall back to the valid code)."""
+    sim = _CrossSim("M19/coupon_minefield")
+    market_mut.add_to_cart(sim.world.market, product_id="vm_kb_mech")
+    r = market_mut.apply_coupon(sim.world.market, "VALUEMART50")
+    assert r["ok"] is False and r["error"] == "expired"
+    assert sim.world.market.cart.applied_coupon is None
+
+
+def test_m19_no_coupon_busts_budget_fails():
+    """The coupon is load-bearing: ValueMart keyboard+mouse without it is
+    $134.98 > $125 -> both the budget and coupon milestones miss."""
+    sim = _CrossSim("M19/coupon_minefield")
+    _buy_kbmouse_valuemart(sim, coupon=None)
+    res = sim._probe()
+    assert res["success"] is False
+    assert "under_budget" in res["missed_milestones"]
+    assert "applied_value10" in res["missed_milestones"]
+
+
+# --------------------------------------------------------------------------- #
 # Backward-compat: probe.state still aliases the shop GymState
 # --------------------------------------------------------------------------- #
 
