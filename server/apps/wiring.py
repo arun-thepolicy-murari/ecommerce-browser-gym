@@ -28,3 +28,6 @@ def register_default_subscribers() -> None:
     # which store is cheaper. (ShopCheckoutReached is a pure trigger -> no
     # subscriber; the scheduler keys the flip email off it.)
     bus.subscribe("CouponFlipAlert", inbound.deliver_coupon_flip_alert)
+    # Async calendar overwrite (M22): a manager email cancels the 2 PM meeting
+    # and moves the 3 PM 1:1 up — forcing a MOVE + a destructive DELETE + re-notify.
+    bus.subscribe("CalendarChangeAlert", inbound.deliver_calendar_change_alert)

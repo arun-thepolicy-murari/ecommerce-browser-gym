@@ -2025,6 +2025,73 @@ def _suite_m21() -> TaskSuite:
     )
 
 
+def _suite_m22() -> TaskSuite:
+    """ASYNC CALENDAR CASCADE — destructive overwrite + ripple under juggling
+    load. All four sub-goals are required POSITIVE end-state checks (no sticky
+    negatives), so the missed milestone pinpoints the drop:
+      env gate -> change_alert_delivered (the async manager email fired)
+      juggle   -> coffee_ordered (a Bean There Cafe order — concurrent load)
+      move     -> oneonone_moved_to_2pm (EXACTLY one 1:1-with-Priya event, now
+                  at 14:00 — catches duplicate/forgot-to-move)
+      DELETE   -> cancelled_sync_deleted (no 'Team Sync' event remains — the
+                  destructive action agents skip, leaving a 2 PM double-booking)
+      notify   -> notified_priya_new_time (a sent email to Priya carrying the
+                  new 2 PM time — the cross-app value ripple)."""
+
+    def _events(p: Probe) -> list:
+        cal = getattr(p.world, "calendar", None) if p.world else None
+        return list(cal.events.values()) if cal is not None else []
+
+    def _coffee_ordered(p: Probe) -> bool:
+        food = getattr(p.world, "food", None) if p.world else None
+        if food is None:
+            return False
+        return any(o.restaurant_id == "r_bean" for o in food.orders.values())
+
+    def _oneonone_moved(p: Probe) -> bool:
+        priya = [e for e in _events(p) if "priya" in (e.title or "").lower()]
+        return len(priya) == 1 and priya[0].start == "14:00"
+
+    def _sync_deleted(p: Probe) -> bool:
+        # False while the seeded Team Sync still exists; becomes True only once
+        # the agent deletes it (so it is a positive 'deletion happened' check,
+        # not a vacuous step-0 negative).
+        return not any("team sync" in (e.title or "").lower()
+                       for e in _events(p))
+
+    def _notified_priya(p: Probe) -> bool:
+        mail = getattr(p.world, "mail", None) if p.world else None
+        if mail is None:
+            return False
+        needles = ("2:00", "2 pm", "2pm", "14:00")
+        return any("priya" in (se.to or "").lower()
+                   and any(n in (se.body or "").lower() for n in needles)
+                   for se in mail.sent.values())
+
+    def _change_delivered(p: Probe) -> bool:
+        mail = getattr(p.world, "mail", None) if p.world else None
+        if mail is None:
+            return False
+        return any("calendar-change" in (e.labels or [])
+                   for e in mail.inbox.values())
+
+    return TaskSuite(
+        task_id="M22/async_calendar_cascade",
+        milestones=[
+            Milestone("change_alert_delivered", weight=0.0,
+                      check=_change_delivered, required_for_success=False),
+            Milestone("coffee_ordered", weight=0.2,
+                      check=_coffee_ordered, required_for_success=True),
+            Milestone("oneonone_moved_to_2pm", weight=0.3,
+                      check=_oneonone_moved, required_for_success=True),
+            Milestone("cancelled_sync_deleted", weight=0.3,
+                      check=_sync_deleted, required_for_success=True),
+            Milestone("notified_priya_new_time", weight=0.2,
+                      check=_notified_priya, required_for_success=True),
+        ],
+    )
+
+
 def _suite_m19() -> TaskSuite:
     """COUPON MINEFIELD. Buy keyboard + mouse on the cheaper store (ValueMart)
     with the VALID coupon (VALUE10), under a $125 budget — resisting the salient
@@ -2232,6 +2299,7 @@ SUITE_FACTORIES = {
     "M19/coupon_minefield":          _suite_m19,
     "M20/errand_run":                _suite_m20,
     "M21/async_errand_run":          _suite_m21,
+    "M22/async_calendar_cascade":    _suite_m22,
 }
 
 

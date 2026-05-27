@@ -364,6 +364,25 @@ def _facts_m21(world: dict, url: str) -> dict[str, Any]:
     return facts
 
 
+def _facts_m22(world: dict, url: str) -> dict[str, Any]:
+    """M22 async calendar cascade — the manager email's delivery (env truth) +
+    the NEW meeting time recorded ONLY when the agent READS it (so coverage =
+    did it notice the async cancel/move), plus whether the stale Team Sync still
+    lingers on the calendar. 'used' (move + delete + notify) is the verifier's
+    job."""
+    facts: dict[str, Any] = {}
+    for e in ((world.get("mail") or {}).get("inbox") or {}).values():
+        if "calendar-change" not in (e.get("labels") or []):
+            continue
+        facts["mail.change_delivered"] = True
+        if e.get("read"):
+            facts["mail.new_meeting_time"] = "14:00"     # boss moved the 1:1 to 2 PM
+    facts["calendar.stale_sync_present"] = any(
+        "team sync" in (ev.get("title") or "").lower()
+        for ev in ((world.get("calendar") or {}).get("events") or {}).values())
+    return facts
+
+
 def _facts_m19(world: dict, url: str) -> dict[str, Any]:
     """M19 coupon minefield — which coupon codes the agent saw (recorded when
     the email is READ), separating the valid VALUE10 from the expired decoy
@@ -445,6 +464,7 @@ FACT_EXTRACTORS: dict[str, Callable[[dict, str], dict]] = {
     "M19/coupon_minefield":          _facts_m19,
     "M20/errand_run":                _facts_m20,
     "M21/async_errand_run":          _facts_m21,
+    "M22/async_calendar_cascade":    _facts_m22,
 }
 
 

@@ -979,6 +979,55 @@ async def solve_m21_async_errand_run(ctx: BrowserCtx) -> None:
     await ctx.click("button[data-test-id='btn-send']")
 
 
+async def solve_m22_async_calendar_cascade(ctx: BrowserCtx) -> None:
+    """Gold trajectory for the destructive async overwrite. Order the coffee,
+    WAIT for the manager's change email, then: move the 1:1 up to 2 PM, DELETE
+    the cancelled Team Sync (the step agents skip), and reply to Priya with the
+    new time."""
+    # 1) Concurrent juggling load: order the coffee from Bean There Cafe.
+    await ctx.goto("/food/restaurant/r_bean", reasoning="Order the latte.")
+    await ctx.click("button[data-test-id='btn-add-d_latte']")
+    await ctx.goto("/food/cart")
+    await ctx.click("button[data-test-id='btn-place-food-order']")
+    # 2) Watch the inbox for the manager's schedule-change email.
+    for _ in range(8):
+        world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
+        change = next((e for e in world["mail"]["inbox"].values()
+                       if "calendar-change" in (e.get("labels") or [])), None)
+        if change is not None:
+            await ctx.goto(f"/mail/message/{change['id']}",
+                           reasoning="Manager changed the plan — read it.")
+            break
+        await ctx.wait(reasoning="Watch for a schedule change before finalizing.")
+    # 3) Move the 1:1 with Priya up to 2 PM (14:00).
+    world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
+    events = world["calendar"]["events"]
+    oneonone = next(e for e in events.values()
+                    if "priya" in (e.get("title") or "").lower())
+    await ctx.goto(f"/calendar/edit/{oneonone['id']}",
+                   reasoning="Move the 1:1 from 3 PM up to 2 PM.")
+    await ctx.fill("input[data-test-id='input-edit-start']", "14:00")
+    await ctx.fill("input[data-test-id='input-edit-end']", "15:00")
+    await ctx.click("button[data-test-id='btn-update-event']")
+    # 4) DELETE the cancelled Team Sync so 2 PM isn't double-booked.
+    world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
+    events = world["calendar"]["events"]
+    sync = next(e for e in events.values()
+                if "team sync" in (e.get("title") or "").lower())
+    await ctx.goto(f"/calendar/edit/{sync['id']}",
+                   reasoning="The 2 PM sync is cancelled — delete it.")
+    await ctx.click("button[data-test-id='btn-delete-event']")
+    # 5) Reply to Priya with the NEW time.
+    await ctx.goto("/mail/compose", reasoning="Tell Priya the new time.")
+    await ctx.fill("input[data-test-id='input-compose-to']", "priya@example.com")
+    await ctx.fill("input[data-test-id='input-compose-subject']",
+                   "Re: Our 1:1 today")
+    await ctx.fill("textarea[data-test-id='input-compose-body']",
+                   "Hi Priya — our 1:1 has been moved up to 2:00 PM today. "
+                   "See you then!")
+    await ctx.click("button[data-test-id='btn-send']")
+
+
 async def solve_m19_coupon_minefield(ctx: BrowserCtx) -> None:
     """Read the coupon emails, buy keyboard+mouse on ValueMart (the cheaper
     store), try the salient 50% code (rejected — expired), fall back to the
@@ -1105,4 +1154,5 @@ SOLVERS = {
     "M19/coupon_minefield":          solve_m19_coupon_minefield,
     "M20/errand_run":                solve_m20_errand_run,
     "M21/async_errand_run":          solve_m21_async_errand_run,
+    "M22/async_calendar_cascade":    solve_m22_async_calendar_cascade,
 }

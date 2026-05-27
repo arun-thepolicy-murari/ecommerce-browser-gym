@@ -642,6 +642,90 @@ def test_m21_dropped_subgoal_under_load_fails():
 
 
 # --------------------------------------------------------------------------- #
+# M22 (async calendar cascade): destructive overwrite + ripple under load
+# --------------------------------------------------------------------------- #
+
+def _m22_ids(sim: _CrossSim):
+    evs = sim.world.calendar.events
+    sync = next(e for e in evs.values() if "team sync" in e.title.lower())
+    one = next(e for e in evs.values() if "priya" in e.title.lower())
+    return sync.id, one.id
+
+
+def _m22_coffee(sim: _CrossSim) -> None:
+    food_mut.add_dish(sim.world.food, restaurant_id="r_bean", dish_id="d_latte")
+    food_mut.place_food_order(sim.world)
+
+
+def _m22_move_and_delete(sim: _CrossSim) -> None:
+    sync_id, one_id = _m22_ids(sim)
+    cal_mut.update_event(sim.world.calendar, one_id, start="14:00", end="15:00")
+    cal_mut.delete_event(sim.world.calendar, sync_id)
+
+
+def _m22_notify(sim: _CrossSim) -> None:
+    mail_mut.send_email(sim.world.mail, to="priya@example.com",
+                        subject="Re: Our 1:1 today",
+                        body="Moved our 1:1 up to 2:00 PM today — see you then!")
+
+
+def test_m22_change_alert_fires_at_step_4():
+    sim = _CrossSim("M22/async_calendar_cascade")
+    assert not bus.has_delivered(sim.world, "CalendarChangeAlert")
+    scheduler.advance_and_flush(sim.world, 4)
+    assert bus.has_delivered(sim.world, "CalendarChangeAlert")
+    alerts = [e for e in sim.world.mail.inbox.values()
+              if "calendar-change" in (e.labels or [])]
+    assert len(alerts) == 1
+
+
+def test_m22_full_path_all_subgoals():
+    sim = _CrossSim("M22/async_calendar_cascade")
+    scheduler.advance_and_flush(sim.world, 4)
+    _m22_coffee(sim)
+    _m22_move_and_delete(sim)
+    _m22_notify(sim)
+    res = sim._probe()
+    assert res["success"] is True
+    assert res["score"] == 1.0
+
+
+def test_m22_kept_stale_sync_double_books_fails():
+    """THE destructive trap: moved the 1:1 to 2 PM but forgot to DELETE the
+    cancelled Team Sync -> 2 PM is double-booked, so the deletion milestone
+    misses."""
+    sim = _CrossSim("M22/async_calendar_cascade")
+    scheduler.advance_and_flush(sim.world, 4)
+    _m22_coffee(sim)
+    sync_id, one_id = _m22_ids(sim)
+    cal_mut.update_event(sim.world.calendar, one_id, start="14:00", end="15:00")
+    _m22_notify(sim)                      # everything BUT deleting the sync
+    res = sim._probe()
+    assert res["success"] is False
+    assert "cancelled_sync_deleted" in res["missed_milestones"]
+
+
+def test_m22_forgot_notify_priya_fails():
+    sim = _CrossSim("M22/async_calendar_cascade")
+    scheduler.advance_and_flush(sim.world, 4)
+    _m22_coffee(sim)
+    _m22_move_and_delete(sim)             # calendar fixed, but Priya not told
+    res = sim._probe()
+    assert res["success"] is False
+    assert "notified_priya_new_time" in res["missed_milestones"]
+
+
+def test_m22_dropped_coffee_under_load_fails():
+    sim = _CrossSim("M22/async_calendar_cascade")
+    scheduler.advance_and_flush(sim.world, 4)
+    _m22_move_and_delete(sim)
+    _m22_notify(sim)                      # handled the change but dropped the coffee
+    res = sim._probe()
+    assert res["success"] is False
+    assert "coffee_ordered" in res["missed_milestones"]
+
+
+# --------------------------------------------------------------------------- #
 # Backward-compat: probe.state still aliases the shop GymState
 # --------------------------------------------------------------------------- #
 

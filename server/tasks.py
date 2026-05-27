@@ -335,6 +335,17 @@ BRIEFS = {
         "sure the number you give Alex matches what you really paid."
     ),
 
+    "M22": (
+        "Run my afternoon for me. Right now my calendar has a Team Sync at 2 PM "
+        "and a 1:1 with Priya at 3 PM.\n"
+        "1) Order me an Oat Milk Latte from Bean There Cafe.\n"
+        "2) Keep an eye on my email — my manager may change the afternoon plan "
+        "while you're working. If a change comes in, update my calendar so it "
+        "matches the new plan EXACTLY: nothing stale, nothing double-booked.\n"
+        "3) Then reply to Priya letting her know the correct new time.\n"
+        "Get everything consistent across my calendar and email."
+    ),
+
     "M19": (
         "I need a Mechanical Keyboard AND a Wireless Mouse — buy the pair from "
         "whichever store is cheaper, use a ValueMart coupon to bring the price "
@@ -1011,6 +1022,8 @@ START_PATHS = {
     "M20/errand_run": "/",
     # M21 (async errand run) starts on the Shop.
     "M21/async_errand_run": "/",
+    # M22 (async calendar cascade) starts on the Calendar.
+    "M22/async_calendar_cascade": "/calendar",
 }
 
 
@@ -1328,6 +1341,54 @@ def task_m21_async_errand_run(seed: int) -> "WorldState":
     return world
 
 
+def task_m22_async_calendar_cascade(seed: int) -> "WorldState":
+    """ASYNC CALENDAR CASCADE (destructive overwrite + ripple — attacks the
+    NEGATIVE-action weakness). The agent juggles three apps: order a coffee
+    (Food), keep the calendar in sync (Calendar), and notify a colleague (Mail).
+    Mid-task, a manager email arrives async (step 4): the 2 PM Team Sync is
+    CANCELLED and the 3 PM 1:1 with Priya must move UP to 2 PM. The correct end
+    state requires THREE moves with a DESTRUCTIVE one in the middle:
+      - move the 1:1 from 15:00 -> 14:00,
+      - DELETE the cancelled Team Sync (the action agents skip -> a 2 PM
+        double-booking), and
+      - reply to Priya with the NEW time.
+    Plus the coffee order as concurrent juggling load. Each is a separate
+    required, POSITIVE end-state milestone, so the missed one pinpoints the
+    failure: kept-the-stale-event (double-book), moved-to-wrong-slot/duplicated,
+    dropped-the-notify, or dropped-the-coffee. Sharper than M16: the stale event
+    must be explicitly removed, not just superseded."""
+    from server.apps.mail.state import Email, SEED_DATE
+    from server.apps.calendar.state import CalendarEvent, TOMORROW
+    from server.apps import scheduler as _sched
+    world = _cross_app_world(seed, "M22/async_calendar_cascade", "hard")
+    # Deterministic afternoon: Team Sync @ 2 PM (to be CANCELLED), 1:1 @ 3 PM
+    # (to MOVE up to 2 PM). Independent of seed parity.
+    cal = world.calendar
+    cal.events.clear()
+    for title, s, e in [("Team Sync", "14:00", "15:00"),
+                        ("1:1 with Priya", "15:00", "16:00")]:
+        eid = cal.new_id()
+        cal.events[eid] = CalendarEvent(
+            id=eid, title=title, day=TOMORROW,
+            day_label="Tomorrow (Fri May 22)", start=s, end=e, source="seed")
+    # Priya's email so the agent can reply with the new time (reply target known).
+    m = world.mail
+    pid = m.new_id()
+    m.inbox[pid] = Email(
+        id=pid, sender="priya@example.com", to=m.account_email,
+        subject="Our 1:1 today",
+        body=("Hey! Are we still on for our 1:1 at 3 PM today? Ping me if "
+              "anything shifts. — Priya"),
+        received_at=f"{SEED_DATE}T09:15:00", received_label="9:15 AM",
+        read=False, labels=[])
+    # The async overwrite: the manager's cancel/move email lands mid-task.
+    _sched.schedule_absolute(
+        world.schedule, id="se_m22_change", fire_at_step=4,
+        emit_type="CalendarChangeAlert", source_app="calendar",
+        target_app="mail", payload={"new_start": "14:00", "new_label": "2 PM"})
+    return world
+
+
 def task_m19_coupon_minefield(seed: int) -> "WorldState":
     """COUPON MINEFIELD (decoy + validity reasoning + conjunctive budget). Buy a
     keyboard + mouse from the cheaper store, under a $125 budget, using a VALID
@@ -1487,6 +1548,7 @@ REQUIRED_FACTS = {
     "M19/coupon_minefield":          ["mail.valid_coupon_code"],
     "M20/errand_run":                ["mail.gear_total", "food.eta"],
     "M21/async_errand_run":          ["mail.flip_coupon", "mail.gear_total"],
+    "M22/async_calendar_cascade":    ["mail.new_meeting_time"],
 }
 
 
@@ -1529,6 +1591,7 @@ TASKS = {
     "M19/coupon_minefield":          task_m19_coupon_minefield,
     "M20/errand_run":                task_m20_errand_run,
     "M21/async_errand_run":          task_m21_async_errand_run,
+    "M22/async_calendar_cascade":    task_m22_async_calendar_cascade,
 }
 
 

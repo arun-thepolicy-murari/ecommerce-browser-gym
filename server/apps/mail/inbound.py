@@ -133,6 +133,30 @@ def deliver_coupon_flip_alert(world: "WorldState", event: "WorldEvent") -> None:
         read=False, labels=["coupon-flip", "deals"])
 
 
+def deliver_calendar_change_alert(world: "WorldState", event: "WorldEvent") -> None:
+    """CalendarChangeAlert -> a manager email that CANCELS the 2 PM meeting and
+    tells the user to move the 3 PM 1:1 up to 2 PM (M22). Delivered async
+    mid-task, so the agent must notice it, MOVE one event, DELETE the cancelled
+    one (the destructive action agents skip -> a double-booking), and re-notify
+    the guest. Idempotent: only ONE such email is ever added."""
+    mail = world.mail
+    if mail is None:
+        return
+    if any("calendar-change" in (e.labels or []) for e in mail.inbox.values()):
+        return                                  # already delivered — dedupe
+    eid = mail.new_id()
+    mail.inbox[eid] = Email(
+        id=eid, sender="manager@example.com", to=mail.account_email,
+        subject="Schedule change — 2 PM sync cancelled",
+        body=(
+            "Quick change to this afternoon: the 2 PM Team Sync is CANCELLED.\n\n"
+            "Please move your 3 PM 1:1 with Priya UP to 2 PM instead, and let "
+            "Priya know the new time. Make sure the old 2 PM slot is cleared so "
+            "nothing is double-booked. Thanks!\n"),
+        received_at=f"{SEED_DATE}T13:30:00", received_label="now",
+        read=False, labels=["calendar-change"])
+
+
 def deliver_delivery_delayed(world: "WorldState", event: "WorldEvent") -> None:
     """DeliveryDelayed -> a 'your delivery is running late' email with a NEW
     ETA. Delivered ASYNCHRONOUSLY by the scheduler a few steps AFTER the agent
