@@ -319,6 +319,25 @@ def _facts_m16(world: dict, url: str) -> dict[str, Any]:
     return facts
 
 
+def _facts_m20(world: dict, url: str) -> dict[str, Any]:
+    """M20 errand run — the cross-tab values the agent must carry: the gear
+    total (Shop->Mail reply), the food ETA (Food->Calendar, when the receipt is
+    read), and whether a calendar reminder was created."""
+    facts: dict[str, Any] = {}
+    for o in ((world.get("market") or {}).get("orders") or {}).values():
+        pids = {i.get("product_id") for i in o.get("items", [])}
+        if {"vm_kb_mech", "vm_mouse_wireless"}.issubset(pids):
+            facts["mail.gear_total"] = o.get("total")
+    for e in ((world.get("mail") or {}).get("inbox") or {}).values():
+        if e.get("eta") and "foodapp" in (e.get("sender") or "").lower() \
+                and e.get("read"):
+            facts["food.eta"] = e.get("eta")
+    if any(ev.get("source") == "user"
+           for ev in ((world.get("calendar") or {}).get("events") or {}).values()):
+        facts["calendar.user_event_created"] = True
+    return facts
+
+
 def _facts_m19(world: dict, url: str) -> dict[str, Any]:
     """M19 coupon minefield — which coupon codes the agent saw (recorded when
     the email is READ), separating the valid VALUE10 from the expired decoy
@@ -398,6 +417,7 @@ FACT_EXTRACTORS: dict[str, Callable[[dict, str], dict]] = {
     "M17/cross_retailer_cheaper":    _facts_m17,
     "M18/async_coupon_flip":         _facts_m18,
     "M19/coupon_minefield":          _facts_m19,
+    "M20/errand_run":                _facts_m20,
 }
 
 

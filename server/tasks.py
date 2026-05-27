@@ -310,6 +310,18 @@ BRIEFS = {
         "item is on its way back."
     ),
 
+    "M20": (
+        "Help me knock out a few things before the week starts:\n"
+        "1) I need a Mechanical Keyboard AND a Wireless Mouse — buy the pair "
+        "from whichever store is cheaper, use a ValueMart coupon, and keep that "
+        "purchase under $125.\n"
+        "2) Order me the Salmon Avocado Roll from Sakura Sushi, and put a "
+        "reminder on my calendar for when it's set to arrive.\n"
+        "3) My friend Alex emailed asking what the keyboard and mouse came to — "
+        "reply to Alex with the EXACT total you paid for them.\n"
+        "Get all of it done."
+    ),
+
     "M19": (
         "I need a Mechanical Keyboard AND a Wireless Mouse — buy the pair from "
         "whichever store is cheaper, use a ValueMart coupon to bring the price "
@@ -982,6 +994,8 @@ START_PATHS = {
     # M19 starts on the Shop — compare, then read the coupon emails + use the
     # one that isn't expired on ValueMart, under budget.
     "M19/coupon_minefield": "/",
+    # M20 (bundled errand run) starts on the Shop.
+    "M20/errand_run": "/",
 }
 
 
@@ -1223,6 +1237,34 @@ def task_m16_coordinated_dinner_delay(seed: int) -> "WorldState":
     return world
 
 
+def task_m20_errand_run(seed: int) -> "WorldState":
+    """BUNDLED MULTI-APP ERRAND RUN (juggling load — many sub-goals, 5 apps).
+    One brief bundles THREE independent jobs the agent must all complete:
+      (1) buy keyboard+mouse on the cheaper store (ValueMart) with VALUE10,
+          under $125 (cross-retailer + coupon + budget);
+      (2) order the Salmon Avocado Roll from Sakura Sushi + add a calendar
+          reminder (Food -> Calendar);
+      (3) reply to Alex's email with the EXACT gear total (Shop -> Mail, exact
+          cross-tab value transfer).
+    The breaker is dropped/forgotten sub-goals + paraphrased values under load:
+    agents reliably finish 2 of 3 and forget the calendar reminder or the reply,
+    or report a wrong total. Every sub-goal is a separate required milestone, so
+    the verifier shows exactly which one was dropped."""
+    from server.apps.mail.state import Email, SEED_DATE
+    world = _cross_app_world(seed, "M20/errand_run", "hard")
+    m = world.mail
+    eid = m.new_id()
+    m.inbox[eid] = Email(
+        id=eid, sender="alex@example.com", to=m.account_email,
+        subject="What did the keyboard + mouse cost?",
+        body=("Hey! Quick question — what did the new keyboard and mouse end "
+              "up costing you in total? I'm trying to budget for the same "
+              "setup. Thanks! - Alex"),
+        received_at=f"{SEED_DATE}T09:00:00", received_label="9:00 AM",
+        read=False, labels=[])
+    return world
+
+
 def task_m19_coupon_minefield(seed: int) -> "WorldState":
     """COUPON MINEFIELD (decoy + validity reasoning + conjunctive budget). Buy a
     keyboard + mouse from the cheaper store, under a $125 budget, using a VALID
@@ -1380,6 +1422,7 @@ REQUIRED_FACTS = {
     "M17/cross_retailer_cheaper":    ["mail.coupon_code", "market.monitor_price"],
     "M18/async_coupon_flip":         ["mail.flip_coupon_code"],
     "M19/coupon_minefield":          ["mail.valid_coupon_code"],
+    "M20/errand_run":                ["mail.gear_total", "food.eta"],
 }
 
 
@@ -1420,6 +1463,7 @@ TASKS = {
     "M17/cross_retailer_cheaper":    task_m17_cross_retailer_cheaper,
     "M18/async_coupon_flip":         task_m18_async_coupon_flip,
     "M19/coupon_minefield":          task_m19_coupon_minefield,
+    "M20/errand_run":                task_m20_errand_run,
 }
 
 

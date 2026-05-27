@@ -487,6 +487,79 @@ def test_m19_no_coupon_busts_budget_fails():
 
 
 # --------------------------------------------------------------------------- #
+# M20 (bundled errand run): all sub-goals required; dropping one fails
+# --------------------------------------------------------------------------- #
+
+def _m20_gear(sim: _CrossSim) -> float:
+    market_mut.add_to_cart(sim.world.market, product_id="vm_kb_mech")
+    market_mut.add_to_cart(sim.world.market, product_id="vm_mouse_wireless")
+    market_mut.apply_coupon(sim.world.market, "VALUE10")
+    market_mut.place_order(sim.world)
+    return next(o.total for o in sim.world.market.orders.values()
+                if o.coupon_code == "VALUE10")
+
+
+def _m20_dinner(sim: _CrossSim) -> None:
+    food_mut.add_dish(sim.world.food, restaurant_id="r_sushi",
+                      dish_id="d_salmon_roll")
+    food_mut.place_food_order(sim.world)
+
+
+def _m20_calendar(sim: _CrossSim) -> None:
+    cal_mut.create_event(sim.world.calendar, title="Sushi delivery",
+                         day="2026-05-22", start="19:00", end="19:30")
+
+
+def _m20_reply(sim: _CrossSim, total: float) -> None:
+    mail_mut.send_email(sim.world.mail, to="alex@example.com",
+                        subject="Re: cost", body=f"It came to ${total:.2f} total.")
+
+
+def test_m20_full_path_all_subgoals():
+    sim = _CrossSim("M20/errand_run")
+    total = _m20_gear(sim)
+    _m20_dinner(sim)
+    _m20_calendar(sim)
+    _m20_reply(sim, total)
+    res = sim._probe()
+    assert res["success"] is True
+    assert res["score"] == 1.0
+
+
+def test_m20_dropped_calendar_reminder_fails():
+    sim = _CrossSim("M20/errand_run")
+    total = _m20_gear(sim)
+    _m20_dinner(sim)
+    _m20_reply(sim, total)            # everything BUT the calendar reminder
+    res = sim._probe()
+    assert res["success"] is False
+    assert "calendar_reminder_created" in res["missed_milestones"]
+
+
+def test_m20_dropped_reply_fails():
+    sim = _CrossSim("M20/errand_run")
+    _m20_gear(sim)
+    _m20_dinner(sim)
+    _m20_calendar(sim)               # everything BUT the reply to Alex
+    res = sim._probe()
+    assert res["success"] is False
+    assert "replied_gear_total_to_alex" in res["missed_milestones"]
+
+
+def test_m20_wrong_total_in_reply_fails():
+    """Reporting a paraphrased / wrong total (not the exact charge) misses."""
+    sim = _CrossSim("M20/errand_run")
+    _m20_gear(sim)
+    _m20_dinner(sim)
+    _m20_calendar(sim)
+    mail_mut.send_email(sim.world.mail, to="alex@example.com",
+                        subject="Re", body="It was about $130.")  # wrong number
+    res = sim._probe()
+    assert res["success"] is False
+    assert "replied_gear_total_to_alex" in res["missed_milestones"]
+
+
+# --------------------------------------------------------------------------- #
 # Backward-compat: probe.state still aliases the shop GymState
 # --------------------------------------------------------------------------- #
 

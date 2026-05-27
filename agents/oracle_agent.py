@@ -882,6 +882,45 @@ async def solve_m16_coordinated_dinner_delay(ctx: BrowserCtx) -> None:
     await ctx.click("button[data-test-id='btn-send']")
 
 
+async def solve_m20_errand_run(ctx: BrowserCtx) -> None:
+    """Complete all three bundled sub-goals: (1) buy keyboard+mouse on ValueMart
+    with VALUE10 under $125, (2) order Sakura Sushi + add a calendar reminder,
+    (3) reply to Alex with the exact gear total."""
+    # 1) Gear on ValueMart with VALUE10.
+    await ctx.goto("/market/product/vm_kb_mech", reasoning="ValueMart keyboard.")
+    await ctx.click("button[data-test-id='market-btn-add-to-cart']")
+    await ctx.goto("/market/product/vm_mouse_wireless")
+    await ctx.click("button[data-test-id='market-btn-add-to-cart']")
+    await ctx.goto("/market/cart")
+    await ctx.fill("input[data-test-id='market-input-coupon']", "VALUE10")
+    await ctx.click("button[data-test-id='market-btn-apply-coupon']")
+    await ctx.click("button[data-test-id='market-btn-place-order']")
+    world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
+    gear = next(o for o in world["market"]["orders"].values()
+                if o.get("coupon_code") == "VALUE10")
+    total = gear["total"]
+    # 2) Dinner from Sakura Sushi + a calendar reminder.
+    await ctx.goto("/food/restaurant/r_sushi", reasoning="Order tonight's dinner.")
+    await ctx.click("button[data-test-id='btn-add-d_salmon_roll']")
+    await ctx.goto("/food/cart")
+    await ctx.click("button[data-test-id='btn-place-food-order']")
+    await ctx.goto("/calendar/new", reasoning="Add a reminder for the delivery.")
+    await ctx.fill("input[data-test-id='input-event-title']", "Sushi delivery")
+    await ctx.click("button[data-test-id='btn-save-event']")
+    # 3) Reply to Alex with the EXACT gear total.
+    world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
+    alex = next(e for e in world["mail"]["inbox"].values()
+                if "alex@" in (e.get("sender") or "").lower()
+                and "keyboard" in (e.get("subject") or "").lower())
+    await ctx.goto(f"/mail/message/{alex['id']}",
+                   reasoning="Reply to Alex with the gear cost.")
+    await ctx.click("a[data-test-id='btn-reply']")
+    await ctx.fill("textarea[data-test-id='input-compose-body']",
+                   f"The keyboard and mouse came to ${total:.2f} total at "
+                   f"ValueMart. Hope that helps!")
+    await ctx.click("button[data-test-id='btn-send']")
+
+
 async def solve_m19_coupon_minefield(ctx: BrowserCtx) -> None:
     """Read the coupon emails, buy keyboard+mouse on ValueMart (the cheaper
     store), try the salient 50% code (rejected — expired), fall back to the
@@ -1006,4 +1045,5 @@ SOLVERS = {
     "M17/cross_retailer_cheaper":    solve_m17_cross_retailer_cheaper,
     "M18/async_coupon_flip":         solve_m18_async_coupon_flip,
     "M19/coupon_minefield":          solve_m19_coupon_minefield,
+    "M20/errand_run":                solve_m20_errand_run,
 }

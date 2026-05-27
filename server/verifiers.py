@@ -1891,6 +1891,67 @@ def _suite_m16() -> TaskSuite:
     )
 
 
+def _suite_m20() -> TaskSuite:
+    """BUNDLED ERRAND RUN — four independent sub-goals across 5 apps, ALL
+    required (so dropping any one fails the task; the missed milestone shows
+    which). Positive end-state checks:
+      gear     -> ordered_gear_valuemart (keyboard+mouse on ValueMart w/ VALUE10,
+                  under $125)
+      dinner   -> dinner_ordered (a Sakura Sushi food order)
+      calendar -> calendar_reminder_created (an agent-created calendar event)
+      reply    -> replied_gear_total_to_alex (a sent email to Alex containing the
+                  EXACT total of the gear order — the Shop->Mail value transfer)."""
+    _GEAR = {"vm_kb_mech", "vm_mouse_wireless"}
+    _BUDGET = 125.0
+
+    def _gear_orders(p: Probe) -> list:
+        mk = getattr(p.world, "market", None) if p.world else None
+        if mk is None:
+            return []
+        return [o for o in mk.orders.values()
+                if _GEAR.issubset({it.product_id for it in o.items})]
+
+    def _ordered_gear(p: Probe) -> bool:
+        return any(o.coupon_code == "VALUE10" and o.total <= _BUDGET
+                   for o in _gear_orders(p))
+
+    def _dinner_ordered(p: Probe) -> bool:
+        food = getattr(p.world, "food", None) if p.world else None
+        if food is None:
+            return False
+        return any(o.restaurant_id == "r_sushi" for o in food.orders.values())
+
+    def _calendar_reminder(p: Probe) -> bool:
+        cal = getattr(p.world, "calendar", None) if p.world else None
+        if cal is None:
+            return False
+        return any(e.source == "user" for e in cal.events.values())
+
+    def _replied_gear_total_to_alex(p: Probe) -> bool:
+        mail = getattr(p.world, "mail", None) if p.world else None
+        orders = _gear_orders(p)
+        if mail is None or not orders:
+            return False
+        needle = f"{orders[0].total:.2f}"            # the EXACT charged total
+        return any("alex" in (se.to or "").lower() and needle in (se.body or "")
+                   for se in mail.sent.values())
+
+    return TaskSuite(
+        task_id="M20/errand_run",
+        milestones=[
+            Milestone("ordered_gear_valuemart", weight=0.3,
+                      check=_ordered_gear, required_for_success=True),
+            Milestone("dinner_ordered", weight=0.2,
+                      check=_dinner_ordered, required_for_success=True),
+            Milestone("calendar_reminder_created", weight=0.2,
+                      check=_calendar_reminder, required_for_success=True),
+            Milestone("replied_gear_total_to_alex", weight=0.3,
+                      check=_replied_gear_total_to_alex,
+                      required_for_success=True),
+        ],
+    )
+
+
 def _suite_m19() -> TaskSuite:
     """COUPON MINEFIELD. Buy keyboard + mouse on the cheaper store (ValueMart)
     with the VALID coupon (VALUE10), under a $125 budget — resisting the salient
@@ -2096,6 +2157,7 @@ SUITE_FACTORIES = {
     "M17/cross_retailer_cheaper":    _suite_m17,
     "M18/async_coupon_flip":         _suite_m18,
     "M19/coupon_minefield":          _suite_m19,
+    "M20/errand_run":                _suite_m20,
 }
 
 
