@@ -165,6 +165,20 @@ TOOLS_PIXEL = [
         },
     },
     {
+        "name": "wait",
+        "description": (
+            "Let time pass WITHOUT a UI action — use this to wait for something "
+            "to arrive that you cannot make happen yourself (a new email, a "
+            "notification, a price/coupon update). After waiting, re-check the "
+            "relevant tab (e.g. switch to Mail) to see if it arrived."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {"reason": {"type": "string"}},
+            "required": [],
+        },
+    },
+    {
         "name": "finish",
         "description": (
             "End the episode. Call this ONLY after verifying that the "
@@ -378,16 +392,23 @@ class PixelBrowserAgent:
     Set ANTHROPIC_API_KEY in the environment.
     """
 
-    def __init__(self, model: str | None = None, max_steps: int = 50,
-                 verbose: bool = True, thinking_budget: int = 4000):
+    def __init__(self, model: str | None = None, max_steps: int | None = None,
+                 verbose: bool = True, thinking_budget: int = 4000,
+                 eval_mode: bool | None = None):
         from anthropic import Anthropic
         self.client = Anthropic()
         self.model = model or os.getenv(
             "ANTHROPIC_MODEL", "claude-sonnet-4-5-20250929",
         )
-        self.max_steps = max_steps
+        self.max_steps = (max_steps if max_steps is not None
+                          else int(os.getenv("AGENT_MAX_STEPS", "50")))
         self.verbose = verbose
         self.thinking_budget = thinking_budget
+        # No reward leakage in benchmark runs (AGENT_EVAL_MODE=1): strip
+        # milestone names + running score from the agent's observation. The
+        # trajectory still records them for grading.
+        self.eval_mode = (eval_mode if eval_mode is not None
+                          else os.getenv("AGENT_EVAL_MODE", "0") == "1")
 
     async def run(self, ctx: BrowserCtx, task_brief: str) -> None:
         messages: list[dict[str, Any]] = []
@@ -399,6 +420,11 @@ class PixelBrowserAgent:
         pending_tool_result: dict[str, Any] | None = None
 
         for turn in range(self.max_steps):
+            # ─── TICK the async clock BEFORE observing, so any event scheduled
+            # for this step (a new email / price change / coupon flip) has
+            # arrived and shows up in the screenshot the agent is about to act
+            # on. Without this, scheduled events never fire for this agent. ───
+            await ctx.tick()
             # ─── OBSERVE: capture screenshot, extract marks, annotate ───
             marks = await extract_marks(ctx.page)
             raw_png = await ctx.page.screenshot(full_page=False)
@@ -550,6 +576,8 @@ class PixelBrowserAgent:
                 elif kind == "close_tab":
                     step_record = await ctx.close_tab(
                         int(args["index"]), reasoning=args.get("reason", ""))
+                elif kind == "wait":
+                    step_record = await ctx.wait(reasoning=args.get("reason", ""))
                 elif kind == "finish":
                     if self.verbose:
                         print(f"[pixel_agent] finishing: {args.get('reason', '')}")
@@ -571,6 +599,11 @@ class PixelBrowserAgent:
                     last_action_result = (
                         f"ERROR: {step_record.action_error}. "
                         f"URL is now {step_record.url_after}."
+                    )
+                elif self.eval_mode:
+                    # Benchmark mode: do NOT leak milestone names / score.
+                    last_action_result = (
+                        f"OK ({kind}). URL is now {step_record.url_after}."
                     )
                 else:
                     last_action_result = (

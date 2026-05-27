@@ -73,7 +73,10 @@ def _to_openai_tools(anthropic_tools: list[dict]) -> list[dict]:
             for t in anthropic_tools]
 
 
-TOOLS_OPENAI_PIXEL = _to_openai_tools(TOOLS_PIXEL + _TAB_TOOLS)
+# TOOLS_PIXEL already carries the multi-tab tools + `wait` + `finish`, so use it
+# directly — adding _TAB_TOOLS again would duplicate tool names. (_TAB_TOOLS is
+# kept above for reference / backward-compat imports.)
+TOOLS_OPENAI_PIXEL = _to_openai_tools(TOOLS_PIXEL)
 
 
 # --------------------------------------------------------------------------- #
