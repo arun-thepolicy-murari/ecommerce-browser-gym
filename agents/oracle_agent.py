@@ -882,6 +882,46 @@ async def solve_m16_coordinated_dinner_delay(ctx: BrowserCtx) -> None:
     await ctx.click("button[data-test-id='btn-send']")
 
 
+async def solve_m18_async_coupon_flip(ctx: BrowserCtx) -> None:
+    """Gold 'noticed-the-flip-and-switched' trajectory. Commit to ShopGym
+    (initially cheaper with TECH20) -> reaching its checkout fires the async
+    flash-sale email -> read VALUEMART30 -> re-evaluate (ValueMart now cheapest)
+    -> abandon ShopGym, buy the laptop+keyboard on ValueMart with VALUEMART30."""
+    import re
+    # 1) Start the ShopGym purchase (laptop + keyboard) and reach checkout —
+    #    this fires ShopCheckoutReached, arming the async flip.
+    await ctx.goto("/product/p_laptop_studio",
+                   reasoning="ShopGym + TECH20 looks cheaper, so start here.")
+    await ctx.click("button[data-test-id='btn-add-to-cart']")
+    await ctx.goto("/product/p_kb_mech")
+    await ctx.click("button[data-test-id='btn-add-to-cart']")
+    await ctx.click("a[data-test-id='link-cart']")
+    await ctx.click("a[data-test-id='btn-proceed-checkout']")   # -> /checkout/address
+    # 2) Wait for the flash-sale email, then read the new coupon code.
+    code = "VALUEMART30"
+    for _ in range(6):
+        world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
+        flip = next((e for e in world["mail"]["inbox"].values()
+                     if "coupon-flip" in (e.get("labels") or [])), None)
+        if flip is not None:
+            m = re.search(r"VALUEMART\d+", flip.get("body", "") or "")
+            code = m.group(0) if m else code
+            await ctx.goto(f"/mail/message/{flip['id']}",
+                           reasoning="A bigger ValueMart coupon arrived — read it.")
+            break
+        await ctx.wait(reasoning="Watch the inbox for a better deal before paying.")
+    # 3) Re-evaluate -> ValueMart is now cheapest. Abandon ShopGym, buy there.
+    await ctx.goto("/market/product/vm_laptop_studio",
+                   reasoning="ValueMart is cheapest with the flip coupon — switch.")
+    await ctx.click("button[data-test-id='market-btn-add-to-cart']")
+    await ctx.goto("/market/product/vm_kb_mech")
+    await ctx.click("button[data-test-id='market-btn-add-to-cart']")
+    await ctx.goto("/market/cart")
+    await ctx.fill("input[data-test-id='market-input-coupon']", code)
+    await ctx.click("button[data-test-id='market-btn-apply-coupon']")
+    await ctx.click("button[data-test-id='market-btn-place-order']")
+
+
 async def solve_m17_cross_retailer_cheaper(ctx: BrowserCtx) -> None:
     """Read the ValueMart coupon from email, then buy the monitor on the
     genuinely-cheaper store. ShopGym deal = $199.99 + $5.99 = $205.98;
@@ -939,4 +979,5 @@ SOLVERS = {
     "M15/inbox_price_watch":         solve_m15_inbox_price_watch,
     "M16/coordinated_dinner_delay":  solve_m16_coordinated_dinner_delay,
     "M17/cross_retailer_cheaper":    solve_m17_cross_retailer_cheaper,
+    "M18/async_coupon_flip":         solve_m18_async_coupon_flip,
 }

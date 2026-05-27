@@ -24,3 +24,7 @@ def register_default_subscribers() -> None:
     bus.subscribe("ShopPriceChanged", shop_hooks.apply_shop_price_change)
     # Async delivery-delay notice (M16): pushes the ETA into a later slot.
     bus.subscribe("DeliveryDelayed", inbound.deliver_delivery_delayed)
+    # Async coupon-flip (M18): a deeper coupon arrives mid-checkout and flips
+    # which store is cheaper. (ShopCheckoutReached is a pure trigger -> no
+    # subscriber; the scheduler keys the flip email off it.)
+    bus.subscribe("CouponFlipAlert", inbound.deliver_coupon_flip_alert)

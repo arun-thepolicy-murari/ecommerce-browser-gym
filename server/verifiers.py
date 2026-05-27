@@ -1891,6 +1891,67 @@ def _suite_m16() -> TaskSuite:
     )
 
 
+def _suite_m18() -> TaskSuite:
+    """ASYNC COUPON-FLIP. Initially ShopGym (TECH20) is cheaper; an async
+    FLASH-SALE email then announces VALUEMART30 (30%), making ValueMart the
+    cheapest. The agent must notice the flip mid-checkout and switch. Graded on
+    the OUTCOME (positive end-state checks; milestones are sticky):
+      env gate -> flip_delivered (async event fired) + valuemart_now_cheapest
+      used     -> ordered_gear_on_valuemart (laptop + keyboard, the cheaper
+                  store post-flip) + applied_valuemart30 (used the new coupon).
+    Failure = barrelled through the ShopGym order (sunk cost), or bought
+    ValueMart without the flip coupon."""
+    from server.mutations import SHIPPING_FLAT
+    from server.apps import bus as _bus
+    _GEAR_VM = {"vm_laptop_studio", "vm_kb_mech"}
+
+    def _vm_gear_orders(p: Probe) -> list:
+        mk = getattr(p.world, "market", None) if p.world else None
+        if mk is None:
+            return []
+        return [o for o in mk.orders.values()
+                if _GEAR_VM.issubset({it.product_id for it in o.items})]
+
+    def _ordered_gear_on_valuemart(p: Probe) -> bool:
+        return len(_vm_gear_orders(p)) >= 1
+
+    def _applied_valuemart30(p: Probe) -> bool:
+        return any(o.coupon_code == "VALUEMART30" for o in _vm_gear_orders(p))
+
+    def _flip_delivered(p: Probe) -> bool:
+        return p.world is not None and _bus.has_delivered(p.world, "CouponFlipAlert")
+
+    def _valuemart_now_cheapest(p: Probe) -> bool:
+        mk = getattr(p.world, "market", None) if p.world else None
+        if mk is None:
+            return False
+        vlap, vkb = mk.products.get("vm_laptop_studio"), mk.products.get("vm_kb_mech")
+        slap = p.state.products.get("p_laptop_studio")
+        skb = p.state.products.get("p_kb_mech")
+        if not (vlap and vkb and slap and skb):
+            return False
+        vm_sub = vlap.price + vkb.price
+        c = mk.coupons.get("VALUEMART30")
+        vm_total = round(vm_sub - (vm_sub * c.percent_off if c else 0), 2) \
+            + mk.delivery_for(vm_sub)
+        shop_total = round((slap.base_price + skb.base_price) * 0.80, 2) + SHIPPING_FLAT
+        return vm_total < shop_total
+
+    return TaskSuite(
+        task_id="M18/async_coupon_flip",
+        milestones=[
+            Milestone("flip_delivered", weight=0.0,
+                      check=_flip_delivered, required_for_success=False),
+            Milestone("valuemart_now_cheapest", weight=0.0,
+                      check=_valuemart_now_cheapest, required_for_success=False),
+            Milestone("ordered_gear_on_valuemart", weight=0.5,
+                      check=_ordered_gear_on_valuemart, required_for_success=True),
+            Milestone("applied_valuemart30", weight=0.5,
+                      check=_applied_valuemart30, required_for_success=True),
+        ],
+    )
+
+
 def _suite_m17() -> TaskSuite:
     """CROSS-RETAILER comparison + inbox coupon. The monitor is on both stores;
     the emailed VALUE10 coupon makes ValueMart the genuinely-cheaper store
@@ -1986,6 +2047,7 @@ SUITE_FACTORIES = {
     "M15/inbox_price_watch":         _suite_m15,
     "M16/coordinated_dinner_delay":  _suite_m16,
     "M17/cross_retailer_cheaper":    _suite_m17,
+    "M18/async_coupon_flip":         _suite_m18,
 }
 
 

@@ -106,6 +106,33 @@ def deliver_market_order_confirmation(world: "WorldState",
         order_id=p.get("order_id"), amount_total=p.get("total"))
 
 
+def deliver_coupon_flip_alert(world: "WorldState", event: "WorldEvent") -> None:
+    """CouponFlipAlert -> a FLASH-SALE email announcing a deeper coupon that
+    FLIPS which store is cheaper (M18). Delivered ASYNCHRONOUSLY right after the
+    agent commits to ShopGym, so a linear agent that's already mid-checkout must
+    notice it, abandon the ShopGym plan, and switch stores. Idempotent: the
+    dynamic (on-checkout) trigger and the absolute fallback both emit this, but
+    only ONE email is ever added."""
+    mail = world.mail
+    if mail is None:
+        return
+    if any("coupon-flip" in (e.labels or []) for e in mail.inbox.values()):
+        return                                  # already delivered — dedupe
+    p = event.payload
+    code = p.get("code", "")
+    pct = int(round(float(p.get("percent_off", 0.0)) * 100))
+    eid = mail.new_id()
+    mail.inbox[eid] = Email(
+        id=eid, sender="deals@valuemart.com", to=mail.account_email,
+        subject=f"FLASH SALE — {pct}% off everything at ValueMart!",
+        body=(
+            f"For the next hour only: use code {code} for {pct}% off your "
+            f"ENTIRE ValueMart order — our biggest discount ever. Stack it on "
+            f"anything in your cart. Don't miss out!\n"),
+        received_at=f"{SEED_DATE}T13:15:00", received_label="now",
+        read=False, labels=["coupon-flip", "deals"])
+
+
 def deliver_delivery_delayed(world: "WorldState", event: "WorldEvent") -> None:
     """DeliveryDelayed -> a 'your delivery is running late' email with a NEW
     ETA. Delivered ASYNCHRONOUSLY by the scheduler a few steps AFTER the agent

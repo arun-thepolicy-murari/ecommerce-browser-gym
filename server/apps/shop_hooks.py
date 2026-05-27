@@ -33,6 +33,18 @@ def emit_shop_order_placed(world: "WorldState", order_id: str) -> None:
     )
 
 
+def emit_shop_checkout_reached(world: "WorldState") -> None:
+    """Emit ShopCheckoutReached — a one-shot TRIGGER event (target_app=shop, no
+    subscriber) fired the FIRST time the agent reaches the shop checkout. It
+    lands in ``world.events`` so a scheduled relative event (M18's async coupon-
+    flip) can fire 'just after the agent commits to ShopGym' — the sunk-cost
+    moment. Idempotent: only the first checkout-entry emits it."""
+    if any(e.type == "ShopCheckoutReached" for e in world.events):
+        return
+    bus.emit(world, type="ShopCheckoutReached", source_app="shop",
+             target_app="shop", payload={})
+
+
 def apply_shop_price_change(world: "WorldState", event: "WorldEvent") -> None:
     """ShopPriceChanged -> actually drop a product's price in the shop store.
 

@@ -381,6 +381,71 @@ def test_m17_valuemart_without_coupon_fails():
 
 
 # --------------------------------------------------------------------------- #
+# M18 (async coupon-flip): commit to ShopGym -> flip email -> switch to ValueMart
+# --------------------------------------------------------------------------- #
+
+def _buy_gear_valuemart(sim: _CrossSim, coupon: str | None = None) -> None:
+    market_mut.add_to_cart(sim.world.market, product_id="vm_laptop_studio")
+    market_mut.add_to_cart(sim.world.market, product_id="vm_kb_mech")
+    if coupon:
+        market_mut.apply_coupon(sim.world.market, coupon)
+    market_mut.place_order(sim.world)
+
+
+def test_m18_flip_fires_via_absolute_fallback():
+    sim = _CrossSim("M18/async_coupon_flip")
+    assert not bus.has_delivered(sim.world, "CouponFlipAlert")
+    scheduler.advance_and_flush(sim.world, 8)        # step-8 fallback
+    assert bus.has_delivered(sim.world, "CouponFlipAlert")
+    flips = [e for e in sim.world.mail.inbox.values()
+             if "coupon-flip" in (e.labels or [])]
+    assert len(flips) == 1
+
+
+def test_m18_flip_email_deduped_when_both_triggers_fire():
+    """Dynamic (on-checkout) + absolute fallback both emit CouponFlipAlert, but
+    idempotent delivery yields exactly ONE flip email."""
+    sim = _CrossSim("M18/async_coupon_flip")
+    shop_hooks.emit_shop_checkout_reached(sim.world)  # arms the relative trigger
+    scheduler.advance_and_flush(sim.world, 9)         # fires relative (due 1) + absolute (due 8)
+    flips = [e for e in sim.world.mail.inbox.values()
+             if "coupon-flip" in (e.labels or [])]
+    assert len(flips) == 1
+
+
+def test_m18_full_path_switches_to_valuemart():
+    sim = _CrossSim("M18/async_coupon_flip")
+    scheduler.advance_and_flush(sim.world, 8)         # flip lands
+    _buy_gear_valuemart(sim, coupon="VALUEMART30")
+    res = sim._probe()
+    assert res["success"] is True
+    assert res["score"] == 1.0
+
+
+def test_m18_sunk_cost_buying_shopgym_fails():
+    """Barrel through the ShopGym order (the sunk-cost failure) -> the ValueMart
+    milestone never fires."""
+    sim = _CrossSim("M18/async_coupon_flip")
+    mutations.add_to_cart(sim.shop, "p_laptop_studio", 1)
+    mutations.add_to_cart(sim.shop, "p_kb_mech", 1)
+    mutations.place_order(sim.shop, "pay_visa")
+    res = sim._probe()
+    assert res["success"] is False
+    assert "ordered_gear_on_valuemart" in res["missed_milestones"]
+
+
+def test_m18_valuemart_without_flip_coupon_fails():
+    """Switched stores but used the OLD VALUE10 instead of the flip's
+    VALUEMART30 -> the flip-coupon milestone misses."""
+    sim = _CrossSim("M18/async_coupon_flip")
+    scheduler.advance_and_flush(sim.world, 8)
+    _buy_gear_valuemart(sim, coupon="VALUE10")
+    res = sim._probe()
+    assert res["success"] is False
+    assert "applied_valuemart30" in res["missed_milestones"]
+
+
+# --------------------------------------------------------------------------- #
 # Backward-compat: probe.state still aliases the shop GymState
 # --------------------------------------------------------------------------- #
 

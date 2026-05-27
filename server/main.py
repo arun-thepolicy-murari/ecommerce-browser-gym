@@ -565,6 +565,10 @@ async def checkout_address(request: Request):
     if not s.cart.items:
         return RedirectResponse("/cart", 303)
     log_action(s, "checkout_step", step="address")
+    # Cross-app trigger: the agent has COMMITTED to a ShopGym purchase. Some
+    # tasks (M18 async coupon-flip) schedule an event relative to this moment.
+    if SESSION.world is not None:
+        shop_hooks.emit_shop_checkout_reached(SESSION.world)
     return templates.TemplateResponse(request, "checkout_address.html", _ctx(request))
 
 

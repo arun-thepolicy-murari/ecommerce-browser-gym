@@ -319,6 +319,24 @@ def _facts_m16(world: dict, url: str) -> dict[str, Any]:
     return facts
 
 
+def _facts_m18(world: dict, url: str) -> dict[str, Any]:
+    """M18 async coupon-flip — the flip email's delivery (env truth) + the new
+    coupon code recorded ONLY when the agent READS the flash-sale email (so
+    coverage = did it actually notice the mid-task flip). 'used' (buy ValueMart
+    with VALUEMART30) is checked by the verifier."""
+    import re
+    facts: dict[str, Any] = {}
+    for e in ((world.get("mail") or {}).get("inbox") or {}).values():
+        if "coupon-flip" not in (e.get("labels") or []):
+            continue
+        facts["mail.flip_delivered"] = True
+        if e.get("read"):
+            m = re.search(r"VALUEMART\d+", e.get("body", "") or "")
+            if m:
+                facts["mail.flip_coupon_code"] = m.group(0)
+    return facts
+
+
 def _facts_m17(world: dict, url: str) -> dict[str, Any]:
     """M17 cross-retailer — the prices the agent must compare across the two
     stores + the emailed coupon (recorded when its email is READ). 'used' (buy
@@ -355,6 +373,7 @@ FACT_EXTRACTORS: dict[str, Callable[[dict, str], dict]] = {
     "M15/inbox_price_watch":         _facts_m15,
     "M16/coordinated_dinner_delay":  _facts_m16,
     "M17/cross_retailer_cheaper":    _facts_m17,
+    "M18/async_coupon_flip":         _facts_m18,
 }
 
 

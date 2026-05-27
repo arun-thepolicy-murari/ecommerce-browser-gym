@@ -310,6 +310,16 @@ BRIEFS = {
         "item is on its way back."
     ),
 
+    "M18": (
+        "I need to buy a Studio Laptop 14 AND a Mechanical Keyboard — get the "
+        "pair from whichever of my two stores (ShopGym or ValueMart) is cheaper "
+        "overall, and apply the best coupon. Right now I have a TECH20 code "
+        "(20% off electronics) for ShopGym and a VALUE10 code (10% off) for "
+        "ValueMart. Heads up: ValueMart sometimes emails a bigger coupon while "
+        "you're shopping — keep an eye on my inbox, and if a better deal lands, "
+        "use it. Buy from whichever store ends up cheapest."
+    ),
+
     "M17": (
         "I want to buy a 24-inch Monitor. It's sold on BOTH ShopGym and "
         "ValueMart (use the workspace bar to switch stores). Check the price on "
@@ -957,6 +967,9 @@ START_PATHS = {
     # M17 starts on the Shop — the agent must then compare ValueMart + read the
     # coupon email before deciding where to buy.
     "M17/cross_retailer_cheaper": "/",
+    # M18 starts on the Shop — the agent compares, commits to ShopGym (initially
+    # cheaper), and the async flip lands as it reaches checkout.
+    "M18/async_coupon_flip": "/",
 }
 
 
@@ -1198,6 +1211,45 @@ def task_m16_coordinated_dinner_delay(seed: int) -> "WorldState":
     return world
 
 
+def task_m18_async_coupon_flip(seed: int) -> "WorldState":
+    """ASYNC COUPON-FLIP (attacks sunk-cost / linear execution). Buy a laptop +
+    keyboard from the cheaper of the two stores. Initial math: ShopGym with
+    TECH20 (20% off electronics) = ~$815.98 beats ValueMart with VALUE10 (10%)
+    = $890.98, so the agent commits to ShopGym. THEN, right after it reaches the
+    ShopGym checkout, an async FLASH-SALE email announces VALUEMART30 (30% off),
+    making ValueMart = $692.99 — now the cheapest. To pass, the agent must
+    NOTICE the email mid-checkout, abandon ShopGym, switch to ValueMart, apply
+    VALUEMART30, and check out there. The failure is sunk-cost: barrel through
+    the ShopGym order and never look back. The flip fires dynamically (1 step
+    after ShopCheckoutReached — the commit moment) with an absolute step-8
+    fallback so it ALWAYS fires; idempotent delivery -> exactly one email."""
+    from server.apps import scheduler as _sched
+    from server.state import Promotion
+    from server.apps.market.state import MarketCoupon
+    world = _cross_app_world(seed, "M18/async_coupon_flip", "hard")
+    # ShopGym: TECH20 makes it the initially-cheaper store (the lure).
+    world.shop.promotions["TECH20"] = Promotion(
+        code="TECH20", name="20% off electronics",
+        description="20% off all electronics.", discount_pct=0.20,
+        applies_to_category="electronics", min_purchase=0.0)
+    # ValueMart: VALUEMART30 pre-seeded (applicable) but only LEARNABLE via the
+    # async email — the flip that makes ValueMart cheapest. (VALUE10 is seeded.)
+    world.market.coupons["VALUEMART30"] = MarketCoupon(
+        code="VALUEMART30", percent_off=0.30, min_subtotal=0.0,
+        description="30% off your ValueMart order (flash sale)")
+    flip = {"code": "VALUEMART30", "percent_off": 0.30}
+    _sched.schedule_relative(
+        world.schedule, id="se_flip_oncheckout",
+        after_event_type="ShopCheckoutReached", delay_steps=1,
+        emit_type="CouponFlipAlert", source_app="market", target_app="mail",
+        payload=dict(flip))
+    _sched.schedule_absolute(
+        world.schedule, id="se_flip_fallback", fire_at_step=8,
+        emit_type="CouponFlipAlert", source_app="market", target_app="mail",
+        payload=dict(flip))
+    return world
+
+
 def task_m17_cross_retailer_cheaper(seed: int) -> "WorldState":
     """CROSS-RETAILER comparison + inbox coupon (tim's cluster #3). The 24-inch
     Monitor is sold on BOTH stores: ShopGym $199.99 (+ $5.99 ship = $205.98) vs
@@ -1277,6 +1329,7 @@ REQUIRED_FACTS = {
     "M15/inbox_price_watch":         ["mail.alerted_product_id", "mail.alerted_new_price"],
     "M16/coordinated_dinner_delay":  ["mail.new_eta", "calendar.user_event_time"],
     "M17/cross_retailer_cheaper":    ["mail.coupon_code", "market.monitor_price"],
+    "M18/async_coupon_flip":         ["mail.flip_coupon_code"],
 }
 
 
@@ -1315,6 +1368,7 @@ TASKS = {
     "M15/inbox_price_watch":         task_m15_inbox_price_watch,
     "M16/coordinated_dinner_delay":  task_m16_coordinated_dinner_delay,
     "M17/cross_retailer_cheaper":    task_m17_cross_retailer_cheaper,
+    "M18/async_coupon_flip":         task_m18_async_coupon_flip,
 }
 
 
