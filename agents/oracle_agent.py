@@ -1028,6 +1028,50 @@ async def solve_m22_async_calendar_cascade(ctx: BrowserCtx) -> None:
     await ctx.click("button[data-test-id='btn-send']")
 
 
+async def solve_m23_offsite_keeps_moving(ctx: BrowserCtx) -> None:
+    """Gold trajectory for the tight killer. Derive constraints from the RSVPs,
+    order veg-inclusive lunch under budget, WAIT for the attendee swap, book the
+    only valid after-3 PM free slot (16:00), then confirm the 4 PM time to each
+    attendee — composing FRESH to Dana (not replying to the manager)."""
+    import re
+    # 1) Burger Barn order: Veggie Burger (Priya is vegetarian) + a Cheeseburger,
+    #    well under the $40 cap.
+    await ctx.goto("/food/restaurant/r_burger", reasoning="Order the team lunch.")
+    await ctx.click("button[data-test-id='btn-add-d_veggie']")
+    await ctx.click("button[data-test-id='btn-add-d_classic']")
+    await ctx.goto("/food/cart")
+    await ctx.click("button[data-test-id='btn-place-food-order']")
+    # 2) Watch for the async attendee swap (Sam -> Dana, after 3 PM only).
+    dana = "dana@example.com"
+    for _ in range(8):
+        world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
+        swap = next((e for e in world["mail"]["inbox"].values()
+                     if "offsite-change" in (e.get("labels") or [])), None)
+        if swap is not None:
+            mm = re.search(r"[\w.]+@example\.com", swap.get("body", "") or "")
+            dana = mm.group(0) if mm else dana
+            await ctx.goto(f"/mail/message/{swap['id']}",
+                           reasoning="Plan changed — read the new constraints.")
+            break
+        await ctx.wait(reasoning="Watch for plan changes before finalizing.")
+    # 3) Book the lunch at 4 PM — the only free slot after 3 PM (3-4 PM is busy).
+    await ctx.goto("/calendar/new", reasoning="Book the lunch after 3 PM.")
+    await ctx.fill("input[data-test-id='input-event-title']", "Team Offsite Lunch")
+    await ctx.fill("input[data-test-id='input-event-start']", "16:00")
+    await ctx.fill("input[data-test-id='input-event-end']", "17:00")
+    await ctx.click("button[data-test-id='btn-save-event']")
+    # 4) Confirm the 4 PM time to each attendee — Dana via a FRESH compose.
+    for who in (dana, "priya@example.com", "alex@example.com"):
+        await ctx.goto("/mail/compose", reasoning=f"Confirm the time to {who}.")
+        await ctx.fill("input[data-test-id='input-compose-to']", who)
+        await ctx.fill("input[data-test-id='input-compose-subject']",
+                       "Team lunch — confirmed time")
+        await ctx.fill("textarea[data-test-id='input-compose-body']",
+                       "Confirmed: our team lunch is at 4:00 PM today at "
+                       "Burger Barn. See you there!")
+        await ctx.click("button[data-test-id='btn-send']")
+
+
 async def solve_m19_coupon_minefield(ctx: BrowserCtx) -> None:
     """Read the coupon emails, buy keyboard+mouse on ValueMart (the cheaper
     store), try the salient 50% code (rejected — expired), fall back to the
@@ -1155,4 +1199,5 @@ SOLVERS = {
     "M20/errand_run":                solve_m20_errand_run,
     "M21/async_errand_run":          solve_m21_async_errand_run,
     "M22/async_calendar_cascade":    solve_m22_async_calendar_cascade,
+    "M23/offsite_keeps_moving":      solve_m23_offsite_keeps_moving,
 }

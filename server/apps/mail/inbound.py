@@ -157,6 +157,33 @@ def deliver_calendar_change_alert(world: "WorldState", event: "WorldEvent") -> N
         read=False, labels=["calendar-change"])
 
 
+def deliver_offsite_change_alert(world: "WorldState", event: "WorldEvent") -> None:
+    """OffsiteChangeAlert -> a manager email that swaps an attendee mid-task
+    (M23): Sam is out, Dana is in, and Dana can ONLY meet after 3 PM. This both
+    (a) tightens the time constraint (the 1 PM slot the agent may have already
+    booked is now invalid -> must move later), and (b) changes the notify target
+    to Dana, who is NOT in the inbox -> the agent must COMPOSE FRESH to dana@
+    (replying to this manager email -> wrong recipient, the trap). Dana's address
+    is included so it is discoverable. Idempotent: only ONE such email is added."""
+    mail = world.mail
+    if mail is None:
+        return
+    if any("offsite-change" in (e.labels or []) for e in mail.inbox.values()):
+        return                                  # already delivered — dedupe
+    eid = mail.new_id()
+    mail.inbox[eid] = Email(
+        id=eid, sender="manager@example.com", to=mail.account_email,
+        subject="Change to the team lunch",
+        body=(
+            "Heads up — a change to the team lunch plan:\n\n"
+            "Sam can no longer make it. My manager Dana (dana@example.com) will "
+            "join instead. One catch: Dana is only free AFTER 3 PM, so please "
+            "shift the lunch to a slot after 3 PM, and let Dana know the final "
+            "time directly. Thanks!\n"),
+        received_at=f"{SEED_DATE}T11:30:00", received_label="now",
+        read=False, labels=["offsite-change"])
+
+
 def deliver_delivery_delayed(world: "WorldState", event: "WorldEvent") -> None:
     """DeliveryDelayed -> a 'your delivery is running late' email with a NEW
     ETA. Delivered ASYNCHRONOUSLY by the scheduler a few steps AFTER the agent

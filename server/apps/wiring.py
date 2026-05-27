@@ -31,3 +31,6 @@ def register_default_subscribers() -> None:
     # Async calendar overwrite (M22): a manager email cancels the 2 PM meeting
     # and moves the 3 PM 1:1 up — forcing a MOVE + a destructive DELETE + re-notify.
     bus.subscribe("CalendarChangeAlert", inbound.deliver_calendar_change_alert)
+    # Async offsite attendee swap (M23): Sam out, Dana in (after 3 PM only) —
+    # tightens the time constraint + changes the notify target to a fresh address.
+    bus.subscribe("OffsiteChangeAlert", inbound.deliver_offsite_change_alert)

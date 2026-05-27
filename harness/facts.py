@@ -383,6 +383,28 @@ def _facts_m22(world: dict, url: str) -> dict[str, Any]:
     return facts
 
 
+def _facts_m23(world: dict, url: str) -> dict[str, Any]:
+    """M23 offsite-keeps-moving — the async attendee-swap delivery (env truth) +
+    Dana's address recorded ONLY when the agent READS the swap email (coverage =
+    did it notice the change), plus the final calendar slot it landed on. The
+    'used' checks (veg+budget order, after-3 PM slot, notify the right people)
+    are the verifier's job."""
+    import re
+    facts: dict[str, Any] = {}
+    for e in ((world.get("mail") or {}).get("inbox") or {}).values():
+        if "offsite-change" not in (e.get("labels") or []):
+            continue
+        facts["mail.swap_delivered"] = True
+        if e.get("read"):
+            m = re.search(r"[\w.]+@example\.com", e.get("body", "") or "")
+            if m:
+                facts["mail.dana_address"] = m.group(0)
+    for ev in ((world.get("calendar") or {}).get("events") or {}).values():
+        if ev.get("source") == "user" and (ev.get("start") or "") >= "16:00":
+            facts["calendar.final_slot"] = ev.get("start")
+    return facts
+
+
 def _facts_m19(world: dict, url: str) -> dict[str, Any]:
     """M19 coupon minefield — which coupon codes the agent saw (recorded when
     the email is READ), separating the valid VALUE10 from the expired decoy
@@ -465,6 +487,7 @@ FACT_EXTRACTORS: dict[str, Callable[[dict, str], dict]] = {
     "M20/errand_run":                _facts_m20,
     "M21/async_errand_run":          _facts_m21,
     "M22/async_calendar_cascade":    _facts_m22,
+    "M23/offsite_keeps_moving":      _facts_m23,
 }
 
 

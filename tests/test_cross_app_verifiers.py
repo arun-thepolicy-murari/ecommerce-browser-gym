@@ -726,6 +726,111 @@ def test_m22_dropped_coffee_under_load_fails():
 
 
 # --------------------------------------------------------------------------- #
+# M23 (offsite that keeps moving): derive + conflict + cascade + recipient
+# --------------------------------------------------------------------------- #
+
+def _m23_lunch(sim: _CrossSim, *, veggie: bool, classic_qty: int = 1,
+              fries_qty: int = 0) -> None:
+    if veggie:
+        food_mut.add_dish(sim.world.food, restaurant_id="r_burger",
+                          dish_id="d_veggie")
+    if classic_qty:
+        food_mut.add_dish(sim.world.food, restaurant_id="r_burger",
+                          dish_id="d_classic", quantity=classic_qty)
+    if fries_qty:
+        food_mut.add_dish(sim.world.food, restaurant_id="r_burger",
+                          dish_id="d_fries", quantity=fries_qty)
+    food_mut.place_food_order(sim.world)
+
+
+def _m23_book(sim: _CrossSim, start: str) -> None:
+    cal_mut.create_event(sim.world.calendar, title="Team Offsite Lunch",
+                         day="2026-05-22", start=start, end="17:00")
+
+
+def _m23_notify(sim: _CrossSim, who: str) -> None:
+    mail_mut.send_email(sim.world.mail, to=who, subject="Team lunch — confirmed",
+                        body="Confirmed: team lunch at 4:00 PM today.")
+
+
+def test_m23_swap_fires_at_step_5():
+    sim = _CrossSim("M23/offsite_keeps_moving")
+    assert not bus.has_delivered(sim.world, "OffsiteChangeAlert")
+    scheduler.advance_and_flush(sim.world, 5)
+    assert bus.has_delivered(sim.world, "OffsiteChangeAlert")
+    alerts = [e for e in sim.world.mail.inbox.values()
+              if "offsite-change" in (e.labels or [])]
+    assert len(alerts) == 1 and "dana@example.com" in alerts[0].body
+
+
+def test_m23_full_path_all_blockers():
+    sim = _CrossSim("M23/offsite_keeps_moving")
+    scheduler.advance_and_flush(sim.world, 5)
+    _m23_lunch(sim, veggie=True, classic_qty=1)        # has veggie, ~$22 < $40
+    _m23_book(sim, "16:00")                            # after 3 PM, free
+    for who in ("dana@example.com", "priya@example.com", "alex@example.com"):
+        _m23_notify(sim, who)
+    res = sim._probe()
+    assert res["success"] is True
+    assert res["score"] == 1.0
+
+
+def test_m23_forgot_veggie_fails():
+    """Ordered only cheeseburgers — ignored Priya's vegetarian need."""
+    sim = _CrossSim("M23/offsite_keeps_moving")
+    scheduler.advance_and_flush(sim.world, 5)
+    _m23_lunch(sim, veggie=False, classic_qty=2)
+    _m23_book(sim, "16:00")
+    for who in ("dana@example.com", "priya@example.com", "alex@example.com"):
+        _m23_notify(sim, who)
+    res = sim._probe()
+    assert res["success"] is False
+    assert "lunch_veg_under_budget" in res["missed_milestones"]
+
+
+def test_m23_busted_budget_fails():
+    """Has the veggie burger but blew past Alex's $40 cap."""
+    sim = _CrossSim("M23/offsite_keeps_moving")
+    scheduler.advance_and_flush(sim.world, 5)
+    _m23_lunch(sim, veggie=True, classic_qty=4, fries_qty=2)   # ~$57 > $40
+    _m23_book(sim, "16:00")
+    for who in ("dana@example.com", "priya@example.com", "alex@example.com"):
+        _m23_notify(sim, who)
+    res = sim._probe()
+    assert res["success"] is False
+    assert "lunch_veg_under_budget" in res["missed_milestones"]
+
+
+def test_m23_booked_before_3pm_fails():
+    """Booked at 1 PM (valid pre-cascade) but never moved it after Dana's
+    after-3 PM constraint landed."""
+    sim = _CrossSim("M23/offsite_keeps_moving")
+    scheduler.advance_and_flush(sim.world, 5)
+    _m23_lunch(sim, veggie=True, classic_qty=1)
+    _m23_book(sim, "13:00")                            # after 1 PM, NOT after 3 PM
+    for who in ("dana@example.com", "priya@example.com", "alex@example.com"):
+        _m23_notify(sim, who)
+    res = sim._probe()
+    assert res["success"] is False
+    assert "meeting_after_3pm_free" in res["missed_milestones"]
+
+
+def test_m23_notified_manager_not_dana_fails():
+    """The recipient trap: confirmed to the old crew + the manager, but never
+    told Dana directly (replied to the manager's email instead of composing)."""
+    sim = _CrossSim("M23/offsite_keeps_moving")
+    scheduler.advance_and_flush(sim.world, 5)
+    _m23_lunch(sim, veggie=True, classic_qty=1)
+    _m23_book(sim, "16:00")
+    _m23_notify(sim, "priya@example.com")
+    _m23_notify(sim, "alex@example.com")
+    _m23_notify(sim, "manager@example.com")            # wrong target, not Dana
+    res = sim._probe()
+    assert res["success"] is False
+    assert "notified_dana" in res["missed_milestones"]
+
+
+# --------------------------------------------------------------------------- #
 # Backward-compat: probe.state still aliases the shop GymState
 # --------------------------------------------------------------------------- #
 

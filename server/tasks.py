@@ -346,6 +346,20 @@ BRIEFS = {
         "Get everything consistent across my calendar and email."
     ),
 
+    "M23": (
+        "Set up a team lunch today. My teammates each emailed me their "
+        "requirements — read my inbox and work out the details from what they "
+        "said. Then:\n"
+        "1) Order the lunch from Burger Barn for the team, honoring everyone's "
+        "needs and their spending limit.\n"
+        "2) Put the lunch on my calendar in a slot that works for everyone and "
+        "doesn't clash with anything already booked.\n"
+        "3) Email each attendee to confirm the final time.\n"
+        "Heads up: plans may still change while you're setting this up — keep an "
+        "eye on my inbox and make sure the final calendar slot and the people you "
+        "confirm with reflect the LATEST information, not the original plan."
+    ),
+
     "M19": (
         "I need a Mechanical Keyboard AND a Wireless Mouse — buy the pair from "
         "whichever store is cheaper, use a ValueMart coupon to bring the price "
@@ -1024,6 +1038,8 @@ START_PATHS = {
     "M21/async_errand_run": "/",
     # M22 (async calendar cascade) starts on the Calendar.
     "M22/async_calendar_cascade": "/calendar",
+    # M23 (offsite that keeps moving) starts in the inbox (derive from emails).
+    "M23/offsite_keeps_moving": "/mail",
 }
 
 
@@ -1389,6 +1405,64 @@ def task_m22_async_calendar_cascade(seed: int) -> "WorldState":
     return world
 
 
+def task_m23_offsite_keeps_moving(seed: int) -> "WorldState":
+    """THE OFFSITE THAT KEEPS MOVING — the tight killer. Stacks four clean
+    blockers, none of which is a rigged environment:
+      DERIVE  : three RSVP emails each carry ONE constraint the agent must read
+                and combine — Priya is vegetarian (-> the Burger Barn order must
+                include the Veggie Burger, NOT just the salient Classic
+                Cheeseburger), Alex caps food at < $40 total, Sam can only meet
+                after 1 PM.
+      CONFLICT: the calendar already has 'Quarterly Review' 15:00-16:00, so a
+                valid after-the-constraints slot must thread the busy block.
+      CASCADE : an async manager email (step 5) swaps Sam out for Dana, who can
+                ONLY do after 3 PM. This INVALIDATES any 1 PM slot already booked
+                (must move to 16:00, the first free after-3 PM slot) AND changes
+                the notify target.
+      RECIPIENT: Dana is NOT in the inbox, so the agent must COMPOSE FRESH to
+                dana@ (its address is in the manager email). Replying to that
+                manager email — the salient move, the M22 trap — misroutes.
+    Four required POSITIVE end-state milestones (conjunctive), so the missed one
+    pinpoints which blocker broke the agent."""
+    from server.apps.mail.state import Email, SEED_DATE
+    from server.apps.calendar.state import CalendarEvent, TOMORROW
+    from server.apps import scheduler as _sched
+    world = _cross_app_world(seed, "M23/offsite_keeps_moving", "hard")
+    m = world.mail
+    rsvps = [
+        ("priya@example.com", "Re: team lunch?",
+         "I'm in! Just a heads up — I'm vegetarian, so please make sure there's "
+         "something on the order I can actually eat. — Priya"),
+        ("alex@example.com", "Re: team lunch?",
+         "Count me in. Let's keep it reasonable — please keep the food under $40 "
+         "total. — Alex"),
+        ("sam@example.com", "Re: team lunch?",
+         "I'll be there. Only constraint: I can't do it until after 1 PM. — Sam"),
+    ]
+    for sender, subj, body in rsvps:
+        eid = m.new_id()
+        m.inbox[eid] = Email(
+            id=eid, sender=sender, to=m.account_email, subject=subj, body=body,
+            received_at=f"{SEED_DATE}T09:00:00", received_label="9:00 AM",
+            read=False, labels=[])
+    # Calendar: one busy block (15:00-16:00). 13:00 is free (valid after-1 PM
+    # slot pre-cascade); 16:00 is the first free after-3 PM slot post-cascade.
+    cal = world.calendar
+    cal.events.clear()
+    eid = cal.new_id()
+    cal.events[eid] = CalendarEvent(
+        id=eid, title="Quarterly Review", day=TOMORROW,
+        day_label="Tomorrow (Fri May 22)", start="15:00", end="16:00",
+        source="seed")
+    # Async attendee swap: Sam -> Dana (after 3 PM only), lands mid-task.
+    _sched.schedule_absolute(
+        world.schedule, id="se_m23_swap", fire_at_step=5,
+        emit_type="OffsiteChangeAlert", source_app="calendar",
+        target_app="mail", payload={"new_attendee": "dana@example.com",
+                                     "earliest": "15:00"})
+    return world
+
+
 def task_m19_coupon_minefield(seed: int) -> "WorldState":
     """COUPON MINEFIELD (decoy + validity reasoning + conjunctive budget). Buy a
     keyboard + mouse from the cheaper store, under a $125 budget, using a VALID
@@ -1549,6 +1623,7 @@ REQUIRED_FACTS = {
     "M20/errand_run":                ["mail.gear_total", "food.eta"],
     "M21/async_errand_run":          ["mail.flip_coupon", "mail.gear_total"],
     "M22/async_calendar_cascade":    ["mail.new_meeting_time"],
+    "M23/offsite_keeps_moving":      ["mail.dana_address", "calendar.final_slot"],
 }
 
 
@@ -1592,6 +1667,7 @@ TASKS = {
     "M20/errand_run":                task_m20_errand_run,
     "M21/async_errand_run":          task_m21_async_errand_run,
     "M22/async_calendar_cascade":    task_m22_async_calendar_cascade,
+    "M23/offsite_keeps_moving":      task_m23_offsite_keeps_moving,
 }
 
 

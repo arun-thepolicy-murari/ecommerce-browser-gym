@@ -2092,6 +2092,85 @@ def _suite_m22() -> TaskSuite:
     )
 
 
+def _suite_m23() -> TaskSuite:
+    """THE OFFSITE THAT KEEPS MOVING — derive + conflict + cascade + recipient.
+    Four required POSITIVE end-state milestones (conjunctive), the missed one
+    pinpoints the blocker that broke the agent:
+      env gate -> swap_alert_delivered (the async attendee-swap email fired)
+      DERIVE   -> lunch_veg_under_budget (a Burger Barn order that includes the
+                  Veggie Burger AND totals < $40 — combines Priya's diet + Alex's
+                  budget; resisting the salient Classic Cheeseburger default)
+      CONFLICT+CASCADE -> meeting_after_3pm_free (a user calendar event starting
+                  at/after 16:00 — the only free after-3 PM slot once Dana's
+                  constraint lands; catches not-moved-from-1 PM and the busy
+                  15:00-16:00 block)
+      RECIPIENT-> notified_dana (a sent email to dana@ with the final 4 PM time —
+                  a FRESH compose, since Dana is not in the inbox; replying to the
+                  manager misroutes)
+      MULTI    -> notified_attendees (sent emails to BOTH Priya and Alex with the
+                  final time)."""
+    _TIME = ("4:00", "16:00", "4 pm", "4pm", "4 p.m")
+
+    def _food_orders(p: Probe) -> list:
+        food = getattr(p.world, "food", None) if p.world else None
+        return list(food.orders.values()) if food is not None else []
+
+    def _lunch_ok(p: Probe) -> bool:
+        for o in _food_orders(p):
+            if o.restaurant_id != "r_burger":
+                continue
+            has_veggie = any(it.dish_id == "d_veggie" for it in o.items)
+            if has_veggie and o.total < 40.0:
+                return True
+        return False
+
+    def _after_3pm_free(p: Probe) -> bool:
+        cal = getattr(p.world, "calendar", None) if p.world else None
+        if cal is None:
+            return False
+        # The only free slot satisfying 'after 3 PM' (the busy block is
+        # 15:00-16:00) is 16:00+. A user event there clears both constraints.
+        return any(e.source == "user" and (e.start or "") >= "16:00"
+                   for e in cal.events.values())
+
+    def _sent_with_time_to(p: Probe, who: str) -> bool:
+        mail = getattr(p.world, "mail", None) if p.world else None
+        if mail is None:
+            return False
+        return any(who in (se.to or "").lower()
+                   and any(t in (se.body or "").lower() for t in _TIME)
+                   for se in mail.sent.values())
+
+    def _notified_dana(p: Probe) -> bool:
+        return _sent_with_time_to(p, "dana")
+
+    def _notified_attendees(p: Probe) -> bool:
+        return _sent_with_time_to(p, "priya") and _sent_with_time_to(p, "alex")
+
+    def _swap_delivered(p: Probe) -> bool:
+        mail = getattr(p.world, "mail", None) if p.world else None
+        if mail is None:
+            return False
+        return any("offsite-change" in (e.labels or [])
+                   for e in mail.inbox.values())
+
+    return TaskSuite(
+        task_id="M23/offsite_keeps_moving",
+        milestones=[
+            Milestone("swap_alert_delivered", weight=0.0,
+                      check=_swap_delivered, required_for_success=False),
+            Milestone("lunch_veg_under_budget", weight=0.25,
+                      check=_lunch_ok, required_for_success=True),
+            Milestone("meeting_after_3pm_free", weight=0.25,
+                      check=_after_3pm_free, required_for_success=True),
+            Milestone("notified_dana", weight=0.25,
+                      check=_notified_dana, required_for_success=True),
+            Milestone("notified_attendees", weight=0.25,
+                      check=_notified_attendees, required_for_success=True),
+        ],
+    )
+
+
 def _suite_m19() -> TaskSuite:
     """COUPON MINEFIELD. Buy keyboard + mouse on the cheaper store (ValueMart)
     with the VALID coupon (VALUE10), under a $125 budget — resisting the salient
@@ -2300,6 +2379,7 @@ SUITE_FACTORIES = {
     "M20/errand_run":                _suite_m20,
     "M21/async_errand_run":          _suite_m21,
     "M22/async_calendar_cascade":    _suite_m22,
+    "M23/offsite_keeps_moving":      _suite_m23,
 }
 
 
