@@ -1,0 +1,61 @@
+{% extends "market/_market_layout.html" %}
+{% block title %}Cart{% endblock %}
+{% block content %}
+
+<a href="/market" data-test-id="market-link-continue" class="text-sm text-blue-600 hover:underline">← Continue shopping</a>
+<h1 class="text-2xl font-bold mt-2 mb-4" data-test-id="market-cart-title">Your ValueMart cart</h1>
+
+{% if market.cart.items %}
+<div class="bg-white rounded-lg border border-slate-200 shadow-sm divide-y" data-test-id="market-cart-items">
+  {% for it in market.cart.items %}
+  <div class="px-5 py-3 flex items-center gap-3" data-test-id="market-cart-line-{{ it.product_id }}">
+    <span class="flex-1 font-medium">{{ it.name }}</span>
+    <span class="text-sm text-slate-500">× {{ it.quantity }}</span>
+    <span class="font-semibold w-20 text-right">${{ '%.2f'|format(it.unit_price * it.quantity) }}</span>
+    <form action="/market/cart/remove" method="post">
+      <input type="hidden" name="product_id" value="{{ it.product_id }}" />
+      <button type="submit" data-test-id="market-btn-remove-{{ it.product_id }}"
+              class="text-xs text-red-600 hover:underline">Remove</button>
+    </form>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="grid sm:grid-cols-2 gap-4 mt-4">
+  <!-- Coupon -->
+  <div class="bg-white rounded-lg border border-slate-200 shadow-sm p-4">
+    <div class="font-semibold text-sm mb-2">Coupon</div>
+    {% if market.cart.applied_coupon %}
+      <div class="text-sm text-emerald-700 mb-2" data-test-id="market-applied-coupon">Applied: <b>{{ market.cart.applied_coupon }}</b></div>
+      <form action="/market/remove-coupon" method="post">
+        <button type="submit" data-test-id="market-btn-remove-coupon" class="text-xs text-red-600 hover:underline">Remove coupon</button>
+      </form>
+    {% else %}
+      <form action="/market/apply-coupon" method="post" class="flex gap-2">
+        <input name="code" placeholder="Coupon code" data-test-id="market-input-coupon" aria-label="Coupon code"
+               class="flex-1 border border-slate-300 rounded px-3 py-1.5 text-sm" />
+        <button type="submit" data-test-id="market-btn-apply-coupon"
+                class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded text-sm font-semibold">Apply</button>
+      </form>
+    {% endif %}
+  </div>
+
+  <!-- Totals -->
+  <div class="bg-white rounded-lg border border-slate-200 shadow-sm p-4">
+    <div class="flex justify-between text-sm py-0.5"><span>Subtotal</span><span data-test-id="market-subtotal">${{ '%.2f'|format(quote.subtotal) }}</span></div>
+    <div class="flex justify-between text-sm py-0.5 text-emerald-700"><span>Discount</span><span data-test-id="market-discount">−${{ '%.2f'|format(quote.discount) }}</span></div>
+    <div class="flex justify-between text-sm py-0.5"><span>Delivery</span><span data-test-id="market-delivery">${{ '%.2f'|format(quote.delivery_fee) }}</span></div>
+    <div class="flex justify-between font-bold text-base border-t border-slate-200 mt-1 pt-1"><span>Total</span><span data-test-id="market-total">${{ '%.2f'|format(quote.total) }}</span></div>
+    <form action="/market/checkout" method="post" class="mt-3">
+      <button type="submit" data-test-id="market-btn-place-order"
+              class="w-full bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 rounded-md text-sm font-semibold">
+        Place order
+      </button>
+    </form>
+  </div>
+</div>
+{% else %}
+<div class="text-slate-500" data-test-id="market-cart-empty">Your ValueMart cart is empty.</div>
+{% endif %}
+
+{% endblock %}

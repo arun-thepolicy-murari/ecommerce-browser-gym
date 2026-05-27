@@ -1,0 +1,27 @@
+{% extends "market/_market_layout.html" %}
+{% block title %}Order {{ order.id }}{% endblock %}
+{% block content %}
+
+<div class="bg-white rounded-lg border border-slate-200 shadow-sm p-6 max-w-2xl" data-test-id="market-order-detail">
+  <div class="flex items-center gap-2 text-emerald-600 font-semibold mb-1">
+    <span class="text-2xl" aria-hidden="true">✅</span> Order placed
+  </div>
+  <h1 class="text-xl font-bold mb-1">ValueMart order <span data-test-id="market-order-id">{{ order.id }}</span></h1>
+  <p class="text-xs text-slate-500 mb-4">A confirmation email has been sent to your inbox.</p>
+
+  <ul role="list" class="divide-y border-y border-slate-200 mb-3">
+    {% for it in order.items %}
+    <li class="py-2 flex justify-between text-sm" data-test-id="market-order-line-{{ it.product_id }}">
+      <span>{{ it.name }} × {{ it.quantity }}</span>
+      <span class="font-semibold">${{ '%.2f'|format(it.unit_price * it.quantity) }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+
+  <div class="flex justify-between text-sm py-0.5"><span>Subtotal</span><span>${{ '%.2f'|format(order.subtotal) }}</span></div>
+  {% if order.coupon_code %}<div class="flex justify-between text-sm py-0.5 text-emerald-700"><span>Discount ({{ order.coupon_code }})</span><span>−${{ '%.2f'|format(order.discount) }}</span></div>{% endif %}
+  <div class="flex justify-between text-sm py-0.5"><span>Delivery</span><span>${{ '%.2f'|format(order.delivery_fee) }}</span></div>
+  <div class="flex justify-between font-bold text-base border-t border-slate-200 mt-1 pt-1"><span>Total charged</span><span data-test-id="market-order-total">${{ '%.2f'|format(order.total) }}</span></div>
+</div>
+
+{% endblock %}

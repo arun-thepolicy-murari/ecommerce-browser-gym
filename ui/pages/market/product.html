@@ -1,0 +1,31 @@
+{% extends "market/_market_layout.html" %}
+{% block title %}{{ product.name }}{% endblock %}
+{% block content %}
+
+<a href="/market" data-test-id="market-link-back" class="text-sm text-blue-600 hover:underline">← All products</a>
+
+<div class="bg-white rounded-lg border border-slate-200 shadow-sm mt-3 p-6 max-w-2xl" data-test-id="market-product-detail">
+  <div class="flex items-start gap-5">
+    <span class="text-6xl" aria-hidden="true">{{ product.emoji }}</span>
+    <div class="flex-1">
+      <h1 class="text-2xl font-bold" data-test-id="market-detail-name">{{ product.name }}</h1>
+      <div class="text-xs text-slate-500 mb-2">{{ product.category }}</div>
+      <div class="text-3xl font-extrabold text-blue-700 mb-2" data-test-id="market-detail-price">${{ '%.2f'|format(product.price) }}</div>
+      <p class="text-sm text-slate-600 mb-1">{{ product.description }}</p>
+      <p class="text-xs text-slate-500 mb-4">
+        {% if product.in_stock %}<span class="text-emerald-600 font-semibold">In stock</span>{% else %}<span class="text-red-600 font-semibold">Out of stock</span>{% endif %}
+        · delivery ${{ '%.2f'|format(market.delivery_fee) }} (free over ${{ '%.0f'|format(market.free_delivery_over) }})
+      </p>
+      <form action="/market/cart/add" method="post" data-test-id="market-form-add-detail">
+        <input type="hidden" name="product_id" value="{{ product.id }}" />
+        <input type="hidden" name="quantity" value="1" />
+        <button type="submit" data-test-id="market-btn-add-to-cart"
+                class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2.5 rounded-md text-sm font-semibold">
+          Add to cart
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

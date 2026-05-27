@@ -14,6 +14,8 @@ from server.apps.mail import inbound
 def register_default_subscribers() -> None:
     bus.subscribe("FoodOrderPlaced", inbound.deliver_food_receipt)
     bus.subscribe("ShopOrderPlaced", inbound.deliver_shop_order_confirmation)
+    # ValueMart (2nd e-commerce store) order -> confirmation email in Mail.
+    bus.subscribe("MarketOrderPlaced", inbound.deliver_market_order_confirmation)
     # Async deliveries fired by the scheduler (server.apps.scheduler):
     bus.subscribe("RefundApproved", inbound.deliver_refund_approved)
     # Paired price-drop (M15): the email lands in Mail AND the shop price

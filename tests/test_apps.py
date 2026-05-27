@@ -25,6 +25,8 @@ from server.apps.mail.state import make_mailstate
 from server.apps.mail import mutations as mail_mut
 from server.apps.food.state import make_foodstate
 from server.apps.food import mutations as food_mut
+from server.apps.market.state import make_marketstate
+from server.apps.market import mutations as market_mut
 from server.apps import wiring as apps_wiring
 
 # Any valid shop task works — these tests only need a real GymState to wrap.
@@ -323,3 +325,87 @@ def test_place_food_order_without_subscriber_records_but_not_delivered():
 def test_place_food_order_empty_cart_fails():
     w = _full_world()
     assert food_mut.place_food_order(w)["ok"] is False
+
+
+# --------------------------------------------------------------------------- #
+# ValueMart (2nd e-commerce store) — overlapping SKUs, coupon+delivery math,
+# and the MarketOrderPlaced -> Mail cross-app chain
+# --------------------------------------------------------------------------- #
+
+def _market_world() -> WorldState:
+    return WorldState(
+        shop=make_task(_TASK_ID, 0),
+        mail=make_mailstate(0), market=make_marketstate(0),
+    )
+
+
+def test_make_marketstate_overlaps_shop_and_is_deterministic():
+    m = make_marketstate(0)
+    assert len(m.products) >= 5
+    # At least one SKU overlaps the main ShopGym store (so price-compare works)
+    # and at least one is ValueMart-exclusive.
+    skus = [p.shop_sku for p in m.products.values()]
+    assert "p_mouse_wireless" in skus           # overlaps ShopGym
+    assert any(s is None for s in skus)          # a ValueMart exclusive
+    assert "VALUE10" in m.coupons                # the store-only coupon
+    assert make_marketstate(0).to_json() == make_marketstate(0).to_json()
+
+
+def test_market_add_only_touches_marketstate():
+    w = _market_world()
+    shop_before, mail_before = w.shop.to_json(), w.mail.to_json()
+    r = market_mut.add_to_cart(w.market, product_id="vm_mouse_wireless")
+    assert r["ok"] is True and w.market.cart.count() == 1
+    assert w.shop.to_json() == shop_before       # shop untouched
+    assert w.mail.to_json() == mail_before        # mail untouched
+
+
+def test_market_quote_coupon_and_delivery_math():
+    m = make_marketstate(0)
+    # Under the free-delivery threshold: pay delivery. Mouse 24.99 + VALUE10.
+    q = m.quote(subtotal=24.99, coupon_code="VALUE10")
+    assert q == {"subtotal": 24.99, "discount": 2.50,
+                 "delivery_fee": 5.99, "total": 28.48}
+    # Over the threshold: free delivery. Keyboard 109.99 + VALUE10.
+    q2 = m.quote(subtotal=109.99, coupon_code="VALUE10")
+    assert q2["delivery_fee"] == 0.0 and q2["total"] == 98.99
+    # No coupon, under threshold: sticker + delivery.
+    q3 = m.quote(subtotal=24.99, coupon_code=None)
+    assert q3["discount"] == 0.0 and q3["total"] == 30.98
+
+
+def test_place_market_order_emits_and_delivers_receipt():
+    apps_wiring.register_default_subscribers()
+    w = _market_world()
+    shop_before = w.shop.to_json()
+    market_mut.add_to_cart(w.market, product_id="vm_kb_mech")   # 109.99
+    market_mut.apply_coupon(w.market, "VALUE10")
+    r = market_mut.place_order(w)
+    assert r["ok"] is True
+    assert r["order_id"] in w.market.orders
+    assert w.market.cart.count() == 0
+    # Event log: appended AND delivered
+    evs = bus.events_of_type(w, "MarketOrderPlaced")
+    assert len(evs) == 1 and evs[0].delivered is True
+    # Mail: a confirmation email with the FINAL total (109.99 - 11.00, free ship)
+    confs = [e for e in w.mail.inbox.values() if e.order_id == r["order_id"]]
+    assert len(confs) == 1
+    assert abs((confs[0].amount_total or 0) - 98.99) < 1e-9
+    assert r["total"] == 98.99
+    # Shop completely untouched by the market->mail chain
+    assert w.shop.to_json() == shop_before
+
+
+def test_place_market_order_without_subscriber_records_but_not_delivered():
+    w = _market_world()
+    market_mut.add_to_cart(w.market, product_id="vm_usb_cable")
+    r = market_mut.place_order(w)
+    assert r["ok"] is True
+    evs = bus.events_of_type(w, "MarketOrderPlaced")
+    assert len(evs) == 1 and evs[0].delivered is False
+    assert not any(e.order_id == r["order_id"] for e in w.mail.inbox.values())
+
+
+def test_place_market_order_empty_cart_fails():
+    w = _market_world()
+    assert market_mut.place_order(w)["ok"] is False

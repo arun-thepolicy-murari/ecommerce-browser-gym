@@ -37,9 +37,10 @@ _TAB_TOOLS = [
     {"name": "open_tab",
      "description": ("Open an APP in a NEW browser tab and switch to it. "
                      "`url` is an app root: '/' (Shop), '/mail' (Mail), "
-                     "'/food' (Food). Your old tab stays exactly where it "
-                     "was — use this to keep one app open while you read "
-                     "another."),
+                     "'/food' (Food), '/calendar' (Calendar), '/market' "
+                     "(ValueMart, a second store). Your old tab stays exactly "
+                     "where it was — use this to keep one app open while you "
+                     "read another."),
      "input_schema": {"type": "object", "properties": {
          "url": {"type": "string"}, "reason": {"type": "string"}},
          "required": ["url"]}},
@@ -86,14 +87,15 @@ MULTI-APP WORKSPACE + BROWSER TABS
 ═══════════════════════════════════════════════════════════════════════════
 
 At the very top of every page is a dark workspace bar with marks for
-several apps: Shop, Mail, Food, and Calendar. Some tasks span apps — e.g.
-place an order in the Shop, then read the confirmation email in Mail; or
-check the Calendar's free/busy before booking something.
+several apps: Shop, Mail, Food, Calendar, and ValueMart (a SECOND store).
+Some tasks span apps — e.g. place an order in the Shop, then read the
+confirmation email in Mail; or compare a price in the Shop vs ValueMart
+before buying from the cheaper one.
 
 You have THREE extra tools for tabs:
   open_tab(url)     open an app in a NEW tab and switch to it. `url` is an
                     app root: "/" (Shop), "/mail" (Mail), "/food" (Food),
-                    "/calendar" (Calendar).
+                    "/calendar" (Calendar), "/market" (ValueMart).
   switch_tab(index) make an already-open tab active (see the `tabs` list).
   close_tab(index)  close a tab.
 

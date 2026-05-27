@@ -107,7 +107,8 @@ TOOLS_COORD = [
         "description": (
             "Open an APP in a NEW tab and switch to it. `url` is an app root: "
             "'/' (Shop), '/mail' (Mail), '/food' (Food), '/calendar' "
-            "(Calendar). Your old tab stays where it was."
+            "(Calendar), '/market' (ValueMart, a second store). Your old tab "
+            "stays where it was."
         ),
         "input_schema": {
             "type": "object",

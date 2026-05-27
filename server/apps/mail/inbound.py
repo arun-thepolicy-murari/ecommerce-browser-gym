@@ -75,6 +75,37 @@ def deliver_shop_order_confirmation(world: "WorldState",
     )
 
 
+def deliver_market_order_confirmation(world: "WorldState",
+                                      event: "WorldEvent") -> None:
+    """MarketOrderPlaced -> a ValueMart order-confirmation email with the
+    itemized FINAL total (subtotal - discount + delivery). The cross-retailer
+    tasks check the charged total here, so it must reflect coupon + delivery,
+    not the sticker sum."""
+    mail = world.mail
+    if mail is None:
+        return
+    p = event.payload
+    lines = "\n".join(
+        f"  {it.get('qty', 1)} x {it.get('name', '')}"
+        for it in p.get("items", []))
+    coupon = p.get("coupon_code")
+    eid = mail.new_id()
+    mail.inbox[eid] = Email(
+        id=eid, sender="orders@valuemart.com", to=mail.account_email,
+        subject=f"Your ValueMart order {p.get('order_id', '')} is confirmed",
+        body=(
+            f"Thanks for shopping at ValueMart!\n\n"
+            f"Order number: {p.get('order_id', '')}\n\n"
+            f"{lines}\n\n"
+            f"Subtotal: ${p.get('subtotal', 0):.2f}\n"
+            + (f"Coupon ({coupon}): -${p.get('discount', 0):.2f}\n" if coupon else "")
+            + f"Delivery: ${p.get('delivery_fee', 0):.2f}\n"
+            f"Total charged: ${p.get('total', 0):.2f}\n"),
+        received_at=f"{SEED_DATE}T12:31:00", received_label="now",
+        read=False, labels=["orders"],
+        order_id=p.get("order_id"), amount_total=p.get("total"))
+
+
 def deliver_delivery_delayed(world: "WorldState", event: "WorldEvent") -> None:
     """DeliveryDelayed -> a 'your delivery is running late' email with a NEW
     ETA. Delivered ASYNCHRONOUSLY by the scheduler a few steps AFTER the agent

@@ -28,6 +28,7 @@ if TYPE_CHECKING:                      # Phase-2 stores; not imported at runtime
     from server.apps.mail.state import MailState
     from server.apps.food.state import FoodState
     from server.apps.calendar.state import CalendarState
+    from server.apps.market.state import MarketState
 
 
 @dataclass
@@ -38,6 +39,7 @@ class WorldState:
     mail: Optional["MailState"] = None
     food: Optional["FoodState"] = None
     calendar: Optional["CalendarState"] = None
+    market: Optional["MarketState"] = None               # 2nd e-commerce store (ValueMart)
     events: list[WorldEvent] = field(default_factory=list)   # append-only
     # Deterministic async event injector — scheduled future cross-app effects
     # (emails/price-changes/notifications) that fire on the step clock, not on
@@ -78,6 +80,7 @@ class WorldState:
             "calendar": (
                 self.calendar.to_json() if self.calendar is not None else None
             ),
+            "market": self.market.to_json() if self.market is not None else None,
             "events": [asdict(e) for e in self.events],
             "schedule": self.schedule.to_json(),
         }

@@ -638,10 +638,11 @@ def _cross_app_world(seed: int, task_id: str, difficulty: str) -> "WorldState":
     from server.apps.mail.state import make_mailstate
     from server.apps.food.state import make_foodstate
     from server.apps.calendar.state import make_calendarstate
+    from server.apps.market.state import make_marketstate
     shop = _base_state(seed, task_id, difficulty, "M", with_login=True)
     return WorldState(
         shop=shop, mail=make_mailstate(seed), food=make_foodstate(seed),
-        calendar=make_calendarstate(seed),
+        calendar=make_calendarstate(seed), market=make_marketstate(seed),
     )
 
 

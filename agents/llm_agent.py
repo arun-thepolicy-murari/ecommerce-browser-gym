@@ -445,6 +445,7 @@ class LLMBrowserAgent:
             "/account/orders/<id>/track",
             # Multi-app workspace roots (prefer clicking the appbar links):
             "/mail", "/mail/compose", "/food", "/calendar", "/calendar/new",
+            "/market", "/market/cart",
         ]
 
         # Open browser tabs (multi-tab observation) — what's open + which is
