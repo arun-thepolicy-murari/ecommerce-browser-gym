@@ -560,6 +560,88 @@ def test_m20_wrong_total_in_reply_fails():
 
 
 # --------------------------------------------------------------------------- #
+# M21 (async errand run): juggle × async flip -> exact total is a MOVING TARGET
+# --------------------------------------------------------------------------- #
+
+def _m21_gear_postflip(sim: _CrossSim) -> float:
+    """Buy keyboard+mouse on ValueMart with the POST-FLIP coupon VALUEMART20."""
+    market_mut.add_to_cart(sim.world.market, product_id="vm_kb_mech")
+    market_mut.add_to_cart(sim.world.market, product_id="vm_mouse_wireless")
+    market_mut.apply_coupon(sim.world.market, "VALUEMART20")
+    market_mut.place_order(sim.world)
+    return next(o.total for o in sim.world.market.orders.values()
+               if o.coupon_code == "VALUEMART20")
+
+
+def test_m21_flip_fires_at_step_4():
+    sim = _CrossSim("M21/async_errand_run")
+    assert not bus.has_delivered(sim.world, "CouponFlipAlert")
+    scheduler.advance_and_flush(sim.world, 4)            # absolute step-4 arrival
+    assert bus.has_delivered(sim.world, "CouponFlipAlert")
+    flips = [e for e in sim.world.mail.inbox.values()
+             if "coupon-flip" in (e.labels or [])]
+    assert len(flips) == 1 and "VALUEMART20" in flips[0].body
+
+
+def test_m21_full_path_postflip_total():
+    sim = _CrossSim("M21/async_errand_run")
+    scheduler.advance_and_flush(sim.world, 4)            # flip lands
+    total = _m21_gear_postflip(sim)
+    assert round(total, 2) == 107.98                     # post-flip, not 121.48
+    _m20_dinner(sim)
+    _m20_calendar(sim)
+    _m20_reply(sim, total)                               # reply carries 107.98
+    res = sim._probe()
+    assert res["success"] is True
+    assert res["score"] == 1.0
+
+
+def test_m21_stale_total_reply_fails():
+    """Applied the flip coupon (paid $107.98) but reported the STALE $121.48 to
+    Alex -> the value went out of date under load; the reply milestone misses."""
+    sim = _CrossSim("M21/async_errand_run")
+    scheduler.advance_and_flush(sim.world, 4)
+    _m21_gear_postflip(sim)                              # actually paid 107.98
+    _m20_dinner(sim)
+    _m20_calendar(sim)
+    mail_mut.send_email(sim.world.mail, to="alex@example.com",
+                        subject="Re: cost",
+                        body="It came to $121.48 total.")  # the pre-flip number
+    res = sim._probe()
+    assert res["success"] is False
+    assert "replied_postflip_total_to_alex" in res["missed_milestones"]
+
+
+def test_m21_missed_flip_uses_value10_fails():
+    """Bought gear with the stale VALUE10 (never caught the flip) -> the
+    flip-coupon milestone misses."""
+    sim = _CrossSim("M21/async_errand_run")
+    scheduler.advance_and_flush(sim.world, 4)
+    market_mut.add_to_cart(sim.world.market, product_id="vm_kb_mech")
+    market_mut.add_to_cart(sim.world.market, product_id="vm_mouse_wireless")
+    market_mut.apply_coupon(sim.world.market, "VALUE10")
+    market_mut.place_order(sim.world)
+    _m20_dinner(sim)
+    _m20_calendar(sim)
+    res = sim._probe()
+    assert res["success"] is False
+    assert "ordered_gear_with_flip_coupon" in res["missed_milestones"]
+
+
+def test_m21_dropped_subgoal_under_load_fails():
+    """Did gear (post-flip) + dinner + reply but dropped the calendar reminder
+    (the M20 juggling failure persists even with the flip handled)."""
+    sim = _CrossSim("M21/async_errand_run")
+    scheduler.advance_and_flush(sim.world, 4)
+    total = _m21_gear_postflip(sim)
+    _m20_dinner(sim)
+    _m20_reply(sim, total)                               # no calendar reminder
+    res = sim._probe()
+    assert res["success"] is False
+    assert "calendar_reminder_created" in res["missed_milestones"]
+
+
+# --------------------------------------------------------------------------- #
 # Backward-compat: probe.state still aliases the shop GymState
 # --------------------------------------------------------------------------- #
 

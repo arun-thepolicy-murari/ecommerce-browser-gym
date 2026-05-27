@@ -322,6 +322,19 @@ BRIEFS = {
         "Get all of it done."
     ),
 
+    "M21": (
+        "A few errands to knock out:\n"
+        "1) Buy a Mechanical Keyboard AND a Wireless Mouse from ValueMart, and "
+        "use the BEST ValueMart coupon you can to bring the price down.\n"
+        "2) Order me the Salmon Avocado Roll from Sakura Sushi and put a "
+        "reminder on my calendar for when it's set to arrive.\n"
+        "3) My friend Alex emailed asking what the keyboard and mouse cost — "
+        "reply to Alex with the EXACT total you actually paid.\n"
+        "ValueMart keeps emailing me coupons while I shop, so make sure you "
+        "use the best one that's actually live before you check out — and make "
+        "sure the number you give Alex matches what you really paid."
+    ),
+
     "M19": (
         "I need a Mechanical Keyboard AND a Wireless Mouse — buy the pair from "
         "whichever store is cheaper, use a ValueMart coupon to bring the price "
@@ -996,6 +1009,8 @@ START_PATHS = {
     "M19/coupon_minefield": "/",
     # M20 (bundled errand run) starts on the Shop.
     "M20/errand_run": "/",
+    # M21 (async errand run) starts on the Shop.
+    "M21/async_errand_run": "/",
 }
 
 
@@ -1265,6 +1280,54 @@ def task_m20_errand_run(seed: int) -> "WorldState":
     return world
 
 
+def task_m21_async_errand_run(seed: int) -> "WorldState":
+    """ASYNC ERRAND RUN (juggling load × async flip — the combined-axis hero).
+    Fuses M20's four-sub-goal juggle with M18's async coupon-flip so the
+    exact-value transfer becomes a MOVING TARGET:
+      - gear (keyboard + mouse) on ValueMart = $134.98 subtotal.
+      - VALUE10 (10%, seeded from the start) -> $121.48  (the STALE total an
+        eager agent locks in if it buys before the flip).
+      - VALUEMART20 (20%) arrives ASYNC at step 4 via a flash-sale email ->
+        $107.98  (the CORRECT post-flip total).
+    The agent must, WHILE juggling dinner + a calendar reminder + a reply to
+    Alex: notice the mid-task flip, apply the better coupon, AND report the
+    NEW total ($107.98) to Alex — not the stale $121.48. Each sub-goal is a
+    separate required milestone, so the missed one shows the exact drop:
+    failing to catch the flip (-> wrong/old coupon), reporting a STALE total to
+    Alex (value went out of date under load), or dropping a sub-goal entirely
+    (the M20 juggling failure). Combines the two proven breakers: working-memory
+    load (M20) + async plan-revision/sunk-cost (M18)."""
+    from server.apps.mail.state import Email, SEED_DATE
+    from server.apps.market.state import MarketCoupon
+    from server.apps import scheduler as _sched
+    world = _cross_app_world(seed, "M21/async_errand_run", "hard")
+    m = world.mail
+    eid = m.new_id()
+    m.inbox[eid] = Email(
+        id=eid, sender="alex@example.com", to=m.account_email,
+        subject="What did the keyboard + mouse cost?",
+        body=("Hey! Quick one — what did the new keyboard and mouse end up "
+              "costing in total? I'm trying to budget for the same setup. "
+              "Thanks! - Alex"),
+        received_at=f"{SEED_DATE}T09:00:00", received_label="9:00 AM",
+        read=False, labels=[])
+    # The async flip coupon: seeded so apply works, but only LEARNABLE via the
+    # flash-sale email that arrives mid-task (VALUE10 is already seeded as the
+    # baseline 10%). 20% > 10%, so the live "best coupon" becomes VALUEMART20.
+    world.market.coupons["VALUEMART20"] = MarketCoupon(
+        code="VALUEMART20", percent_off=0.20, min_subtotal=0.0,
+        description="20% off your ValueMart order (flash sale)")
+    flip = {"code": "VALUEMART20", "percent_off": 0.20}
+    # Absolute step-4 arrival — the email is NOT in the inbox at the start; it
+    # lands mid-task, so an agent that reads the inbox once early and then buys
+    # gear must RE-CHECK to catch it (the async-recovery test under load).
+    _sched.schedule_absolute(
+        world.schedule, id="se_m21_flip", fire_at_step=4,
+        emit_type="CouponFlipAlert", source_app="market", target_app="mail",
+        payload=dict(flip))
+    return world
+
+
 def task_m19_coupon_minefield(seed: int) -> "WorldState":
     """COUPON MINEFIELD (decoy + validity reasoning + conjunctive budget). Buy a
     keyboard + mouse from the cheaper store, under a $125 budget, using a VALID
@@ -1423,6 +1486,7 @@ REQUIRED_FACTS = {
     "M18/async_coupon_flip":         ["mail.flip_coupon_code"],
     "M19/coupon_minefield":          ["mail.valid_coupon_code"],
     "M20/errand_run":                ["mail.gear_total", "food.eta"],
+    "M21/async_errand_run":          ["mail.flip_coupon", "mail.gear_total"],
 }
 
 
@@ -1464,6 +1528,7 @@ TASKS = {
     "M18/async_coupon_flip":         task_m18_async_coupon_flip,
     "M19/coupon_minefield":          task_m19_coupon_minefield,
     "M20/errand_run":                task_m20_errand_run,
+    "M21/async_errand_run":          task_m21_async_errand_run,
 }
 
 

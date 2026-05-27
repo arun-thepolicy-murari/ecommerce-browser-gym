@@ -1952,6 +1952,79 @@ def _suite_m20() -> TaskSuite:
     )
 
 
+def _suite_m21() -> TaskSuite:
+    """ASYNC ERRAND RUN — M20's four-sub-goal juggle where an async flash-sale
+    coupon (VALUEMART20, arrives step 4) makes the exact gear total a MOVING
+    TARGET. All four sub-goals are required positive end-state checks, so the
+    missed milestone pinpoints the drop:
+      env gate -> flip_delivered (the async flash-sale email fired)
+      caught   -> ordered_gear_with_flip_coupon (gear on ValueMart with the
+                  POST-FLIP coupon VALUEMART20 — proves it noticed + applied the
+                  mid-task flip, not the stale VALUE10)
+      dinner   -> dinner_ordered (a Sakura Sushi order)
+      calendar -> calendar_reminder_created (an agent-created calendar event)
+      fresh    -> replied_postflip_total_to_alex (reply to Alex contains the
+                  EXACT post-flip total $107.98 — a STALE $121.48 fails, catching
+                  value-went-out-of-date-under-load)."""
+    _GEAR = {"vm_kb_mech", "vm_mouse_wireless"}
+    _FLIP = "VALUEMART20"
+
+    def _flip_orders(p: Probe) -> list:
+        mk = getattr(p.world, "market", None) if p.world else None
+        if mk is None:
+            return []
+        return [o for o in mk.orders.values()
+                if _GEAR.issubset({it.product_id for it in o.items})
+                and o.coupon_code == _FLIP]
+
+    def _ordered_gear_flip(p: Probe) -> bool:
+        return len(_flip_orders(p)) >= 1
+
+    def _dinner_ordered(p: Probe) -> bool:
+        food = getattr(p.world, "food", None) if p.world else None
+        if food is None:
+            return False
+        return any(o.restaurant_id == "r_sushi" for o in food.orders.values())
+
+    def _calendar_reminder(p: Probe) -> bool:
+        cal = getattr(p.world, "calendar", None) if p.world else None
+        if cal is None:
+            return False
+        return any(e.source == "user" for e in cal.events.values())
+
+    def _replied_postflip_total(p: Probe) -> bool:
+        mail = getattr(p.world, "mail", None) if p.world else None
+        orders = _flip_orders(p)
+        if mail is None or not orders:
+            return False
+        needle = f"{orders[0].total:.2f}"        # the EXACT post-flip total
+        return any("alex" in (se.to or "").lower() and needle in (se.body or "")
+                   for se in mail.sent.values())
+
+    def _flip_delivered(p: Probe) -> bool:
+        mail = getattr(p.world, "mail", None) if p.world else None
+        if mail is None:
+            return False
+        return any("coupon-flip" in (e.labels or [])
+                   for e in mail.inbox.values())
+
+    return TaskSuite(
+        task_id="M21/async_errand_run",
+        milestones=[
+            Milestone("flip_delivered", weight=0.0,
+                      check=_flip_delivered, required_for_success=False),
+            Milestone("ordered_gear_with_flip_coupon", weight=0.3,
+                      check=_ordered_gear_flip, required_for_success=True),
+            Milestone("dinner_ordered", weight=0.2,
+                      check=_dinner_ordered, required_for_success=True),
+            Milestone("calendar_reminder_created", weight=0.2,
+                      check=_calendar_reminder, required_for_success=True),
+            Milestone("replied_postflip_total_to_alex", weight=0.3,
+                      check=_replied_postflip_total, required_for_success=True),
+        ],
+    )
+
+
 def _suite_m19() -> TaskSuite:
     """COUPON MINEFIELD. Buy keyboard + mouse on the cheaper store (ValueMart)
     with the VALID coupon (VALUE10), under a $125 budget — resisting the salient
@@ -2158,6 +2231,7 @@ SUITE_FACTORIES = {
     "M18/async_coupon_flip":         _suite_m18,
     "M19/coupon_minefield":          _suite_m19,
     "M20/errand_run":                _suite_m20,
+    "M21/async_errand_run":          _suite_m21,
 }
 
 

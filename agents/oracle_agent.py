@@ -921,6 +921,64 @@ async def solve_m20_errand_run(ctx: BrowserCtx) -> None:
     await ctx.click("button[data-test-id='btn-send']")
 
 
+async def solve_m21_async_errand_run(ctx: BrowserCtx) -> None:
+    """Gold trajectory for the combined juggle × async-flip task. Crucially,
+    WAIT for the flash-sale flip BEFORE buying gear (so we apply the post-flip
+    VALUEMART20, not the stale VALUE10), then complete the other three errands
+    and reply to Alex with the EXACT post-flip total."""
+    import re
+    # 1) Watch the inbox for the mid-task flash-sale coupon before buying.
+    code = "VALUEMART20"
+    for _ in range(8):
+        world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
+        flip = next((e for e in world["mail"]["inbox"].values()
+                     if "coupon-flip" in (e.get("labels") or [])), None)
+        if flip is not None:
+            m = re.search(r"VALUEMART\d+", flip.get("body", "") or "")
+            code = m.group(0) if m else code
+            await ctx.goto(f"/mail/message/{flip['id']}",
+                           reasoning="A bigger ValueMart coupon arrived — read it.")
+            break
+        await ctx.wait(reasoning="Watch the inbox for the best live coupon "
+                                 "before checking out.")
+    # 2) Buy keyboard + mouse on ValueMart with the post-flip coupon.
+    await ctx.goto("/market/product/vm_kb_mech",
+                   reasoning="ValueMart keyboard.")
+    await ctx.click("button[data-test-id='market-btn-add-to-cart']")
+    await ctx.goto("/market/product/vm_mouse_wireless")
+    await ctx.click("button[data-test-id='market-btn-add-to-cart']")
+    await ctx.goto("/market/cart")
+    await ctx.fill("input[data-test-id='market-input-coupon']", code)
+    await ctx.click("button[data-test-id='market-btn-apply-coupon']")
+    await ctx.click("button[data-test-id='market-btn-place-order']")
+    world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
+    gear = next(o for o in world["market"]["orders"].values()
+                if o.get("coupon_code") == code)
+    total = gear["total"]
+    # 3) Dinner from Sakura Sushi + a calendar reminder.
+    await ctx.goto("/food/restaurant/r_sushi",
+                   reasoning="Order tonight's dinner.")
+    await ctx.click("button[data-test-id='btn-add-d_salmon_roll']")
+    await ctx.goto("/food/cart")
+    await ctx.click("button[data-test-id='btn-place-food-order']")
+    await ctx.goto("/calendar/new",
+                   reasoning="Add a reminder for the delivery.")
+    await ctx.fill("input[data-test-id='input-event-title']", "Sushi delivery")
+    await ctx.click("button[data-test-id='btn-save-event']")
+    # 4) Reply to Alex with the EXACT post-flip total.
+    world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
+    alex = next(e for e in world["mail"]["inbox"].values()
+                if "alex@" in (e.get("sender") or "").lower()
+                and "keyboard" in (e.get("subject") or "").lower())
+    await ctx.goto(f"/mail/message/{alex['id']}",
+                   reasoning="Reply to Alex with the gear cost.")
+    await ctx.click("a[data-test-id='btn-reply']")
+    await ctx.fill("textarea[data-test-id='input-compose-body']",
+                   f"The keyboard and mouse came to ${total:.2f} total at "
+                   f"ValueMart. Hope that helps!")
+    await ctx.click("button[data-test-id='btn-send']")
+
+
 async def solve_m19_coupon_minefield(ctx: BrowserCtx) -> None:
     """Read the coupon emails, buy keyboard+mouse on ValueMart (the cheaper
     store), try the salient 50% code (rejected — expired), fall back to the
@@ -1046,4 +1104,5 @@ SOLVERS = {
     "M18/async_coupon_flip":         solve_m18_async_coupon_flip,
     "M19/coupon_minefield":          solve_m19_coupon_minefield,
     "M20/errand_run":                solve_m20_errand_run,
+    "M21/async_errand_run":          solve_m21_async_errand_run,
 }

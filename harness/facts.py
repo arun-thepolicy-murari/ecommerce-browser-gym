@@ -338,6 +338,32 @@ def _facts_m20(world: dict, url: str) -> dict[str, Any]:
     return facts
 
 
+def _facts_m21(world: dict, url: str) -> dict[str, Any]:
+    """M21 async errand run — the async flip's delivery (env truth) + the new
+    coupon code recorded ONLY when the agent READS the flash-sale email (so
+    coverage = did it notice the mid-task flip), plus the gear total it actually
+    locked in. 'used' (buy with VALUEMART20 + reply the post-flip total) is the
+    verifier's job."""
+    import re
+    facts: dict[str, Any] = {}
+    for e in ((world.get("mail") or {}).get("inbox") or {}).values():
+        if "coupon-flip" not in (e.get("labels") or []):
+            continue
+        facts["mail.flip_delivered"] = True
+        if e.get("read"):
+            m = re.search(r"VALUEMART\d+", e.get("body", "") or "")
+            if m:
+                facts["mail.flip_coupon"] = m.group(0)
+    for o in ((world.get("market") or {}).get("orders") or {}).values():
+        pids = {i.get("product_id") for i in o.get("items", [])}
+        if {"vm_kb_mech", "vm_mouse_wireless"}.issubset(pids):
+            facts["mail.gear_total"] = o.get("total")
+    if any(ev.get("source") == "user"
+           for ev in ((world.get("calendar") or {}).get("events") or {}).values()):
+        facts["calendar.user_event_created"] = True
+    return facts
+
+
 def _facts_m19(world: dict, url: str) -> dict[str, Any]:
     """M19 coupon minefield — which coupon codes the agent saw (recorded when
     the email is READ), separating the valid VALUE10 from the expired decoy
@@ -418,6 +444,7 @@ FACT_EXTRACTORS: dict[str, Callable[[dict, str], dict]] = {
     "M18/async_coupon_flip":         _facts_m18,
     "M19/coupon_minefield":          _facts_m19,
     "M20/errand_run":                _facts_m20,
+    "M21/async_errand_run":          _facts_m21,
 }
 
 
