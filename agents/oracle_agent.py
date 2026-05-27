@@ -882,6 +882,32 @@ async def solve_m16_coordinated_dinner_delay(ctx: BrowserCtx) -> None:
     await ctx.click("button[data-test-id='btn-send']")
 
 
+async def solve_m17_cross_retailer_cheaper(ctx: BrowserCtx) -> None:
+    """Read the ValueMart coupon from email, then buy the monitor on the
+    genuinely-cheaper store. ShopGym deal = $199.99 + $5.99 = $205.98;
+    ValueMart with VALUE10 = $209.99 x 0.9 = $188.99 (free delivery) -> the
+    coupon makes ValueMart cheaper, so order it there with the coupon applied."""
+    import re
+    # 1) Read the coupon code from the ValueMart email.
+    world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
+    coupon_email = next(
+        e for e in world["mail"]["inbox"].values()
+        if "valuemart" in (e.get("sender") or "").lower()
+        and "coupon" in (e.get("subject") or "").lower())
+    mm = re.search(r"VALUE\d+", coupon_email.get("body", "") or "")
+    code = mm.group(0) if mm else "VALUE10"
+    await ctx.goto(f"/mail/message/{coupon_email['id']}",
+                   reasoning="Read the ValueMart coupon code.")
+    # 2) ValueMart is cheaper AFTER the coupon ($188.99 < $205.98) -> buy there.
+    await ctx.goto("/market/product/vm_monitor_24",
+                   reasoning="ValueMart is the cheaper store once the coupon applies.")
+    await ctx.click("button[data-test-id='market-btn-add-to-cart']")
+    await ctx.goto("/market/cart")
+    await ctx.fill("input[data-test-id='market-input-coupon']", code)
+    await ctx.click("button[data-test-id='market-btn-apply-coupon']")
+    await ctx.click("button[data-test-id='market-btn-place-order']")
+
+
 SOLVERS = {
     "A1/buy_wireless_mouse":     solve_a1_buy_wireless_mouse,
     "A2/filter_laptop":          solve_a2_filter_laptop,
@@ -912,4 +938,5 @@ SOLVERS = {
     "M14/return_then_refund":        solve_m14_return_then_refund,
     "M15/inbox_price_watch":         solve_m15_inbox_price_watch,
     "M16/coordinated_dinner_delay":  solve_m16_coordinated_dinner_delay,
+    "M17/cross_retailer_cheaper":    solve_m17_cross_retailer_cheaper,
 }

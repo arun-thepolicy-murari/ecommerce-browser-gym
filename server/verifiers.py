@@ -1891,6 +1891,66 @@ def _suite_m16() -> TaskSuite:
     )
 
 
+def _suite_m17() -> TaskSuite:
+    """CROSS-RETAILER comparison + inbox coupon. The monitor is on both stores;
+    the emailed VALUE10 coupon makes ValueMart the genuinely-cheaper store
+    (price + delivery - coupon, pre-tax). Grade the OUTCOME with positive
+    end-state checks (milestones are sticky, so a 'not bought on X' negative
+    would wrongly fire at step 0):
+      env gate -> valuemart_is_cheaper (the engineered answer holds)
+      used     -> ordered_monitor_on_valuemart (picked the cheaper store)
+                  + applied_value10_coupon (read + used the emailed coupon;
+                    without it ValueMart isn't actually cheaper)."""
+    from server.mutations import SHIPPING_FLAT
+    _MON_SHOP = "p_monitor_24"
+    _MON_VM = "vm_monitor_24"
+
+    def _shop_deal(p):
+        prod = p.state.products.get(_MON_SHOP)
+        return (prod.base_price + SHIPPING_FLAT) if prod else None
+
+    def _vm_deal(p):
+        mk = getattr(p.world, "market", None) if p.world else None
+        if mk is None:
+            return None
+        prod = mk.products.get(_MON_VM)
+        if prod is None:
+            return None
+        c = mk.coupons.get("VALUE10")               # best achievable price here
+        disc = round(prod.price * c.percent_off, 2) if c else 0.0
+        return round(prod.price - disc + mk.delivery_for(prod.price), 2)
+
+    def _valuemart_cheaper(p) -> bool:
+        sd, vd = _shop_deal(p), _vm_deal(p)
+        return sd is not None and vd is not None and vd < sd
+
+    def _vm_monitor_orders(p):
+        mk = getattr(p.world, "market", None) if p.world else None
+        if mk is None:
+            return []
+        return [o for o in mk.orders.values()
+                if any(it.product_id == _MON_VM for it in o.items)]
+
+    def _ordered_monitor_on_valuemart(p) -> bool:
+        return len(_vm_monitor_orders(p)) >= 1
+
+    def _applied_value10_coupon(p) -> bool:
+        return any(o.coupon_code == "VALUE10" for o in _vm_monitor_orders(p))
+
+    return TaskSuite(
+        task_id="M17/cross_retailer_cheaper",
+        milestones=[
+            Milestone("valuemart_is_cheaper", weight=0.0,
+                      check=_valuemart_cheaper, required_for_success=False),
+            Milestone("ordered_monitor_on_valuemart", weight=0.5,
+                      check=_ordered_monitor_on_valuemart,
+                      required_for_success=True),
+            Milestone("applied_value10_coupon", weight=0.5,
+                      check=_applied_value10_coupon, required_for_success=True),
+        ],
+    )
+
+
 # --------------------------------------------------------------------------- #
 # Registry
 # --------------------------------------------------------------------------- #
@@ -1925,6 +1985,7 @@ SUITE_FACTORIES = {
     "M14/return_then_refund":        _suite_m14,
     "M15/inbox_price_watch":         _suite_m15,
     "M16/coordinated_dinner_delay":  _suite_m16,
+    "M17/cross_retailer_cheaper":    _suite_m17,
 }
 
 

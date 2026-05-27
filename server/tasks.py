@@ -310,6 +310,16 @@ BRIEFS = {
         "item is on its way back."
     ),
 
+    "M17": (
+        "I want to buy a 24-inch Monitor. It's sold on BOTH ShopGym and "
+        "ValueMart (use the workspace bar to switch stores). Check the price on "
+        "each store, and check my email — there's a ValueMart coupon you should "
+        "use. Work out the real cost on each store — the item price plus "
+        "delivery, minus any coupon — then order the monitor from whichever "
+        "store is cheaper on that basis. Apply the coupon if it helps, and "
+        "don't buy the monitor on both stores."
+    ),
+
     "M16": (
         "Order me the Salmon Avocado Roll from Sakura Sushi for tonight. Once "
         "it's ordered, add a reminder to my calendar for when it's set to "
@@ -944,6 +954,9 @@ START_PATHS = {
     # M16 starts on the food app — ordering dinner is the first move and what
     # arms the async delay notice.
     "M16/coordinated_dinner_delay": "/food",
+    # M17 starts on the Shop — the agent must then compare ValueMart + read the
+    # coupon email before deciding where to buy.
+    "M17/cross_retailer_cheaper": "/",
 }
 
 
@@ -1185,6 +1198,33 @@ def task_m16_coordinated_dinner_delay(seed: int) -> "WorldState":
     return world
 
 
+def task_m17_cross_retailer_cheaper(seed: int) -> "WorldState":
+    """CROSS-RETAILER comparison + inbox coupon (tim's cluster #3). The 24-inch
+    Monitor is sold on BOTH stores: ShopGym $199.99 (+ $5.99 ship = $205.98) vs
+    ValueMart $209.99 (free delivery >= $35). Sticker says ShopGym is cheaper,
+    and WITHOUT the coupon ShopGym's deal ($205.98) still beats ValueMart's
+    $209.99 — but the emailed VALUE10 coupon makes ValueMart $188.99, so it
+    becomes the cheaper store. The agent must check both stores, read + apply
+    the coupon from email, and order from the genuinely-cheaper one (ValueMart).
+    Traps: comparing stickers (-> ShopGym), or never reading/applying the coupon
+    (-> ShopGym's deal wins). Comparison basis is price + delivery - coupon,
+    PRE-TAX (tax is a uniform location charge, not a store-differentiating deal
+    factor) — stated in the brief so it isn't a hidden gotcha."""
+    from server.apps.mail.state import Email, SEED_DATE
+    world = _cross_app_world(seed, "M17/cross_retailer_cheaper", "hard")
+    m = world.mail
+    eid = m.new_id()
+    m.inbox[eid] = Email(
+        id=eid, sender="deals@valuemart.com", to=m.account_email,
+        subject="Your ValueMart coupon: VALUE10",
+        body=("Thanks for being a ValueMart member!\n\n"
+              "Use code VALUE10 at checkout for 10% off your entire ValueMart "
+              "order. This code only works at ValueMart, not at other stores.\n"),
+        received_at=f"{SEED_DATE}T08:30:00", received_label="8:30 AM",
+        read=False, labels=["deals"])
+    return world
+
+
 def task_m5_cheaper_mouse_from_deals(seed: int) -> "WorldState":
     """Comparison + salience trap. Two 'deal' emails name two DIFFERENT mice
     at two prices: the flashy 'FLASH SALE' email pushes the PRICIER gaming
@@ -1236,6 +1276,7 @@ REQUIRED_FACTS = {
     "M14/return_then_refund":        ["mail.rma_code", "mail.refund_amount"],
     "M15/inbox_price_watch":         ["mail.alerted_product_id", "mail.alerted_new_price"],
     "M16/coordinated_dinner_delay":  ["mail.new_eta", "calendar.user_event_time"],
+    "M17/cross_retailer_cheaper":    ["mail.coupon_code", "market.monitor_price"],
 }
 
 
@@ -1273,6 +1314,7 @@ TASKS = {
     "M14/return_then_refund":        task_m14_return_then_refund,
     "M15/inbox_price_watch":         task_m15_inbox_price_watch,
     "M16/coordinated_dinner_delay":  task_m16_coordinated_dinner_delay,
+    "M17/cross_retailer_cheaper":    task_m17_cross_retailer_cheaper,
 }
 
 

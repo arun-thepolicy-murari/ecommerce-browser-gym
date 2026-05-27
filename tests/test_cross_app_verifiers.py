@@ -23,6 +23,7 @@ from server.apps import wiring as apps_wiring
 from server.apps.mail import mutations as mail_mut
 from server.apps.food import mutations as food_mut
 from server.apps.calendar import mutations as cal_mut
+from server.apps.market import mutations as market_mut
 
 
 @pytest.fixture(autouse=True)
@@ -338,6 +339,45 @@ def test_m16_reminder_never_moved_fails():
     res = sim._probe()
     assert res["success"] is False
     assert "calendar_reflects_new_eta_only" in res["missed_milestones"]
+
+
+# --------------------------------------------------------------------------- #
+# M17 (cross-retailer): compare both stores + the emailed coupon, buy cheaper
+# --------------------------------------------------------------------------- #
+
+def _buy_monitor_valuemart(sim: _CrossSim, coupon: str | None = None) -> None:
+    market_mut.add_to_cart(sim.world.market, product_id="vm_monitor_24")
+    if coupon:
+        market_mut.apply_coupon(sim.world.market, coupon)
+    market_mut.place_order(sim.world)
+
+
+def test_m17_full_path_buys_cheaper_store_with_coupon():
+    sim = _CrossSim("M17/cross_retailer_cheaper")
+    _buy_monitor_valuemart(sim, coupon="VALUE10")
+    res = sim._probe()
+    assert res["success"] is True
+    assert res["score"] == 1.0
+
+
+def test_m17_buying_on_shopgym_is_wrong_store():
+    """Sticker says ShopGym ($199.99 < $209.99); buying there is the trap."""
+    sim = _CrossSim("M17/cross_retailer_cheaper")
+    mutations.add_to_cart(sim.shop, "p_monitor_24", 1)
+    mutations.place_order(sim.shop, "pay_visa")
+    res = sim._probe()
+    assert res["success"] is False
+    assert "ordered_monitor_on_valuemart" in res["missed_milestones"]
+
+
+def test_m17_valuemart_without_coupon_fails():
+    """Right store but no coupon -> ValueMart ($209.99) isn't actually cheaper
+    than ShopGym's deal ($205.98), so the coupon milestone must miss."""
+    sim = _CrossSim("M17/cross_retailer_cheaper")
+    _buy_monitor_valuemart(sim, coupon=None)
+    res = sim._probe()
+    assert res["success"] is False
+    assert "applied_value10_coupon" in res["missed_milestones"]
 
 
 # --------------------------------------------------------------------------- #

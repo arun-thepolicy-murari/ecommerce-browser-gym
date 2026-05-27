@@ -319,6 +319,26 @@ def _facts_m16(world: dict, url: str) -> dict[str, Any]:
     return facts
 
 
+def _facts_m17(world: dict, url: str) -> dict[str, Any]:
+    """M17 cross-retailer — the prices the agent must compare across the two
+    stores + the emailed coupon (recorded when its email is READ). 'used' (buy
+    the cheaper store with the coupon) is checked by the verifier."""
+    import re
+    facts: dict[str, Any] = {}
+    sprod = ((world.get("shop") or {}).get("products") or {}).get("p_monitor_24")
+    if sprod is not None:
+        facts["shop.monitor_price"] = sprod.get("base_price", sprod.get("price"))
+    mprod = ((world.get("market") or {}).get("products") or {}).get("vm_monitor_24")
+    if mprod is not None:
+        facts["market.monitor_price"] = mprod.get("price")
+    for e in ((world.get("mail") or {}).get("inbox") or {}).values():
+        if "valuemart" in (e.get("sender") or "").lower() and e.get("read"):
+            mm = re.search(r"VALUE\d+", e.get("body", "") or "")
+            if mm:
+                facts["mail.coupon_code"] = mm.group(0)
+    return facts
+
+
 FACT_EXTRACTORS: dict[str, Callable[[dict, str], dict]] = {
     "M2/order_then_track_via_email": _facts_m2,
     "M3/dinner_then_receipt":        _facts_m3,
@@ -334,6 +354,7 @@ FACT_EXTRACTORS: dict[str, Callable[[dict, str], dict]] = {
     "M14/return_then_refund":        _facts_m14,
     "M15/inbox_price_watch":         _facts_m15,
     "M16/coordinated_dinner_delay":  _facts_m16,
+    "M17/cross_retailer_cheaper":    _facts_m17,
 }
 
 
