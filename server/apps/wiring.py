@@ -37,3 +37,6 @@ def register_default_subscribers() -> None:
     # Async dispatch correction (M25): one teammate's value is corrected mid-task,
     # so the agent must relay the updated figure to the right person.
     bus.subscribe("DispatchCorrection", inbound.deliver_dispatch_correction)
+    # Async project cancellation (M26): clear all of a project's meetings EXCEPT
+    # one repurposed exception — a destructive exact-set purge with a kept event.
+    bus.subscribe("ProjectCancelled", inbound.deliver_project_cancellation)

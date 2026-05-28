@@ -379,6 +379,16 @@ BRIEFS = {
         "sure the affected person gets the UPDATED figure, not the original one."
     ),
 
+    "M26": (
+        "My calendar tomorrow is packed with project meetings. I'm expecting an "
+        "email shortly about a project being cancelled. When it arrives, read it "
+        "carefully and clean up my calendar to match: remove the meetings it tells "
+        "you to remove, and honor any exception it mentions EXACTLY. Don't touch "
+        "any meeting the email doesn't mention. When you're done, my calendar "
+        "should reflect the latest plan — nothing that should be gone left behind, "
+        "and nothing removed that was supposed to stay."
+    ),
+
     "M19": (
         "I need a Mechanical Keyboard AND a Wireless Mouse — buy the pair from "
         "whichever store is cheaper, use a ValueMart coupon to bring the price "
@@ -1063,6 +1073,9 @@ START_PATHS = {
     "M24/procurement_puzzle": "/",
     # M25 (dispatch desk) starts in the inbox (read the manager's update).
     "M25/dispatch_desk": "/mail",
+    # M26 (calendar purge) starts on the agenda — must open Mail for the async
+    # cancellation, then come back to delete exactly the right meetings.
+    "M26/calendar_purge_async": "/calendar",
 }
 
 
@@ -1560,6 +1573,48 @@ def task_m23_offsite_keeps_moving(seed: int) -> "WorldState":
     return world
 
 
+def task_m26_calendar_purge(seed: int) -> "WorldState":
+    """ASYNC DESTRUCTIVE EXACT-SET PURGE (attacks the destructive-unwind +
+    negative-exception weakness through an async trigger). Tomorrow's calendar
+    holds three Phoenix meetings, two Atlas decoys, and a 1:1. An async manager
+    email (step 5) cancels Project Phoenix and says: delete every Phoenix meeting
+    EXCEPT the 'Phoenix Retro' (repurposed into a Q3 sync -> KEEP it). The correct
+    end state deletes EXACTLY {Phoenix Standup, Phoenix Design Review}. Traps:
+      - the 'delete ALL Phoenix' pattern-match OVER-deletes the kept Retro,
+      - confusing projects deletes an Atlas decoy (over-delete),
+      - missing the async email deletes nothing (under-delete / no-recovery),
+      - deleting only one Phoenix meeting (under-delete).
+    Graded by set equality (events removed == target Q), which is stickiness-safe
+    because deletions only grow: deleted==Q is False at the seed and can only
+    become True for the EXACT set (any over-delete makes it a strict superset
+    forever). Distinct from M24 (optimization) and M25 (recipient routing)."""
+    from server.apps.calendar.state import CalendarEvent, TOMORROW
+    from server.apps import scheduler as _sched
+    world = _cross_app_world(seed, "M26/calendar_purge_async", "hard")
+    cal = world.calendar
+    cal.events.clear()
+    rows = [
+        ("Phoenix Standup",       "09:00", "09:30"),   # DELETE (in target)
+        ("Atlas Sync",            "10:30", "11:00"),   # KEEP (decoy project)
+        ("Phoenix Design Review", "11:30", "12:30"),   # DELETE (in target)
+        ("1:1 with Manager",      "14:00", "14:30"),   # KEEP
+        ("Phoenix Retro",         "15:00", "16:00"),   # KEEP (the exception)
+        ("Atlas Planning",        "16:30", "17:30"),   # KEEP (decoy project)
+    ]
+    for title, s, e in rows:
+        eid = cal.new_id()
+        cal.events[eid] = CalendarEvent(
+            id=eid, title=title, day=TOMORROW,
+            day_label="Tomorrow (Fri May 22)", start=s, end=e, source="seed")
+    # The async project cancellation lands mid-task (step 5), so the agent must
+    # be watching the inbox to even learn which meetings to purge + the exception.
+    _sched.schedule_absolute(
+        world.schedule, id="se_m26_cancel", fire_at_step=5,
+        emit_type="ProjectCancelled", source_app="calendar",
+        target_app="mail", payload={"project": "Phoenix"})
+    return world
+
+
 def task_m19_coupon_minefield(seed: int) -> "WorldState":
     """COUPON MINEFIELD (decoy + validity reasoning + conjunctive budget). Buy a
     keyboard + mouse from the cheaper store, under a $125 budget, using a VALID
@@ -1723,6 +1778,7 @@ REQUIRED_FACTS = {
     "M23/offsite_keeps_moving":      ["mail.dana_address", "calendar.final_slot"],
     "M24/procurement_puzzle":        ["market.basket_total"],
     "M25/dispatch_desk":             ["mail.alex_corrected_budget"],
+    "M26/calendar_purge_async":      ["mail.cancelled_project"],
 }
 
 
@@ -1769,6 +1825,7 @@ TASKS = {
     "M23/offsite_keeps_moving":      task_m23_offsite_keeps_moving,
     "M24/procurement_puzzle":        task_m24_procurement_puzzle,
     "M25/dispatch_desk":             task_m25_dispatch_desk,
+    "M26/calendar_purge_async":      task_m26_calendar_purge,
 }
 
 

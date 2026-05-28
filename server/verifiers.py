@@ -2269,6 +2269,93 @@ def _suite_m25() -> TaskSuite:
     )
 
 
+def _suite_m26() -> TaskSuite:
+    """ASYNC DESTRUCTIVE EXACT-SET PURGE. An async manager email (step 5) cancels
+    Project Phoenix and instructs the agent to delete every Phoenix meeting EXCEPT
+    the repurposed 'Phoenix Retro' (KEEP it). Success = the set of calendar events
+    actually removed equals the target Q = {Phoenix meetings} - {Phoenix Retro}.
+
+    Why set-equality is the right grader AND stickiness-safe: deletions only grow
+    (the UI cannot un-delete; a re-created event gets a fresh id). So `deleted`
+    climbs monotonically from {} and `deleted == Q` is False at the seed; it can
+    only become True for the EXACT target. The instant the agent removes any
+    non-target event (the kept Retro, an Atlas decoy, the 1:1), `deleted` is a
+    strict superset of Q forever, so the exact-set milestone can never fire —
+    catching over-deletion, which a sticky `deleted ⊆ Q` precision check could
+    not (that is True at step 0). Two milestones split the failure direction:
+      deleted_all_target    -> completeness (every Phoenix-to-go was removed)
+      deleted_exactly_target-> precision    (and nothing else was removed)
+    Weight-0 gates expose the async delivery + read + the engineered over-delete."""
+    from server.apps import bus as _bus
+
+    def _seed_titles(p: Probe) -> dict[str, str]:
+        """event_id -> lowercased title, from the INITIAL (seed) calendar."""
+        iw = p.initial_world
+        cal = getattr(iw, "calendar", None) if iw else None
+        if cal is None:
+            return {}
+        return {eid: (ev.title or "").lower() for eid, ev in cal.events.items()}
+
+    def _target(p: Probe) -> set[str]:
+        # Q = Phoenix meetings to delete = 'phoenix' in title AND NOT 'retro'
+        # (the Retro is the repurposed exception the email says to KEEP). This
+        # rule is kept in lockstep with the email body in mail/inbound.py.
+        return {eid for eid, t in _seed_titles(p).items()
+                if "phoenix" in t and "retro" not in t}
+
+    def _exception(p: Probe) -> set[str]:
+        return {eid for eid, t in _seed_titles(p).items()
+                if "phoenix" in t and "retro" in t}
+
+    def _deleted(p: Probe) -> set[str]:
+        cur = getattr(getattr(p.world, "calendar", None), "events", {}) or {}
+        return {eid for eid in _seed_titles(p) if eid not in cur}
+
+    def _cancel_email(p: Probe):
+        mail = getattr(p.world, "mail", None) if p.world else None
+        if mail is None:
+            return None
+        for e in mail.inbox.values():
+            if "project-cancelled" in (e.labels or []):
+                return e
+        return None
+
+    def _delivered(p: Probe) -> bool:
+        return p.world is not None and _bus.has_delivered(p.world, "ProjectCancelled")
+
+    def _read(p: Probe) -> bool:
+        e = _cancel_email(p)
+        return e is not None and e.read
+
+    def _deleted_all_target(p: Probe) -> bool:
+        q = _target(p)
+        return bool(q) and q.issubset(_deleted(p))
+
+    def _deleted_exactly_target(p: Probe) -> bool:
+        q = _target(p)
+        return bool(q) and _deleted(p) == q
+
+    def _over_deleted_exception(p: Probe) -> bool:
+        exc = _exception(p)
+        return bool(exc) and exc.issubset(_deleted(p))
+
+    return TaskSuite(
+        task_id="M26/calendar_purge_async",
+        milestones=[
+            Milestone("cancellation_email_delivered", weight=0.0,
+                      check=_delivered, required_for_success=False),
+            Milestone("read_cancellation_email", weight=0.0,
+                      check=_read, required_for_success=False),
+            Milestone("deleted_all_target", weight=0.5,
+                      check=_deleted_all_target, required_for_success=True),
+            Milestone("deleted_exactly_target", weight=0.5,
+                      check=_deleted_exactly_target, required_for_success=True),
+            Milestone("over_deleted_exception", weight=0.0,
+                      check=_over_deleted_exception, required_for_success=False),
+        ],
+    )
+
+
 def _suite_m19() -> TaskSuite:
     """COUPON MINEFIELD. Buy keyboard + mouse on the cheaper store (ValueMart)
     with the VALID coupon (VALUE10), under a $125 budget — resisting the salient
@@ -2480,6 +2567,7 @@ SUITE_FACTORIES = {
     "M23/offsite_keeps_moving":      _suite_m23,
     "M24/procurement_puzzle":        _suite_m24,
     "M25/dispatch_desk":             _suite_m25,
+    "M26/calendar_purge_async":      _suite_m26,
 }
 
 

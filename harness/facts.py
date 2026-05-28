@@ -416,6 +416,25 @@ def _facts_m24(world: dict, url: str) -> dict[str, Any]:
     return facts
 
 
+def _facts_m26(world: dict, url: str) -> dict[str, Any]:
+    """M26 calendar purge — the async cancellation's delivery (env truth) + the
+    cancelled project name + the kept exception, recorded ONLY when the agent
+    READS the email (coverage = did it notice the cancel AND the exception), plus
+    a running count of how many calendar events remain. The 'used' check (delete
+    EXACTLY the right meetings, keep the Retro) is the verifier's job."""
+    facts: dict[str, Any] = {}
+    for e in ((world.get("mail") or {}).get("inbox") or {}).values():
+        if "project-cancelled" not in (e.get("labels") or []):
+            continue
+        facts["mail.cancellation_delivered"] = True
+        if e.get("read"):
+            facts["mail.cancelled_project"] = "Phoenix"
+            facts["mail.kept_exception"] = "Phoenix Retro"
+    facts["calendar.event_count"] = len(
+        ((world.get("calendar") or {}).get("events") or {}))
+    return facts
+
+
 def _facts_m23(world: dict, url: str) -> dict[str, Any]:
     """M23 offsite-keeps-moving — the async attendee-swap delivery (env truth) +
     Dana's address recorded ONLY when the agent READS the swap email (coverage =
@@ -523,6 +542,7 @@ FACT_EXTRACTORS: dict[str, Callable[[dict, str], dict]] = {
     "M23/offsite_keeps_moving":      _facts_m23,
     "M24/procurement_puzzle":        _facts_m24,
     "M25/dispatch_desk":             _facts_m25,
+    "M26/calendar_purge_async":      _facts_m26,
 }
 
 

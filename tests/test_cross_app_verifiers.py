@@ -979,6 +979,115 @@ def test_m25_replied_to_manager_only_fails():
 
 
 # --------------------------------------------------------------------------- #
+# M26 (calendar purge): async destructive EXACT-SET delete with a kept exception
+# --------------------------------------------------------------------------- #
+
+def _m26_event_id(sim: _CrossSim, needle: str) -> str:
+    for eid, ev in sim.world.calendar.events.items():
+        if needle.lower() in (ev.title or "").lower():
+            return eid
+    raise KeyError(needle)
+
+
+def _m26_delete(sim: _CrossSim, needle: str) -> None:
+    cal_mut.delete_event(sim.world.calendar, _m26_event_id(sim, needle))
+
+
+def test_m26_cancellation_fires_at_step_5():
+    """Env-truth: the async cancellation lands at step 5, names the exception, and
+    is genuinely learnable (body carries both 'Retro' and 'keep')."""
+    sim = _CrossSim("M26/calendar_purge_async")
+    assert not bus.has_delivered(sim.world, "ProjectCancelled")
+    scheduler.advance_and_flush(sim.world, 5)
+    assert bus.has_delivered(sim.world, "ProjectCancelled")
+    cancels = [e for e in sim.world.mail.inbox.values()
+               if "project-cancelled" in (e.labels or [])]
+    assert len(cancels) == 1
+    body = cancels[0].body.lower()
+    assert "phoenix" in body and "retro" in body and "keep" in body
+
+
+def test_m26_full_path_deletes_exactly_target():
+    """Delete EXACTLY the two non-retro Phoenix meetings -> success, score 1.0.
+    The kept Retro, the 1:1, and both Atlas decoys remain."""
+    sim = _CrossSim("M26/calendar_purge_async")
+    scheduler.advance_and_flush(sim.world, 5)
+    _m26_delete(sim, "Phoenix Standup")
+    _m26_delete(sim, "Phoenix Design Review")
+    res = sim._probe()
+    assert res["success"] is True
+    assert res["score"] == 1.0
+    # Exactly the right four remain.
+    remaining = {ev.title for ev in sim.world.calendar.events.values()}
+    assert remaining == {"Atlas Sync", "1:1 with Manager",
+                         "Phoenix Retro", "Atlas Planning"}
+
+
+def test_m26_over_delete_retro_fails():
+    """The engineered trap: pattern-matched 'delete ALL Phoenix' and removed the
+    kept Retro too. Completeness fires; exact-set (precision) does not."""
+    sim = _CrossSim("M26/calendar_purge_async")
+    scheduler.advance_and_flush(sim.world, 5)
+    _m26_delete(sim, "Phoenix Standup")
+    _m26_delete(sim, "Phoenix Design Review")
+    _m26_delete(sim, "Phoenix Retro")               # OVER-delete the exception
+    res = sim._probe()
+    assert res["success"] is False
+    assert "deleted_exactly_target" in res["missed_milestones"]
+    assert "deleted_all_target" not in res["missed_milestones"]  # completeness ok
+    fired = {m["name"] for m in res["all_milestones"] if m["fired_at_step"] >= 0}
+    assert "over_deleted_exception" in fired         # diagnostic gate fired
+    assert res["score"] == 0.5
+
+
+def test_m26_over_delete_decoy_fails():
+    """Confused projects and removed an Atlas decoy along with the Phoenix two."""
+    sim = _CrossSim("M26/calendar_purge_async")
+    scheduler.advance_and_flush(sim.world, 5)
+    _m26_delete(sim, "Phoenix Standup")
+    _m26_delete(sim, "Phoenix Design Review")
+    _m26_delete(sim, "Atlas Sync")                   # OVER-delete a decoy
+    res = sim._probe()
+    assert res["success"] is False
+    assert "deleted_exactly_target" in res["missed_milestones"]
+
+
+def test_m26_under_delete_fails():
+    """Missed one of the two Phoenix meetings -> completeness never fires."""
+    sim = _CrossSim("M26/calendar_purge_async")
+    scheduler.advance_and_flush(sim.world, 5)
+    _m26_delete(sim, "Phoenix Standup")              # only one of two
+    res = sim._probe()
+    assert res["success"] is False
+    assert "deleted_all_target" in res["missed_milestones"]
+    assert "deleted_exactly_target" in res["missed_milestones"]
+    assert res["score"] == 0.0
+
+
+def test_m26_never_acted_fails():
+    """Never noticed the async email / deleted nothing -> zero credit."""
+    sim = _CrossSim("M26/calendar_purge_async")
+    scheduler.advance_and_flush(sim.world, 5)
+    res = sim._probe()
+    assert res["success"] is False
+    assert res["score"] == 0.0
+
+
+def test_m26_read_email_fires_read_level():
+    """4-level facts: opening the cancellation email flips the (weight-0) read
+    gate, distinguishing 'noticed it' from 'acted blind'."""
+    sim = _CrossSim("M26/calendar_purge_async")
+    scheduler.advance_and_flush(sim.world, 5)
+    cancel = next(e for e in sim.world.mail.inbox.values()
+                  if "project-cancelled" in (e.labels or []))
+    mail_mut.mark_read(sim.world.mail, cancel.id)
+    res = sim._probe()
+    fired = {m["name"] for m in res["all_milestones"] if m["fired_at_step"] >= 0}
+    assert "read_cancellation_email" in fired
+    assert "cancellation_email_delivered" in fired
+
+
+# --------------------------------------------------------------------------- #
 # Backward-compat: probe.state still aliases the shop GymState
 # --------------------------------------------------------------------------- #
 

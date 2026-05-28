@@ -1130,6 +1130,35 @@ async def solve_m24_procurement_puzzle(ctx: BrowserCtx) -> None:
     await ctx.click("button[data-test-id='market-btn-place-order']")
 
 
+async def solve_m26_calendar_purge(ctx: BrowserCtx) -> None:
+    """Gold trajectory for the async destructive exact-set purge. WAIT for the
+    project-cancellation email, read it, then delete EXACTLY the Phoenix meetings
+    it names — KEEPING the repurposed 'Phoenix Retro' and never touching the Atlas
+    decoys or the 1:1. (Deleting all Phoenix, incl. the Retro, would over-delete
+    and fail; deleting only some would under-delete and fail.)"""
+    # 1) Watch the inbox for the async cancellation (it lands ~step 5).
+    for _ in range(8):
+        world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
+        cancel = next((e for e in world["mail"]["inbox"].values()
+                       if "project-cancelled" in (e.get("labels") or [])), None)
+        if cancel is not None:
+            await ctx.goto(f"/mail/message/{cancel['id']}",
+                           reasoning="Project cancelled — read which meetings go "
+                                     "and which one stays.")
+            break
+        await ctx.wait(reasoning="Watch for the cancellation email before editing.")
+    # 2) Delete exactly the Phoenix meetings EXCEPT the repurposed Retro.
+    world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
+    events = world["calendar"]["events"]
+    to_delete = [e for e in events.values()
+                 if "phoenix" in (e.get("title") or "").lower()
+                 and "retro" not in (e.get("title") or "").lower()]
+    for ev in to_delete:
+        await ctx.goto(f"/calendar/edit/{ev['id']}",
+                       reasoning=f"Delete cancelled Phoenix meeting: {ev['title']}.")
+        await ctx.click("button[data-test-id='btn-delete-event']")
+
+
 async def solve_m19_coupon_minefield(ctx: BrowserCtx) -> None:
     """Read the coupon emails, buy keyboard+mouse on ValueMart (the cheaper
     store), try the salient 50% code (rejected — expired), fall back to the
@@ -1260,4 +1289,5 @@ SOLVERS = {
     "M23/offsite_keeps_moving":      solve_m23_offsite_keeps_moving,
     "M24/procurement_puzzle":        solve_m24_procurement_puzzle,
     "M25/dispatch_desk":             solve_m25_dispatch_desk,
+    "M26/calendar_purge_async":      solve_m26_calendar_purge,
 }

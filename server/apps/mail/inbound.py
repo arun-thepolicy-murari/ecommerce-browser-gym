@@ -206,6 +206,34 @@ def deliver_dispatch_correction(world: "WorldState", event: "WorldEvent") -> Non
         read=False, labels=["dispatch-correction"])
 
 
+def deliver_project_cancellation(world: "WorldState", event: "WorldEvent") -> None:
+    """ProjectCancelled -> a manager email that cancels a project and instructs
+    the agent to delete ALL its meetings EXCEPT one repurposed exception that must
+    be KEPT (M26). Delivered async (step 5), so the agent must notice it arrive,
+    then delete EXACTLY the right meetings — not the kept exception, not a same-day
+    decoy from another project. The verifier's target rule ('phoenix' in title AND
+    not 'retro') is kept in lockstep with this body. Idempotent on the label."""
+    mail = world.mail
+    if mail is None:
+        return
+    if any("project-cancelled" in (e.labels or []) for e in mail.inbox.values()):
+        return                                  # already delivered — dedupe
+    eid = mail.new_id()
+    mail.inbox[eid] = Email(
+        id=eid, sender="manager@example.com", to=mail.account_email,
+        subject="Project Phoenix cancelled — please clear my calendar",
+        body=(
+            "Project Phoenix has been cancelled, effective immediately.\n\n"
+            "Please remove ALL Phoenix meetings from tomorrow's calendar so my "
+            "day is clear of it.\n\n"
+            "ONE EXCEPTION: keep the 'Phoenix Retro' at 3:00 PM — it has been "
+            "repurposed into our Q3 Planning sync, so that meeting STAYS on the "
+            "calendar. Everything else with Phoenix in the name should go.\n\n"
+            "Please don't touch any of my other meetings. Thanks!\n"),
+        received_at=f"{SEED_DATE}T10:30:00", received_label="now",
+        read=False, labels=["project-cancelled"])
+
+
 def deliver_delivery_delayed(world: "WorldState", event: "WorldEvent") -> None:
     """DeliveryDelayed -> a 'your delivery is running late' email with a NEW
     ETA. Delivered ASYNCHRONOUSLY by the scheduler a few steps AFTER the agent
