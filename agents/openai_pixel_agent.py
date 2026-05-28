@@ -126,7 +126,7 @@ SYSTEM_PROMPT = _PIXEL_SYSTEM_PROMPT + _MULTI_APP_TABS
 class OpenAIPixelAgent:
     """gpt-4o-mini pixel/SoM agent with multi-tab tools."""
 
-    def __init__(self, model: str | None = None, max_steps: int = 50,
+    def __init__(self, model: str | None = None, max_steps: int | None = None,
                  verbose: bool = True, base_url: str | None = None,
                  api_key: str | None = None, eval_mode: bool | None = None):
         from openai import OpenAI
@@ -137,7 +137,8 @@ class OpenAIPixelAgent:
         key = api_key or os.getenv("OPENAI_API_KEY")
         self.client = OpenAI(base_url=base, api_key=key)
         self.model = model or os.getenv("OPENAI_MODEL", "gpt-5.4")
-        self.max_steps = max_steps
+        self.max_steps = (max_steps if max_steps is not None
+                          else int(os.getenv("AGENT_MAX_STEPS", "50")))
         self.verbose = verbose
         # No reward leakage in benchmark runs (AGENT_EVAL_MODE=1).
         self.eval_mode = (eval_mode if eval_mode is not None
