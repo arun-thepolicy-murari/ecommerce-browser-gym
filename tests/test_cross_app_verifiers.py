@@ -1197,6 +1197,43 @@ def test_m27_no_credit_before_raise():
 
 
 # --------------------------------------------------------------------------- #
+# Calendar booking must REJECT overlaps (fairness: tell the agent the slot is
+# taken so it can recover, instead of silently double-booking)
+# --------------------------------------------------------------------------- #
+
+def test_calendar_rejects_overlapping_booking():
+    from server.apps.calendar.state import CalendarState, CalendarEvent, TODAY
+    cal = CalendarState()
+    eid = cal.new_id()
+    cal.events[eid] = CalendarEvent(
+        id=eid, title="Quarterly Review", day=TODAY, day_label="Today",
+        start="15:00", end="16:00", source="seed")
+
+    # Overlapping booking -> rejected, error names the clash, NO event added.
+    r = cal_mut.create_event(cal, title="Lunch", day=TODAY,
+                             start="15:30", end="16:30")
+    assert r["ok"] is False
+    assert "already booked" in r["error"].lower()
+    assert "Quarterly Review" in r["error"]
+    assert len(cal.events) == 1
+
+    # A free slot -> accepted.
+    r2 = cal_mut.create_event(cal, title="Lunch", day=TODAY,
+                              start="16:00", end="17:00")
+    assert r2["ok"] is True and len(cal.events) == 2
+
+    # Back-to-back (abuts the 15:00 start, no overlap) -> accepted.
+    r3 = cal_mut.create_event(cal, title="Prep", day=TODAY,
+                              start="14:00", end="15:00")
+    assert r3["ok"] is True and len(cal.events) == 3
+
+    # Same window but a DIFFERENT day -> no conflict.
+    r4 = cal_mut.create_event(cal, title="X", day="2026-05-22",
+                              start="15:30", end="16:00")
+    assert r4["ok"] is True
+
+
+# --------------------------------------------------------------------------- #
 # Backward-compat: probe.state still aliases the shop GymState
 # --------------------------------------------------------------------------- #
 

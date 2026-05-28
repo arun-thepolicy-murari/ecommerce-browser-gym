@@ -26,10 +26,28 @@ def create_event(cal: CalendarState, *, title: str, day: str,
         return {"ok": False, "error": "a title is required"}
     if not day:
         return {"ok": False, "error": "a day is required"}
+    s = start or "00:00"
+    e = end or "00:00"
+    # Reject a booking that OVERLAPS an event already on the calendar — you
+    # cannot double-book a slot that's taken. The error names the conflicting
+    # event + its window so the agent can read it and pick a free time (the
+    # error-recovery path). Half-open overlap, so back-to-back (e.g. 16:00-17:00
+    # next to 17:00-19:00) is allowed. NOTE: this guards create_event only;
+    # update_event (moving an existing event) is intentionally NOT guarded, so
+    # the M22 "move Priya to 2 PM, then delete the cancelled Sync" sequence —
+    # which briefly overlaps before the delete — still works.
+    for ev in cal.events.values():
+        if ev.day != day:
+            continue
+        if s < ev.end and ev.start < e:        # intervals overlap
+            return {"ok": False,
+                    "error": (f"Slot already booked — that time overlaps "
+                              f"'{ev.title}' ({ev.start} to {ev.end}). "
+                              f"Pick a time that's free.")}
     eid = cal.new_id()
     cal.events[eid] = CalendarEvent(
         id=eid, title=title, day=day, day_label=day_label or day,
-        start=start or "00:00", end=end or "00:00", source="user",
+        start=s, end=e, source="user",
     )
     return {"ok": True, "event_id": eid, "title": title, "day": day}
 
