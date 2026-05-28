@@ -146,13 +146,15 @@ def deliver_calendar_change_alert(world: "WorldState", event: "WorldEvent") -> N
         return                                  # already delivered — dedupe
     eid = mail.new_id()
     mail.inbox[eid] = Email(
-        id=eid, sender="manager@example.com", to=mail.account_email,
-        subject="Schedule change — 2 PM sync cancelled",
+        id=eid, sender="scheduling@example.com", to=mail.account_email,
+        subject="Automated notice: 2 PM Team Sync cancelled",
         body=(
-            "Quick change to this afternoon: the 2 PM Team Sync is CANCELLED.\n\n"
-            "Please move your 3 PM 1:1 with Priya UP to 2 PM instead, and let "
-            "Priya know the new time. Make sure the old 2 PM slot is cleared so "
-            "nothing is double-booked. Thanks!\n"),
+            "This is an automated notice from your calendar system — no reply "
+            "needed.\n\n"
+            "The 2 PM Team Sync has been CANCELLED. To keep your afternoon "
+            "consistent, move your 3 PM 1:1 with Priya up to the freed 2 PM slot "
+            "and clear the old 2 PM block so nothing is double-booked. You'll "
+            "want to let Priya know her new time directly.\n"),
         received_at=f"{SEED_DATE}T13:30:00", received_label="now",
         read=False, labels=["calendar-change"])
 
@@ -172,14 +174,14 @@ def deliver_offsite_change_alert(world: "WorldState", event: "WorldEvent") -> No
         return                                  # already delivered — dedupe
     eid = mail.new_id()
     mail.inbox[eid] = Email(
-        id=eid, sender="manager@example.com", to=mail.account_email,
+        id=eid, sender="events@example.com", to=mail.account_email,
         subject="Change to the team lunch",
         body=(
-            "Heads up — a change to the team lunch plan:\n\n"
-            "Sam can no longer make it. My manager Dana (dana@example.com) will "
-            "join instead. One catch: Dana is only free AFTER 3 PM, so please "
-            "shift the lunch to a slot after 3 PM, and let Dana know the final "
-            "time directly. Thanks!\n"),
+            "Update on the team lunch:\n\n"
+            "Sam can no longer make it. Dana (dana@example.com) will join in "
+            "Sam's place. Dana can only meet AFTER 3 PM, so move the lunch to a "
+            "slot after 3 PM and email Dana directly with the final time. "
+            "Thanks!\n"),
         received_at=f"{SEED_DATE}T11:30:00", received_label="now",
         read=False, labels=["offsite-change"])
 

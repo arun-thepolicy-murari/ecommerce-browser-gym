@@ -336,14 +336,17 @@ BRIEFS = {
     ),
 
     "M22": (
-        "Run my afternoon for me. Right now my calendar has a Team Sync at 2 PM "
-        "and a 1:1 with Priya at 3 PM.\n"
+        "Run my afternoon for me. My calendar has a Team Sync at 2 PM and a 1:1 "
+        "with Priya at 3 PM.\n"
         "1) Order me an Oat Milk Latte from Bean There Cafe.\n"
-        "2) Keep an eye on my email — my manager may change the afternoon plan "
-        "while you're working. If a change comes in, update my calendar so it "
-        "matches the new plan EXACTLY: nothing stale, nothing double-booked.\n"
-        "3) Then reply to Priya letting her know the correct new time.\n"
-        "Get everything consistent across my calendar and email."
+        "2) While you work, keep checking my inbox — a schedule update may "
+        "arrive. If it says the 2 PM Team Sync is cancelled, then do BOTH: "
+        "delete the Team Sync from my calendar, AND move my 1:1 with Priya from "
+        "3 PM up to the freed 2 PM slot (so nothing is left stale or "
+        "double-booked).\n"
+        "3) Once the 1:1 is at its new time, email Priya directly at "
+        "priya@example.com — and only Priya — to let her know her 1:1 is now at "
+        "2 PM."
     ),
 
     "M23": (
@@ -354,10 +357,12 @@ BRIEFS = {
         "needs and their spending limit.\n"
         "2) Put the lunch on my calendar in a slot that works for everyone and "
         "doesn't clash with anything already booked.\n"
-        "3) Email each attendee to confirm the final time.\n"
-        "Heads up: plans may still change while you're setting this up — keep an "
-        "eye on my inbox and make sure the final calendar slot and the people you "
-        "confirm with reflect the LATEST information, not the original plan."
+        "3) Email EACH attendee directly to confirm the final time — compose a "
+        "new message to each person; don't just reply to a notice.\n"
+        "Before you finish, re-open my inbox and check for any new email: if the "
+        "guest list or the timing has changed, your final calendar slot and the "
+        "people you confirm with must reflect that LATEST update, not the "
+        "original plan."
     ),
 
     "M24": (

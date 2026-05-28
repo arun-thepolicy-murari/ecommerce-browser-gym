@@ -815,16 +815,17 @@ def test_m23_booked_before_3pm_fails():
     assert "meeting_after_3pm_free" in res["missed_milestones"]
 
 
-def test_m23_notified_manager_not_dana_fails():
-    """The recipient trap: confirmed to the old crew + the manager, but never
-    told Dana directly (replied to the manager's email instead of composing)."""
+def test_m23_notified_notice_sender_not_dana_fails():
+    """The recipient trap: confirmed to the old crew + the change-notice sender,
+    but never told Dana directly (replied to the notice instead of composing
+    fresh to Dana)."""
     sim = _CrossSim("M23/offsite_keeps_moving")
     scheduler.advance_and_flush(sim.world, 5)
     _m23_lunch(sim, veggie=True, classic_qty=1)
     _m23_book(sim, "16:00")
     _m23_notify(sim, "priya@example.com")
     _m23_notify(sim, "alex@example.com")
-    _m23_notify(sim, "manager@example.com")            # wrong target, not Dana
+    _m23_notify(sim, "events@example.com")             # wrong target, not Dana
     res = sim._probe()
     assert res["success"] is False
     assert "notified_dana" in res["missed_milestones"]
