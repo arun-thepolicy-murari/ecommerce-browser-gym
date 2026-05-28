@@ -1197,6 +1197,81 @@ def test_m27_no_credit_before_raise():
 
 
 # --------------------------------------------------------------------------- #
+# M28 (stockout scramble): observed-vs-assumed state — recover OOS items at
+# ValueMart, no decoy substitutes
+# --------------------------------------------------------------------------- #
+
+def _m28_shop_order(sim: _CrossSim, product_ids: list[str]) -> None:
+    for pid in product_ids:
+        mutations.add_to_cart(sim.shop, pid, 1)
+    mutations.place_order(sim.shop, "pay_visa")
+
+
+def _m28_market_order(sim: _CrossSim, product_ids: list[str]) -> None:
+    for pid in product_ids:
+        market_mut.add_to_cart(sim.world.market, product_id=pid)
+    market_mut.place_order(sim.world)
+
+
+def test_m28_oos_items_seeded():
+    """Env-truth: the keyboard + monitor really are out of stock at ShopGym, and
+    add-to-cart there is rejected (the trap mechanic)."""
+    sim = _CrossSim("M28/stockout_scramble")
+    assert sim.shop.products["p_kb_mech"].stock == 0
+    assert sim.shop.products["p_monitor_24"].stock == 0
+    assert sim.shop.products["p_mouse_wireless"].stock > 0
+    r = mutations.add_to_cart(sim.shop, "p_kb_mech", 1)
+    assert r["ok"] is False and "stock" in r["error"].lower()
+
+
+def test_m28_full_path_scores_one():
+    """In-stock items from ShopGym + the two OOS items recovered at ValueMart."""
+    sim = _CrossSim("M28/stockout_scramble")
+    _m28_shop_order(sim, ["p_mouse_wireless", "p_hp_premium"])
+    _m28_market_order(sim, ["vm_kb_mech", "vm_monitor_24"])
+    res = sim._probe()
+    assert res["success"] is True
+    assert res["score"] == 1.0
+
+
+def test_m28_fire_and_forget_two_items_fails():
+    """The headline trap: shipped only the two in-stock items, never noticed the
+    keyboard + monitor failed to add and never recovered them at ValueMart."""
+    sim = _CrossSim("M28/stockout_scramble")
+    _m28_shop_order(sim, ["p_mouse_wireless", "p_hp_premium"])   # the OOS two never recovered
+    res = sim._probe()
+    assert res["success"] is False
+    assert res["score"] == 0.2
+    assert "recovered_keyboard" in res["missed_milestones"]
+    assert "recovered_monitor" in res["missed_milestones"]
+
+
+def test_m28_substituted_decoy_keyboard_fails():
+    """Recovered a Wireless Keyboard (decoy) instead of the Mechanical Keyboard."""
+    sim = _CrossSim("M28/stockout_scramble")
+    _m28_shop_order(sim, ["p_mouse_wireless", "p_hp_premium"])
+    _m28_market_order(sim, ["vm_kb_wireless", "vm_monitor_24"])   # wrong keyboard
+    res = sim._probe()
+    assert res["success"] is False
+    assert "recovered_keyboard" in res["missed_milestones"]
+    fired = {m["name"] for m in res["all_milestones"] if m["fired_at_step"] >= 0}
+    assert "bought_decoy_keyboard" in fired
+
+
+def test_m28_substituted_27inch_monitor_fails():
+    """Grabbed the in-stock 27-inch Monitor at ShopGym instead of recovering the
+    24-inch at ValueMart."""
+    sim = _CrossSim("M28/stockout_scramble")
+    _m28_shop_order(sim, ["p_mouse_wireless", "p_hp_premium", "p_monitor_27"])
+    _m28_market_order(sim, ["vm_kb_mech"])
+    res = sim._probe()
+    assert res["success"] is False
+    assert "recovered_monitor" in res["missed_milestones"]
+    fired = {m["name"] for m in res["all_milestones"] if m["fired_at_step"] >= 0}
+    assert "bought_decoy_monitor" in fired
+
+
+# --------------------------------------------------------------------------- #
 # Calendar booking must REJECT overlaps (fairness: tell the agent the slot is
 # taken so it can recover, instead of silently double-booking)
 # --------------------------------------------------------------------------- #

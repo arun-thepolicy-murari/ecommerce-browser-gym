@@ -1227,6 +1227,33 @@ async def solve_m27_budget_desk(ctx: BrowserCtx) -> None:
                      f"in tomorrow's batch.")
 
 
+async def solve_m28_stockout_scramble(ctx: BrowserCtx) -> None:
+    """Gold trajectory for the observed-vs-assumed-state breaker. The Wireless
+    Mouse + Bluetooth Headphone Premium are in stock at ShopGym (order them
+    there); the Mechanical Keyboard + 24-inch Monitor are OUT OF STOCK at ShopGym
+    (their add-to-cart fails), so recover those two at ValueMart. End state: all
+    four exact items ordered across the two stores — no decoy substitutes."""
+    # 1) ShopGym: add the two IN-STOCK bundle items, then check out (one order).
+    for pid in ("p_mouse_wireless", "p_hp_premium"):
+        await ctx.goto(f"/product/{pid}",
+                       reasoning="In-stock bundle item at ShopGym — add it.")
+        await ctx.click("button[data-test-id='btn-add-to-cart']")
+    await ctx.click("a[data-test-id='link-cart']")
+    await ctx.click("a[data-test-id='btn-proceed-checkout']")
+    await ctx.click("a[data-test-id='btn-continue-payment']")
+    await ctx.click("a[data-test-id='btn-continue-review']")
+    await ctx.click("button[data-test-id='btn-place-order']")
+    # 2) The keyboard + monitor are OUT OF STOCK at ShopGym -> recover the EXACT
+    #    same items at ValueMart (not a wireless keyboard / 27-inch decoy).
+    for pid in ("vm_kb_mech", "vm_monitor_24"):
+        await ctx.goto(f"/market/product/{pid}",
+                       reasoning="Out of stock at ShopGym — buy this exact item "
+                                 "at ValueMart instead.")
+        await ctx.click("button[data-test-id='market-btn-add-to-cart']")
+    await ctx.goto("/market/cart", reasoning="Check out the two recovered items.")
+    await ctx.click("button[data-test-id='market-btn-place-order']")
+
+
 async def solve_m19_coupon_minefield(ctx: BrowserCtx) -> None:
     """Read the coupon emails, buy keyboard+mouse on ValueMart (the cheaper
     store), try the salient 50% code (rejected — expired), fall back to the
@@ -1359,4 +1386,5 @@ SOLVERS = {
     "M25/dispatch_desk":             solve_m25_dispatch_desk,
     "M26/calendar_purge_async":      solve_m26_calendar_purge,
     "M27/budget_desk":               solve_m27_budget_desk,
+    "M28/stockout_scramble":         solve_m28_stockout_scramble,
 }

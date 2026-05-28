@@ -414,6 +414,18 @@ BRIEFS = {
         "exactly right."
     ),
 
+    "M28": (
+        "I'm putting together an office gift bundle. Buy ALL FOUR of these exact "
+        "items and place the orders: a Wireless Mouse, a Mechanical Keyboard, a "
+        "24-inch Monitor, and a Bluetooth Headphone Premium.\n"
+        "Start at ShopGym. Important: ShopGym is OUT OF STOCK on some of these — "
+        "if an item won't add to your cart at ShopGym, buy that SAME item from "
+        "ValueMart instead. By the end I need all four actually ordered, and they "
+        "must be those EXACT items (not a gaming or ergonomic mouse, not a "
+        "wireless or membrane keyboard, not a 27-inch monitor, not a different "
+        "headphone model). Double-check each item really made it into an order."
+    ),
+
     "M19": (
         "I need a Mechanical Keyboard AND a Wireless Mouse — buy the pair from "
         "whichever store is cheaper, use a ValueMart coupon to bring the price "
@@ -1104,6 +1116,9 @@ START_PATHS = {
     # M27 (budget desk) starts in the inbox — process the refund queue under a
     # running-total budget that gets raised async mid-task.
     "M27/budget_desk": "/mail",
+    # M28 (stockout scramble) starts at ShopGym — hit the out-of-stock items,
+    # then recover them at ValueMart.
+    "M28/stockout_scramble": "/",
 }
 
 
@@ -1725,6 +1740,34 @@ def task_m27_budget_desk(seed: int) -> "WorldState":
     return world
 
 
+def task_m28_stockout_scramble(seed: int) -> "WorldState":
+    """STOCKOUT SCRAMBLE — the OBSERVED-vs-ASSUMED-state breaker. Attacks the
+    deepest confirmed weakness (gpt-5.1/5.5 fire-and-forget: act, assume success,
+    never verify). Buy a 4-item bundle {Wireless Mouse, Mechanical Keyboard,
+    24-inch Monitor, Bluetooth Headphone Premium}. At ShopGym, the keyboard +
+    monitor are OUT OF STOCK (stock=0) -> add-to-cart fails with a VISIBLE error
+    and does NOT add them; they're available at ValueMart. The trap: a
+    fire-and-forget agent adds all four at ShopGym, two silently fail to add, and
+    it checks out with only two — never noticing. To succeed it must VERIFY the
+    cart and RECOVER the two OOS items at ValueMart, without substituting a
+    look-alike decoy (gaming mouse / wireless keyboard / 27-inch monitor) that IS
+    in stock at ShopGym. Multi-app + error-recovery + exact-item discipline.
+    Env-clean: the OOS error is real (add_to_cart already rejects stock=0), the
+    items are obtainable at ValueMart, and the oracle completes it 1.0."""
+    world = _cross_app_world(seed, "M28/stockout_scramble", "hard")
+    s = world.shop.products
+    # Pin the trap deterministically across seeds:
+    s["p_mouse_wireless"].stock = 10        # in stock at ShopGym
+    s["p_hp_premium"].stock = 10            # in stock at ShopGym
+    s["p_kb_mech"].stock = 0                # OUT OF STOCK -> recover at ValueMart
+    s["p_monitor_24"].stock = 0             # OUT OF STOCK -> recover at ValueMart
+    # Decoys stay in stock so a careless agent can mis-substitute them.
+    s["p_mouse_gaming"].stock = max(s["p_mouse_gaming"].stock, 5)
+    s["p_kb_wireless"].stock = max(s["p_kb_wireless"].stock, 5)
+    s["p_monitor_27"].stock = max(s["p_monitor_27"].stock, 5)
+    return world
+
+
 def task_m19_coupon_minefield(seed: int) -> "WorldState":
     """COUPON MINEFIELD (decoy + validity reasoning + conjunctive budget). Buy a
     keyboard + mouse from the cheaper store, under a $125 budget, using a VALID
@@ -1890,6 +1933,7 @@ REQUIRED_FACTS = {
     "M25/dispatch_desk":             ["mail.alex_corrected_budget"],
     "M26/calendar_purge_async":      ["mail.cancelled_project"],
     "M27/budget_desk":               ["mail.refund_budget"],
+    "M28/stockout_scramble":         ["shop.oos_bundle_items"],
 }
 
 
@@ -1938,6 +1982,7 @@ TASKS = {
     "M25/dispatch_desk":             task_m25_dispatch_desk,
     "M26/calendar_purge_async":      task_m26_calendar_purge,
     "M27/budget_desk":               task_m27_budget_desk,
+    "M28/stockout_scramble":         task_m28_stockout_scramble,
 }
 
 

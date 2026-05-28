@@ -452,6 +452,23 @@ def _facts_m27(world: dict, url: str) -> dict[str, Any]:
     return facts
 
 
+def _facts_m28(world: dict, url: str) -> dict[str, Any]:
+    """M28 stockout scramble — which bundle items are OUT OF STOCK at ShopGym
+    (env truth: the keyboard + monitor that must be recovered at ValueMart).
+    'used' (all four exact items ordered, OOS ones recovered, no decoy) is the
+    verifier's job."""
+    facts: dict[str, Any] = {}
+    prods = (world.get("shop") or {}).get("products") or {}
+    oos = []
+    for pid in ("p_kb_mech", "p_monitor_24"):
+        p = prods.get(pid)
+        if p is not None and p.get("stock", 1) == 0:
+            oos.append(p.get("name", pid))
+    if oos:
+        facts["shop.oos_bundle_items"] = ", ".join(sorted(oos))
+    return facts
+
+
 def _facts_m23(world: dict, url: str) -> dict[str, Any]:
     """M23 offsite-keeps-moving — the async attendee-swap delivery (env truth) +
     Dana's address recorded ONLY when the agent READS the swap email (coverage =
@@ -561,6 +578,7 @@ FACT_EXTRACTORS: dict[str, Callable[[dict, str], dict]] = {
     "M25/dispatch_desk":             _facts_m25,
     "M26/calendar_purge_async":      _facts_m26,
     "M27/budget_desk":               _facts_m27,
+    "M28/stockout_scramble":         _facts_m28,
 }
 
 

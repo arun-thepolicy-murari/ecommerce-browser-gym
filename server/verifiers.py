@@ -2496,6 +2496,82 @@ def _suite_m27() -> TaskSuite:
     )
 
 
+def _suite_m28() -> TaskSuite:
+    """STOCKOUT SCRAMBLE — observed-vs-assumed state. Buy the 4-item bundle; the
+    keyboard + monitor are OUT OF STOCK at ShopGym and must be recovered at
+    ValueMart. Graded by EXACT-ITEM coverage across BOTH stores' orders (matched
+    by exact product name, so a look-alike decoy — wireless keyboard, 27-inch
+    monitor, gaming mouse — does NOT count). All positive end-state checks
+    (ordered X), so stickiness-safe. The fire-and-forget agent that ships only
+    the two in-stock items lands on easy_items_ordered (0.2) but misses both
+    recovery milestones — the signature of 'acted, assumed success, never
+    verified the cart.' Weight-0 diagnostics expose decoy substitution."""
+    TARGETS = ("wireless mouse", "mechanical keyboard",
+               "24-inch monitor", "bluetooth headphone premium")
+
+    def _ordered_names(p: Probe) -> set:
+        names: set = set()
+        shop = p.state
+        if shop is not None:
+            for o in shop.orders.values():
+                for it in o.items:
+                    pr = shop.products.get(it.product_id)
+                    if pr:
+                        names.add((pr.name or "").strip().lower())
+        mk = getattr(p.world, "market", None) if p.world else None
+        if mk is not None:
+            for o in mk.orders.values():
+                for it in o.items:
+                    pr = mk.products.get(it.product_id)
+                    if pr:
+                        names.add((pr.name or "").strip().lower())
+        return names
+
+    def _has(p: Probe, name: str) -> bool:
+        return name in _ordered_names(p)
+
+    def _easy_items(p: Probe) -> bool:
+        # The two in-stock-at-ShopGym items (no recovery needed).
+        return _has(p, "wireless mouse") and _has(p, "bluetooth headphone premium")
+
+    def _keyboard(p: Probe) -> bool:
+        return _has(p, "mechanical keyboard")
+
+    def _monitor(p: Probe) -> bool:
+        return _has(p, "24-inch monitor")
+
+    def _decoy_keyboard(p: Probe) -> bool:
+        n = _ordered_names(p)
+        return any(k in n for k in ("wireless keyboard", "membrane keyboard",
+                                    "mini mechanical keyboard"))
+
+    def _decoy_monitor(p: Probe) -> bool:
+        return "27-inch monitor" in _ordered_names(p)
+
+    def _decoy_mouse(p: Probe) -> bool:
+        n = _ordered_names(p)
+        return any(k in n for k in ("wireless gaming mouse",
+                                    "wireless ergonomic mouse", "wireless mini mouse"))
+
+    return TaskSuite(
+        task_id="M28/stockout_scramble",
+        milestones=[
+            Milestone("easy_items_ordered", weight=0.2,
+                      check=_easy_items, required_for_success=True),
+            Milestone("recovered_keyboard", weight=0.4,
+                      check=_keyboard, required_for_success=True),
+            Milestone("recovered_monitor", weight=0.4,
+                      check=_monitor, required_for_success=True),
+            Milestone("bought_decoy_keyboard", weight=0.0,
+                      check=_decoy_keyboard, required_for_success=False),
+            Milestone("bought_decoy_monitor", weight=0.0,
+                      check=_decoy_monitor, required_for_success=False),
+            Milestone("bought_decoy_mouse", weight=0.0,
+                      check=_decoy_mouse, required_for_success=False),
+        ],
+    )
+
+
 def _suite_m19() -> TaskSuite:
     """COUPON MINEFIELD. Buy keyboard + mouse on the cheaper store (ValueMart)
     with the VALID coupon (VALUE10), under a $125 budget — resisting the salient
@@ -2709,6 +2785,7 @@ SUITE_FACTORIES = {
     "M25/dispatch_desk":             _suite_m25,
     "M26/calendar_purge_async":      _suite_m26,
     "M27/budget_desk":               _suite_m27,
+    "M28/stockout_scramble":         _suite_m28,
 }
 
 
