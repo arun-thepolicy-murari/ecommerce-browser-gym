@@ -360,6 +360,16 @@ BRIEFS = {
         "confirm with reflect the LATEST information, not the original plan."
     ),
 
+    "M24": (
+        "I need exactly three things: a Wireless Mouse, a Mechanical Keyboard, "
+        "and a 24-inch Monitor. Buy that exact set for the LOWEST total you can — "
+        "and it must come to $320 or less. You can shop at ShopGym, ValueMart, or "
+        "split your purchase between them. You have a VALUE10 code (10% off your "
+        "ValueMart order). Compare offers by what you'd ACTUALLY pay — item "
+        "prices plus delivery, minus any coupon (ignore sales tax). Get the right "
+        "three items (not a fancier or cheaper lookalike) at the lowest real total."
+    ),
+
     "M19": (
         "I need a Mechanical Keyboard AND a Wireless Mouse — buy the pair from "
         "whichever store is cheaper, use a ValueMart coupon to bring the price "
@@ -1040,6 +1050,8 @@ START_PATHS = {
     "M22/async_calendar_cascade": "/calendar",
     # M23 (offsite that keeps moving) starts in the inbox (derive from emails).
     "M23/offsite_keeps_moving": "/mail",
+    # M24 (procurement puzzle) starts on the Shop (compare both stores).
+    "M24/procurement_puzzle": "/",
 }
 
 
@@ -1405,6 +1417,37 @@ def task_m22_async_calendar_cascade(seed: int) -> "WorldState":
     return world
 
 
+def task_m24_procurement_puzzle(seed: int) -> "WorldState":
+    """PROCUREMENT PUZZLE (pure-decision global-optimum trap — the cleanest
+    breaker: no async, no calendar/text-field friction, no step/budget escape
+    hatch; just reasoning). Buy a Wireless Mouse + Mechanical Keyboard + 24-inch
+    Monitor for the lowest real total, at or under $320, across ShopGym and/or
+    ValueMart, with a VALUE10 (10% off ValueMart) code. Prices are pinned so the
+    trap is deterministic across seeds:
+      ValueMart : mouse 24.99 + kb 109.99 + monitor 209.99 = 344.97
+      ShopGym   : mouse 29.99 + kb 119.99 + monitor 199.99 (+5.99 ship)
+    The GREEDY per-item-cheapest choice splits stores (mouse+kb at ValueMart,
+    monitor at ShopGym):
+      ValueMart 134.98 -10% = 121.48 (free delivery >35) + ShopGym 199.99 + 5.99
+      = 327.46  -> OVER the 320 budget.
+    The GLOBAL OPTIMUM consolidates everything at ValueMart (even though the
+    monitor is $10 pricier there), because VALUE10 applies to the WHOLE order and
+    delivery is free:
+      344.97 -10% = 310.47  -> UNDER 320.
+    So an agent that reasons greedily/per-item busts the budget; only the
+    counter-intuitive consolidation fits. Decoys (gaming/ergonomic/mini mouse,
+    membrane/mini keyboard, 27-inch/office monitor) punish picking a lookalike."""
+    world = _cross_app_world(seed, "M24/procurement_puzzle", "hard")
+    # Pin the six relevant prices so the optimum/greedy gap is seed-independent.
+    world.market.products["vm_mouse_wireless"].price = 24.99
+    world.market.products["vm_kb_mech"].price = 109.99
+    world.market.products["vm_monitor_24"].price = 209.99
+    world.shop.products["p_mouse_wireless"].base_price = 29.99
+    world.shop.products["p_kb_mech"].base_price = 119.99
+    world.shop.products["p_monitor_24"].base_price = 199.99
+    return world
+
+
 def task_m23_offsite_keeps_moving(seed: int) -> "WorldState":
     """THE OFFSITE THAT KEEPS MOVING — the tight killer. Stacks four clean
     blockers, none of which is a rigged environment:
@@ -1631,6 +1674,7 @@ REQUIRED_FACTS = {
     "M21/async_errand_run":          ["mail.flip_coupon", "mail.gear_total"],
     "M22/async_calendar_cascade":    ["mail.new_meeting_time"],
     "M23/offsite_keeps_moving":      ["mail.dana_address", "calendar.final_slot"],
+    "M24/procurement_puzzle":        ["market.basket_total"],
 }
 
 
@@ -1675,6 +1719,7 @@ TASKS = {
     "M21/async_errand_run":          task_m21_async_errand_run,
     "M22/async_calendar_cascade":    task_m22_async_calendar_cascade,
     "M23/offsite_keeps_moving":      task_m23_offsite_keeps_moving,
+    "M24/procurement_puzzle":        task_m24_procurement_puzzle,
 }
 
 

@@ -852,6 +852,62 @@ def test_m23_wrong_slot_and_wrong_time_fails():
 
 
 # --------------------------------------------------------------------------- #
+# M24 (procurement puzzle): global-optimum trap — consolidate at ValueMart
+# --------------------------------------------------------------------------- #
+
+def _m24_buy_valuemart(sim: _CrossSim, pids, coupon=None) -> None:
+    for pid in pids:
+        market_mut.add_to_cart(sim.world.market, product_id=pid)
+    if coupon:
+        market_mut.apply_coupon(sim.world.market, coupon)
+    market_mut.place_order(sim.world)
+
+
+def test_m24_consolidate_valuemart_wins():
+    """The optimum: all three at ValueMart with VALUE10 = $310.47 <= $320."""
+    sim = _CrossSim("M24/procurement_puzzle")
+    _m24_buy_valuemart(sim, ["vm_mouse_wireless", "vm_kb_mech", "vm_monitor_24"],
+                       coupon="VALUE10")
+    res = sim._probe()
+    assert res["success"] is True
+    assert res["score"] == 1.0
+
+
+def test_m24_greedy_split_busts_budget():
+    """Greedy per-item-cheapest splits stores (mouse+kb at ValueMart, monitor at
+    ShopGym). No single ValueMart order has all three, so the items milestone
+    misses — and the split total ($327.46) is over budget anyway."""
+    sim = _CrossSim("M24/procurement_puzzle")
+    _m24_buy_valuemart(sim, ["vm_mouse_wireless", "vm_kb_mech"], coupon="VALUE10")
+    mutations.add_to_cart(sim.shop, "p_monitor_24", 1)
+    mutations.place_order(sim.shop, "pay_visa")
+    res = sim._probe()
+    assert res["success"] is False
+    assert "ordered_three_at_valuemart" in res["missed_milestones"]
+
+
+def test_m24_no_coupon_over_budget():
+    """Right three at ValueMart but no coupon -> $344.97 > $320."""
+    sim = _CrossSim("M24/procurement_puzzle")
+    _m24_buy_valuemart(sim, ["vm_mouse_wireless", "vm_kb_mech", "vm_monitor_24"])
+    res = sim._probe()
+    assert res["success"] is False
+    assert "under_budget" in res["missed_milestones"]
+    assert "applied_value10" in res["missed_milestones"]
+
+
+def test_m24_wrong_item_decoy_fails():
+    """Grabbed a lookalike (Wireless Keyboard) instead of the required Mechanical
+    Keyboard -> the exact-set items milestone misses."""
+    sim = _CrossSim("M24/procurement_puzzle")
+    _m24_buy_valuemart(sim, ["vm_mouse_wireless", "vm_kb_wireless", "vm_monitor_24"],
+                       coupon="VALUE10")
+    res = sim._probe()
+    assert res["success"] is False
+    assert "ordered_three_at_valuemart" in res["missed_milestones"]
+
+
+# --------------------------------------------------------------------------- #
 # Backward-compat: probe.state still aliases the shop GymState
 # --------------------------------------------------------------------------- #
 

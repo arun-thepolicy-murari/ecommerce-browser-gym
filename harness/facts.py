@@ -383,6 +383,24 @@ def _facts_m22(world: dict, url: str) -> dict[str, Any]:
     return facts
 
 
+def _facts_m24(world: dict, url: str) -> dict[str, Any]:
+    """M24 procurement puzzle — the cross-tab value the agent must reason about:
+    the consolidated ValueMart basket total (the price the optimum hinges on).
+    Recorded when the three target items are in the ValueMart cart or an order;
+    'used' (ordered the exact three at ValueMart, with VALUE10, under $320) is the
+    verifier's job."""
+    items = {"vm_mouse_wireless", "vm_kb_mech", "vm_monitor_24"}
+    facts: dict[str, Any] = {}
+    mk = world.get("market") or {}
+    for o in (mk.get("orders") or {}).values():
+        if items.issubset({i.get("product_id") for i in o.get("items", [])}):
+            facts["market.basket_total"] = o.get("total")
+    cart = mk.get("cart") or {}
+    if items.issubset({i.get("product_id") for i in (cart.get("items") or [])}):
+        facts["market.basket_in_cart"] = True
+    return facts
+
+
 def _facts_m23(world: dict, url: str) -> dict[str, Any]:
     """M23 offsite-keeps-moving — the async attendee-swap delivery (env truth) +
     Dana's address recorded ONLY when the agent READS the swap email (coverage =
@@ -488,6 +506,7 @@ FACT_EXTRACTORS: dict[str, Callable[[dict, str], dict]] = {
     "M21/async_errand_run":          _facts_m21,
     "M22/async_calendar_cascade":    _facts_m22,
     "M23/offsite_keeps_moving":      _facts_m23,
+    "M24/procurement_puzzle":        _facts_m24,
 }
 
 

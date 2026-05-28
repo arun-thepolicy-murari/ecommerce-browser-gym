@@ -2173,6 +2173,49 @@ def _suite_m23() -> TaskSuite:
     )
 
 
+def _suite_m24() -> TaskSuite:
+    """PROCUREMENT PUZZLE — global-optimum trap. The only under-$320 path is
+    consolidating the exact three items at ValueMart with VALUE10 (greedy
+    per-item-cheapest splits stores and busts the budget). Three decoupled,
+    POSITIVE end-state milestones:
+      items  -> ordered_three_at_valuemart (one ValueMart order whose item set is
+                EXACTLY {Wireless Mouse, Mechanical Keyboard, 24-inch Monitor} —
+                rejects decoys/lookalikes, extras, and store-splitting)
+      coupon -> applied_value10 (that order used the 10% code)
+      budget -> under_budget (that order total <= $320 — only the consolidated
+                optimum fits)."""
+    _ITEMS = {"vm_mouse_wireless", "vm_kb_mech", "vm_monitor_24"}
+    _BUDGET = 320.0
+
+    def _target_orders(p: Probe) -> list:
+        mk = getattr(p.world, "market", None) if p.world else None
+        if mk is None:
+            return []
+        return [o for o in mk.orders.values()
+                if {it.product_id for it in o.items} == _ITEMS]
+
+    def _ordered_three(p: Probe) -> bool:
+        return len(_target_orders(p)) >= 1
+
+    def _applied_value10(p: Probe) -> bool:
+        return any(o.coupon_code == "VALUE10" for o in _target_orders(p))
+
+    def _under_budget(p: Probe) -> bool:
+        return any(o.total <= _BUDGET for o in _target_orders(p))
+
+    return TaskSuite(
+        task_id="M24/procurement_puzzle",
+        milestones=[
+            Milestone("ordered_three_at_valuemart", weight=0.4,
+                      check=_ordered_three, required_for_success=True),
+            Milestone("applied_value10", weight=0.3,
+                      check=_applied_value10, required_for_success=True),
+            Milestone("under_budget", weight=0.3,
+                      check=_under_budget, required_for_success=True),
+        ],
+    )
+
+
 def _suite_m19() -> TaskSuite:
     """COUPON MINEFIELD. Buy keyboard + mouse on the cheaper store (ValueMart)
     with the VALID coupon (VALUE10), under a $125 budget — resisting the salient
@@ -2382,6 +2425,7 @@ SUITE_FACTORIES = {
     "M21/async_errand_run":          _suite_m21,
     "M22/async_calendar_cascade":    _suite_m22,
     "M23/offsite_keeps_moving":      _suite_m23,
+    "M24/procurement_puzzle":        _suite_m24,
 }
 
 

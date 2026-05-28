@@ -1072,6 +1072,24 @@ async def solve_m23_offsite_keeps_moving(ctx: BrowserCtx) -> None:
         await ctx.click("button[data-test-id='btn-send']")
 
 
+async def solve_m24_procurement_puzzle(ctx: BrowserCtx) -> None:
+    """Gold trajectory for the global-optimum trap. The greedy per-item-cheapest
+    choice splits stores and costs $327.46 (over the $320 budget); the optimum
+    CONSOLIDATES all three at ValueMart with VALUE10 = $310.47 (under budget),
+    because the 10% applies to the whole order and delivery is free. So buy all
+    three at ValueMart and apply the code."""
+    for pid in ("vm_mouse_wireless", "vm_kb_mech", "vm_monitor_24"):
+        await ctx.goto(f"/market/product/{pid}",
+                       reasoning="Consolidate at ValueMart — VALUE10 + free "
+                                 "delivery beats splitting stores.")
+        await ctx.click("button[data-test-id='market-btn-add-to-cart']")
+    await ctx.goto("/market/cart",
+                   reasoning="Apply VALUE10 to the whole basket and check out.")
+    await ctx.fill("input[data-test-id='market-input-coupon']", "VALUE10")
+    await ctx.click("button[data-test-id='market-btn-apply-coupon']")
+    await ctx.click("button[data-test-id='market-btn-place-order']")
+
+
 async def solve_m19_coupon_minefield(ctx: BrowserCtx) -> None:
     """Read the coupon emails, buy keyboard+mouse on ValueMart (the cheaper
     store), try the salient 50% code (rejected — expired), fall back to the
@@ -1200,4 +1218,5 @@ SOLVERS = {
     "M21/async_errand_run":          solve_m21_async_errand_run,
     "M22/async_calendar_cascade":    solve_m22_async_calendar_cascade,
     "M23/offsite_keeps_moving":      solve_m23_offsite_keeps_moving,
+    "M24/procurement_puzzle":        solve_m24_procurement_puzzle,
 }
