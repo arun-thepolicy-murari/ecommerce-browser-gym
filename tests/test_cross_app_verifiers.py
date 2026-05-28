@@ -908,6 +908,77 @@ def test_m24_wrong_item_decoy_fails():
 
 
 # --------------------------------------------------------------------------- #
+# M25 (dispatch desk): route each detail to the right person (+ stale value)
+# --------------------------------------------------------------------------- #
+
+def _m25_send(sim: _CrossSim, to: str, body: str) -> None:
+    mail_mut.send_email(sim.world.mail, to=to, subject="update", body=body)
+
+
+def test_m25_correction_fires_at_step_4():
+    sim = _CrossSim("M25/dispatch_desk")
+    assert not bus.has_delivered(sim.world, "DispatchCorrection")
+    scheduler.advance_and_flush(sim.world, 4)
+    assert bus.has_delivered(sim.world, "DispatchCorrection")
+    corr = [e for e in sim.world.mail.inbox.values()
+            if "dispatch-correction" in (e.labels or [])]
+    assert len(corr) == 1 and "21,000" in corr[0].body
+
+
+def test_m25_full_path_routes_all_four():
+    sim = _CrossSim("M25/dispatch_desk")
+    scheduler.advance_and_flush(sim.world, 4)
+    _m25_send(sim, "priya@example.com", "The all-hands moved to 4:00 PM.")
+    _m25_send(sim, "alex@example.com", "Your Q3 budget is $21,000.")  # corrected
+    _m25_send(sim, "sam@example.com", "The report deadline is Friday.")
+    _m25_send(sim, "dana@example.com", "Your new desk is B12.")
+    res = sim._probe()
+    assert res["success"] is True
+    assert res["score"] == 1.0
+
+
+def test_m25_stale_alex_budget_fails():
+    """Relayed Alex's ORIGINAL $12,000 instead of the corrected $21,000."""
+    sim = _CrossSim("M25/dispatch_desk")
+    scheduler.advance_and_flush(sim.world, 4)
+    _m25_send(sim, "priya@example.com", "The all-hands moved to 4:00 PM.")
+    _m25_send(sim, "alex@example.com", "Your Q3 budget is $12,000.")  # STALE
+    _m25_send(sim, "sam@example.com", "The report deadline is Friday.")
+    _m25_send(sim, "dana@example.com", "Your new desk is B12.")
+    res = sim._probe()
+    assert res["success"] is False
+    assert "notified_alex_budget" in res["missed_milestones"]
+
+
+def test_m25_cross_wired_fails():
+    """Sent Priya the budget and Alex the time (details swapped)."""
+    sim = _CrossSim("M25/dispatch_desk")
+    scheduler.advance_and_flush(sim.world, 4)
+    _m25_send(sim, "priya@example.com", "Your Q3 budget is $21,000.")  # wrong detail
+    _m25_send(sim, "alex@example.com", "The all-hands moved to 4:00 PM.")  # wrong
+    _m25_send(sim, "sam@example.com", "The report deadline is Friday.")
+    _m25_send(sim, "dana@example.com", "Your new desk is B12.")
+    res = sim._probe()
+    assert res["success"] is False
+    assert "notified_priya_time" in res["missed_milestones"]
+    assert "notified_alex_budget" in res["missed_milestones"]
+
+
+def test_m25_replied_to_manager_only_fails():
+    """The M22 trap at scale: dumped everything back to the manager instead of
+    messaging each teammate directly."""
+    sim = _CrossSim("M25/dispatch_desk")
+    scheduler.advance_and_flush(sim.world, 4)
+    _m25_send(sim, "manager@example.com",
+              "Priya 4:00 PM; Alex $21,000; Sam Friday; Dana B12.")
+    res = sim._probe()
+    assert res["success"] is False
+    for ms in ("notified_priya_time", "notified_alex_budget",
+               "notified_sam_deadline", "notified_dana_desk"):
+        assert ms in res["missed_milestones"]
+
+
+# --------------------------------------------------------------------------- #
 # Backward-compat: probe.state still aliases the shop GymState
 # --------------------------------------------------------------------------- #
 

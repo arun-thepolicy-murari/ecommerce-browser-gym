@@ -2216,6 +2216,59 @@ def _suite_m24() -> TaskSuite:
     )
 
 
+def _suite_m25() -> TaskSuite:
+    """DISPATCH DESK — route each teammate's detail to the RIGHT person (scales
+    the M22 reply-to-trigger / wrong-recipient failure to four channels), with a
+    moving target on Alex (corrected $12,000 -> $21,000). Four decoupled POSITIVE
+    per-person milestones: each requires a SENT email whose recipient is that
+    person AND whose body carries THAT person's correct detail. Cross-wiring
+    (Alex's figure to Priya), replying to the manager (neither person is the
+    recipient), a stale Alex budget, or a dropped person each misses cleanly."""
+
+    def _sent_to_with(p: Probe, who: str, needles) -> bool:
+        mail = getattr(p.world, "mail", None) if p.world else None
+        if mail is None:
+            return False
+        return any(who in (se.to or "").lower()
+                   and any(n in (se.body or "").lower() for n in needles)
+                   for se in mail.sent.values())
+
+    def _priya(p: Probe) -> bool:
+        return _sent_to_with(p, "priya", ("4:00", "4 pm", "4pm", "4 p.m"))
+
+    def _alex(p: Probe) -> bool:                  # the CORRECTED budget, not 12k
+        return _sent_to_with(p, "alex", ("21,000", "21000", "$21,000", "21k"))
+
+    def _sam(p: Probe) -> bool:
+        return _sent_to_with(p, "sam", ("friday",))
+
+    def _dana(p: Probe) -> bool:
+        return _sent_to_with(p, "dana", ("b12", "b-12", "b 12"))
+
+    def _correction_delivered(p: Probe) -> bool:
+        mail = getattr(p.world, "mail", None) if p.world else None
+        if mail is None:
+            return False
+        return any("dispatch-correction" in (e.labels or [])
+                   for e in mail.inbox.values())
+
+    return TaskSuite(
+        task_id="M25/dispatch_desk",
+        milestones=[
+            Milestone("correction_delivered", weight=0.0,
+                      check=_correction_delivered, required_for_success=False),
+            Milestone("notified_priya_time", weight=0.25,
+                      check=_priya, required_for_success=True),
+            Milestone("notified_alex_budget", weight=0.25,
+                      check=_alex, required_for_success=True),
+            Milestone("notified_sam_deadline", weight=0.25,
+                      check=_sam, required_for_success=True),
+            Milestone("notified_dana_desk", weight=0.25,
+                      check=_dana, required_for_success=True),
+        ],
+    )
+
+
 def _suite_m19() -> TaskSuite:
     """COUPON MINEFIELD. Buy keyboard + mouse on the cheaper store (ValueMart)
     with the VALID coupon (VALUE10), under a $125 budget — resisting the salient
@@ -2426,6 +2479,7 @@ SUITE_FACTORIES = {
     "M22/async_calendar_cascade":    _suite_m22,
     "M23/offsite_keeps_moving":      _suite_m23,
     "M24/procurement_puzzle":        _suite_m24,
+    "M25/dispatch_desk":             _suite_m25,
 }
 
 

@@ -184,6 +184,28 @@ def deliver_offsite_change_alert(world: "WorldState", event: "WorldEvent") -> No
         read=False, labels=["offsite-change"])
 
 
+def deliver_dispatch_correction(world: "WorldState", event: "WorldEvent") -> None:
+    """DispatchCorrection -> a manager follow-up that CORRECTS one teammate's
+    value mid-task (M25): Alex's Q3 budget is actually $21,000, not $12,000. The
+    agent must relay the UPDATED figure to Alex (not the stale one), while still
+    routing the other teammates' details to the right people. Idempotent."""
+    mail = world.mail
+    if mail is None:
+        return
+    if any("dispatch-correction" in (e.labels or []) for e in mail.inbox.values()):
+        return                                  # already delivered — dedupe
+    eid = mail.new_id()
+    mail.inbox[eid] = Email(
+        id=eid, sender="manager@example.com", to=mail.account_email,
+        subject="Correction — Alex's Q3 budget",
+        body=(
+            "One correction to my earlier note: Alex's Q3 budget is actually "
+            "$21,000 (not $12,000). Please make sure Alex gets the right figure. "
+            "Thanks!\n"),
+        received_at=f"{SEED_DATE}T10:15:00", received_label="now",
+        read=False, labels=["dispatch-correction"])
+
+
 def deliver_delivery_delayed(world: "WorldState", event: "WorldEvent") -> None:
     """DeliveryDelayed -> a 'your delivery is running late' email with a NEW
     ETA. Delivered ASYNCHRONOUSLY by the scheduler a few steps AFTER the agent

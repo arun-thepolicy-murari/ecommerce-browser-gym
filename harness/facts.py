@@ -383,6 +383,21 @@ def _facts_m22(world: dict, url: str) -> dict[str, Any]:
     return facts
 
 
+def _facts_m25(world: dict, url: str) -> dict[str, Any]:
+    """M25 dispatch desk — the async correction's delivery (env truth) + Alex's
+    corrected budget recorded ONLY when the agent READS the correction (coverage
+    = did it notice the update). 'used' (each person gets their right detail) is
+    the verifier's job."""
+    facts: dict[str, Any] = {}
+    for e in ((world.get("mail") or {}).get("inbox") or {}).values():
+        if "dispatch-correction" not in (e.get("labels") or []):
+            continue
+        facts["mail.correction_delivered"] = True
+        if e.get("read"):
+            facts["mail.alex_corrected_budget"] = "21000"
+    return facts
+
+
 def _facts_m24(world: dict, url: str) -> dict[str, Any]:
     """M24 procurement puzzle — the cross-tab value the agent must reason about:
     the consolidated ValueMart basket total (the price the optimum hinges on).
@@ -507,6 +522,7 @@ FACT_EXTRACTORS: dict[str, Callable[[dict, str], dict]] = {
     "M22/async_calendar_cascade":    _facts_m22,
     "M23/offsite_keeps_moving":      _facts_m23,
     "M24/procurement_puzzle":        _facts_m24,
+    "M25/dispatch_desk":             _facts_m25,
 }
 
 

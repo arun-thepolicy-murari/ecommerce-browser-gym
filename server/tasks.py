@@ -370,6 +370,15 @@ BRIEFS = {
         "three items (not a fancier or cheaper lookalike) at the lowest real total."
     ),
 
+    "M25": (
+        "My manager sent a round of team updates — one email with a separate "
+        "detail meant for each teammate. Read it, then make sure EACH person gets "
+        "THEIR detail: message each teammate directly (their email address is in "
+        "the manager's note). Send each person only the detail that's for them. "
+        "Also keep an eye on my inbox — if the manager sends a correction, make "
+        "sure the affected person gets the UPDATED figure, not the original one."
+    ),
+
     "M19": (
         "I need a Mechanical Keyboard AND a Wireless Mouse — buy the pair from "
         "whichever store is cheaper, use a ValueMart coupon to bring the price "
@@ -1052,6 +1061,8 @@ START_PATHS = {
     "M23/offsite_keeps_moving": "/mail",
     # M24 (procurement puzzle) starts on the Shop (compare both stores).
     "M24/procurement_puzzle": "/",
+    # M25 (dispatch desk) starts in the inbox (read the manager's update).
+    "M25/dispatch_desk": "/mail",
 }
 
 
@@ -1417,6 +1428,42 @@ def task_m22_async_calendar_cascade(seed: int) -> "WorldState":
     return world
 
 
+def task_m25_dispatch_desk(seed: int) -> "WorldState":
+    """DISPATCH DESK (recipient-routing at scale + stale-value — scales the M22
+    'replied to the trigger sender' failure to FOUR independent channels, plus a
+    moving target). The manager's email carries a different detail for each of
+    four teammates (with their addresses inline). The agent must message EACH
+    person directly with THEIR detail — not reply to the manager (the trap), not
+    cross-wire one person's detail to another. Mid-task (step 4) a correction
+    arrives: Alex's budget is actually $21,000 (not $12,000), so Alex must get
+    the UPDATED figure. Decoupled, POSITIVE per-person milestones — the missed
+    one pinpoints the mis-route / stale value / dropped person."""
+    from server.apps.mail.state import Email, SEED_DATE
+    from server.apps import scheduler as _sched
+    world = _cross_app_world(seed, "M25/dispatch_desk", "hard")
+    m = world.mail
+    eid = m.new_id()
+    m.inbox[eid] = Email(
+        id=eid, sender="manager@example.com", to=m.account_email,
+        subject="Team updates — please pass along",
+        body=(
+            "Quick round of updates — please pass each person their piece "
+            "DIRECTLY (don't just reply to me):\n"
+            "- Priya (priya@example.com): the all-hands moved to 4:00 PM.\n"
+            "- Alex (alex@example.com): the Q3 budget is approved at $12,000.\n"
+            "- Sam (sam@example.com): the report deadline is Friday.\n"
+            "- Dana (dana@example.com): her new desk is B12.\n"
+            "Thanks!\n"),
+        received_at=f"{SEED_DATE}T09:00:00", received_label="9:00 AM",
+        read=False, labels=["dispatch"])
+    # Async correction: Alex's budget changes mid-task ($12,000 -> $21,000).
+    _sched.schedule_absolute(
+        world.schedule, id="se_m25_correction", fire_at_step=4,
+        emit_type="DispatchCorrection", source_app="mail", target_app="mail",
+        payload={"person": "alex", "field": "budget", "new": "21000"})
+    return world
+
+
 def task_m24_procurement_puzzle(seed: int) -> "WorldState":
     """PROCUREMENT PUZZLE (pure-decision global-optimum trap — the cleanest
     breaker: no async, no calendar/text-field friction, no step/budget escape
@@ -1675,6 +1722,7 @@ REQUIRED_FACTS = {
     "M22/async_calendar_cascade":    ["mail.new_meeting_time"],
     "M23/offsite_keeps_moving":      ["mail.dana_address", "calendar.final_slot"],
     "M24/procurement_puzzle":        ["market.basket_total"],
+    "M25/dispatch_desk":             ["mail.alex_corrected_budget"],
 }
 
 
@@ -1720,6 +1768,7 @@ TASKS = {
     "M22/async_calendar_cascade":    task_m22_async_calendar_cascade,
     "M23/offsite_keeps_moving":      task_m23_offsite_keeps_moving,
     "M24/procurement_puzzle":        task_m24_procurement_puzzle,
+    "M25/dispatch_desk":             task_m25_dispatch_desk,
 }
 
 

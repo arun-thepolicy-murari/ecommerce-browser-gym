@@ -34,3 +34,6 @@ def register_default_subscribers() -> None:
     # Async offsite attendee swap (M23): Sam out, Dana in (after 3 PM only) —
     # tightens the time constraint + changes the notify target to a fresh address.
     bus.subscribe("OffsiteChangeAlert", inbound.deliver_offsite_change_alert)
+    # Async dispatch correction (M25): one teammate's value is corrected mid-task,
+    # so the agent must relay the updated figure to the right person.
+    bus.subscribe("DispatchCorrection", inbound.deliver_dispatch_correction)

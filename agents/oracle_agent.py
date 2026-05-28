@@ -1072,6 +1072,46 @@ async def solve_m23_offsite_keeps_moving(ctx: BrowserCtx) -> None:
         await ctx.click("button[data-test-id='btn-send']")
 
 
+async def solve_m25_dispatch_desk(ctx: BrowserCtx) -> None:
+    """Gold trajectory: read the manager's dispatch, WAIT for the correction,
+    then send each teammate THEIR detail in a fresh email (Alex gets the
+    corrected $21,000), never replying to the manager."""
+    world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
+    dispatch = next((e for e in world["mail"]["inbox"].values()
+                     if "dispatch" in (e.get("labels") or [])), None)
+    if dispatch is not None:
+        await ctx.goto(f"/mail/message/{dispatch['id']}",
+                       reasoning="Read the manager's team updates.")
+    # Wait for the mid-task correction to Alex's budget.
+    for _ in range(8):
+        world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
+        corr = next((e for e in world["mail"]["inbox"].values()
+                     if "dispatch-correction" in (e.get("labels") or [])), None)
+        if corr is not None:
+            await ctx.goto(f"/mail/message/{corr['id']}",
+                           reasoning="Correction arrived — Alex's budget changed.")
+            break
+        await ctx.wait(reasoning="Watch for a correction before sending.")
+    # Send each person their own detail directly (Alex = corrected $21,000).
+    msgs = [
+        ("priya@example.com", "Re: all-hands",
+         "Hi Priya, the all-hands has moved to 4:00 PM. Thanks!"),
+        ("alex@example.com", "Re: Q3 budget",
+         "Hi Alex, your Q3 budget is approved at $21,000. Thanks!"),
+        ("sam@example.com", "Re: report",
+         "Hi Sam, the report deadline is Friday. Thanks!"),
+        ("dana@example.com", "Re: desk",
+         "Hi Dana, your new desk is B12. Thanks!"),
+    ]
+    for to, subj, body in msgs:
+        await ctx.goto("/mail/compose",
+                       reasoning=f"Message {to} their detail directly.")
+        await ctx.fill("input[data-test-id='input-compose-to']", to)
+        await ctx.fill("input[data-test-id='input-compose-subject']", subj)
+        await ctx.fill("textarea[data-test-id='input-compose-body']", body)
+        await ctx.click("button[data-test-id='btn-send']")
+
+
 async def solve_m24_procurement_puzzle(ctx: BrowserCtx) -> None:
     """Gold trajectory for the global-optimum trap. The greedy per-item-cheapest
     choice splits stores and costs $327.46 (over the $320 budget); the optimum
@@ -1219,4 +1259,5 @@ SOLVERS = {
     "M22/async_calendar_cascade":    solve_m22_async_calendar_cascade,
     "M23/offsite_keeps_moving":      solve_m23_offsite_keeps_moving,
     "M24/procurement_puzzle":        solve_m24_procurement_puzzle,
+    "M25/dispatch_desk":             solve_m25_dispatch_desk,
 }
