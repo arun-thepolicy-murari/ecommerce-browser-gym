@@ -1036,9 +1036,13 @@ async def solve_m23_offsite_keeps_moving(ctx: BrowserCtx) -> None:
     import re
     # 1) Burger Barn order: Veggie Burger (Priya is vegetarian) + a Cheeseburger,
     #    well under the $40 cap.
-    await ctx.goto("/food/restaurant/r_burger", reasoning="Order the team lunch.")
-    await ctx.click("button[data-test-id='btn-add-d_veggie']")
-    await ctx.click("button[data-test-id='btn-add-d_classic']")
+    await ctx.goto("/food/restaurant/r_burger",
+                   reasoning="Order the team lunch: 4 Veggie Burgers feeds all "
+                             "four (incl. vegetarian Priya) for $38 + $1.50 "
+                             "delivery = $39.50, under Alex's $40 cap. (4 Classic "
+                             "would be $41.50 and bust it.)")
+    for _ in range(4):
+        await ctx.click("button[data-test-id='btn-add-d_veggie']")
     await ctx.goto("/food/cart")
     await ctx.click("button[data-test-id='btn-place-food-order']")
     # 2) Watch for the async attendee swap (Sam -> Dana, after 3 PM only).

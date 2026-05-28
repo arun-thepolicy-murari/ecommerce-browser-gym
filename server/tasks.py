@@ -415,15 +415,10 @@ BRIEFS = {
     ),
 
     "M28": (
-        "I'm putting together an office gift bundle. Buy ALL FOUR of these exact "
-        "items and place the orders: a Wireless Mouse, a Mechanical Keyboard, a "
-        "24-inch Monitor, and a Bluetooth Headphone Premium.\n"
-        "Start at ShopGym. Important: ShopGym is OUT OF STOCK on some of these — "
-        "if an item won't add to your cart at ShopGym, buy that SAME item from "
-        "ValueMart instead. By the end I need all four actually ordered, and they "
-        "must be those EXACT items (not a gaming or ergonomic mouse, not a "
-        "wireless or membrane keyboard, not a 27-inch monitor, not a different "
-        "headphone model). Double-check each item really made it into an order."
+        "I'm putting together an office gift bundle. Buy these four exact items "
+        "and place the order(s): a Wireless Mouse, a Mechanical Keyboard, a "
+        "24-inch Monitor, and a Bluetooth Headphone Premium. You can use ShopGym "
+        "and/or ValueMart. Make sure all four end up ordered."
     ),
 
     "M19": (
@@ -1575,6 +1570,12 @@ def task_m23_offsite_keeps_moving(seed: int) -> "WorldState":
     from server.apps.calendar.state import CalendarEvent, TOMORROW
     from server.apps import scheduler as _sched
     world = _cross_app_world(seed, "M23/offsite_keeps_moving", "hard")
+    # Cheaper delivery so the team CAN be fed under Alex's $40 cap: 4 Veggie
+    # Burgers ($9.50 each = $38.00) + $1.50 delivery = $39.50 < $40. The reasoning
+    # step is "use the cheaper veggie for everyone" — 4 Classic Cheeseburgers
+    # ($10 each = $40 + $1.50 = $41.50) busts the cap. So the budget is real but
+    # satisfiable while still feeding all four people.
+    world.food.restaurants["r_burger"].delivery_fee = 1.50
     m = world.mail
     rsvps = [
         ("priya@example.com", "Re: team lunch?",
