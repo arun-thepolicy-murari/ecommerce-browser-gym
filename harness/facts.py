@@ -435,6 +435,23 @@ def _facts_m26(world: dict, url: str) -> dict[str, Any]:
     return facts
 
 
+def _facts_m27(world: dict, url: str) -> dict[str, Any]:
+    """M27 budget desk — the async budget-raise delivery (env truth) + the NEW
+    budget recorded ONLY when the agent READS the raise email (coverage = did it
+    notice the cap change). 'used' (approve exactly the right set under the new
+    budget) is the verifier's job."""
+    import re
+    facts: dict[str, Any] = {}
+    for e in ((world.get("mail") or {}).get("inbox") or {}).values():
+        if "budget-raise" not in (e.get("labels") or []):
+            continue
+        facts["mail.budget_raise_delivered"] = True
+        if e.get("read"):
+            m = re.search(r"\$(\d+)", e.get("body", "") or "")
+            facts["mail.refund_budget"] = m.group(1) if m else "300"
+    return facts
+
+
 def _facts_m23(world: dict, url: str) -> dict[str, Any]:
     """M23 offsite-keeps-moving — the async attendee-swap delivery (env truth) +
     Dana's address recorded ONLY when the agent READS the swap email (coverage =
@@ -543,6 +560,7 @@ FACT_EXTRACTORS: dict[str, Callable[[dict, str], dict]] = {
     "M24/procurement_puzzle":        _facts_m24,
     "M25/dispatch_desk":             _facts_m25,
     "M26/calendar_purge_async":      _facts_m26,
+    "M27/budget_desk":               _facts_m27,
 }
 
 

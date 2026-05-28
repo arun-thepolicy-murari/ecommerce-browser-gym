@@ -234,6 +234,32 @@ def deliver_project_cancellation(world: "WorldState", event: "WorldEvent") -> No
         read=False, labels=["project-cancelled"])
 
 
+def deliver_budget_raise(world: "WorldState", event: "WorldEvent") -> None:
+    """RefundBudgetRaised -> a manager email that RAISES today's refund budget
+    mid-task (M27): $200 -> $300. This moves the running-total cutoff later, so
+    several requests the agent already deferred now fit and must be approved. The
+    agent must notice the update, use the NEW number, and re-evaluate — the async
+    self-invalidation that linear agents skip. Idempotent on the label."""
+    mail = world.mail
+    if mail is None:
+        return
+    if any("budget-raise" in (e.labels or []) for e in mail.inbox.values()):
+        return                                  # already delivered — dedupe
+    p = event.payload
+    newb = int(p.get("new_budget", 300))
+    eid = mail.new_id()
+    mail.inbox[eid] = Email(
+        id=eid, sender="manager@example.com", to=mail.account_email,
+        subject="Update — today's refund budget raised",
+        body=(
+            f"Good news — finance just bumped today's refund budget UP to ${newb}.\n\n"
+            f"Please use ${newb} as the cap from now on (it REPLACES the earlier "
+            f"$200). Keep approving eligible requests oldest-first until the "
+            f"approved total would exceed ${newb}, then defer the rest as before.\n"),
+        received_at=f"{SEED_DATE}T10:30:00", received_label="now",
+        read=False, labels=["budget-raise"])
+
+
 def deliver_delivery_delayed(world: "WorldState", event: "WorldEvent") -> None:
     """DeliveryDelayed -> a 'your delivery is running late' email with a NEW
     ETA. Delivered ASYNCHRONOUSLY by the scheduler a few steps AFTER the agent

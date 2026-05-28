@@ -2356,6 +2356,146 @@ def _suite_m26() -> TaskSuite:
     )
 
 
+def _suite_m27() -> TaskSuite:
+    """BUDGET DESK — sequential running-total reconciliation. Approve eligible
+    refund requests oldest-first while the cumulative approved amount stays within
+    today's budget; the first that would exceed it (and all after) are deferred.
+    A mid-task email RAISES the budget $200 -> $300, moving the cutoff. The FINAL
+    correct approved set is computed against the (post-raise) budget; success =
+    the agent's approved set EQUALS it.
+
+    Two design points keep this clean:
+      * Set-EQUALITY on the approved set is stickiness-safe: approvals only grow,
+        so `approved == correct` is False at the seed and can only be True for the
+        exact set (any over-approve is a strict superset forever -> never equal;
+        any under-approve never reaches it). Catches both failure directions.
+      * Grading is GATED on the budget-raise having delivered. Without this gate
+        the milestone would sticky-fire the instant the agent matched the *$200*
+        prefix {REF-01,02,03} mid-task and then be immune to ignoring the raise.
+        The raise delivers at step 8 as an env event (agent-independent), so an
+        agent that never reads it still has its work graded against the $300
+        budget -> under-approving the $200 prefix correctly fails."""
+    from server.apps import bus as _bus
+    import re as _re
+    from datetime import date as _date
+
+    TODAY = _date(2026, 5, 21)
+    WINDOW_DAYS = 30
+    BASE_BUDGET = 200.0
+    RAISED_BUDGET = 300.0
+    EPS = 1e-9
+
+    def _requests(p: Probe) -> dict[str, dict]:
+        """order_id -> {amount, date, shipped, final_sale} from the SEEDED inbox."""
+        iw = p.initial_world
+        mail = getattr(iw, "mail", None) if iw else None
+        out: dict[str, dict] = {}
+        if mail is None:
+            return out
+        for e in mail.inbox.values():
+            oid = e.order_id or ""
+            if not oid.startswith("REF-"):
+                continue
+            body = (e.body or "").lower()
+            m = _re.search(r"order date:\s*(\d{4})-(\d{2})-(\d{2})", body)
+            od = _date(int(m.group(1)), int(m.group(2)), int(m.group(3))) if m else None
+            out[oid] = {
+                "amount": float(e.amount_total or 0.0),
+                "date": od,
+                "shipped": "status: shipped" in body,
+                "final_sale": "final sale: yes" in body,
+            }
+        return out
+
+    def _eligible_sorted(p: Probe) -> list[tuple[str, dict]]:
+        out = []
+        for oid, d in _requests(p).items():
+            if d["date"] is None or d["shipped"] or d["final_sale"]:
+                continue
+            age = (TODAY - d["date"]).days
+            if 0 <= age <= WINDOW_DAYS:
+                out.append((oid, d))
+        out.sort(key=lambda kv: (kv[1]["date"], kv[0]))
+        return out
+
+    def _raise_delivered(p: Probe) -> bool:
+        return p.world is not None and _bus.has_delivered(p.world, "RefundBudgetRaised")
+
+    def _budget(p: Probe) -> float:
+        return RAISED_BUDGET if _raise_delivered(p) else BASE_BUDGET
+
+    def _approved_correct(p: Probe) -> set[str]:
+        """Maximal oldest-first prefix of eligible requests whose cumulative
+        amount stays within the (current) budget. Prefix rule: STOP at the first
+        that would exceed -> it and all after are deferred."""
+        budget = _budget(p)
+        cum = 0.0
+        out: set[str] = set()
+        for oid, d in _eligible_sorted(p):
+            if cum + d["amount"] <= budget + EPS:
+                cum += d["amount"]
+                out.add(oid)
+            else:
+                break
+        return out
+
+    def _ineligible(p: Probe) -> set[str]:
+        elig = {oid for oid, _ in _eligible_sorted(p)}
+        return set(_requests(p)) - elig
+
+    def _approved_by_agent(p: Probe) -> set[str]:
+        """Orders the agent approved: a sent reply names the order id AND says
+        'approv' (approved/approve). Mirrors the M11/M13 reply-matching idiom."""
+        mail = getattr(p.world, "mail", None) if p.world else None
+        if mail is None:
+            return set()
+        out: set[str] = set()
+        for oid in _requests(p):
+            for se in mail.sent.values():
+                hay = (se.subject or "") + " " + (se.body or "")
+                if oid in hay and "approv" in (se.body or "").lower():
+                    out.add(oid)
+                    break
+        return out
+
+    def _approved_all_correct(p: Probe) -> bool:
+        # Gated on the raise so the pre-raise $200 prefix can't prematurely fire.
+        if not _raise_delivered(p):
+            return False
+        c = _approved_correct(p)
+        return bool(c) and c.issubset(_approved_by_agent(p))
+
+    def _approved_exactly_correct(p: Probe) -> bool:
+        if not _raise_delivered(p):
+            return False
+        c = _approved_correct(p)
+        return bool(c) and _approved_by_agent(p) == c
+
+    def _approved_an_ineligible(p: Probe) -> bool:
+        return bool(_approved_by_agent(p) & _ineligible(p))
+
+    def _over_budget_approved(p: Probe) -> bool:
+        reqs = _requests(p)
+        tot = sum(reqs[o]["amount"] for o in _approved_by_agent(p) if o in reqs)
+        return tot > _budget(p) + EPS
+
+    return TaskSuite(
+        task_id="M27/budget_desk",
+        milestones=[
+            Milestone("budget_raise_delivered", weight=0.0,
+                      check=_raise_delivered, required_for_success=False),
+            Milestone("approved_all_correct", weight=0.4,
+                      check=_approved_all_correct, required_for_success=True),
+            Milestone("approved_exactly_correct", weight=0.6,
+                      check=_approved_exactly_correct, required_for_success=True),
+            Milestone("approved_an_ineligible", weight=0.0,
+                      check=_approved_an_ineligible, required_for_success=False),
+            Milestone("over_budget_approved", weight=0.0,
+                      check=_over_budget_approved, required_for_success=False),
+        ],
+    )
+
+
 def _suite_m19() -> TaskSuite:
     """COUPON MINEFIELD. Buy keyboard + mouse on the cheaper store (ValueMart)
     with the VALID coupon (VALUE10), under a $125 budget — resisting the salient
@@ -2568,6 +2708,7 @@ SUITE_FACTORIES = {
     "M24/procurement_puzzle":        _suite_m24,
     "M25/dispatch_desk":             _suite_m25,
     "M26/calendar_purge_async":      _suite_m26,
+    "M27/budget_desk":               _suite_m27,
 }
 
 

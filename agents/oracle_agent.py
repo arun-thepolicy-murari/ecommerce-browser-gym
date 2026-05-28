@@ -1159,6 +1159,74 @@ async def solve_m26_calendar_purge(ctx: BrowserCtx) -> None:
         await ctx.click("button[data-test-id='btn-delete-event']")
 
 
+async def solve_m27_budget_desk(ctx: BrowserCtx) -> None:
+    """Gold trajectory for the running-total refund desk. WAIT for the async
+    budget raise (uses the NEW $300 cap), filter eligible (unshipped + within
+    30 days + not final-sale), sort oldest-first, walk the running total and
+    approve the prefix that fits ($300 -> {REF-01..06}), defer the rest. Never
+    approves the URGENT shipped trap or the VIP-but-beyond-cutoff request."""
+    import re
+    from datetime import date
+    today = date(2026, 5, 21)
+    # 1) Watch for the async budget raise; adopt the new cap if it arrives.
+    budget = 200.0
+    for _ in range(12):
+        world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
+        raise_em = next((e for e in world["mail"]["inbox"].values()
+                         if "budget-raise" in (e.get("labels") or [])), None)
+        if raise_em is not None:
+            await ctx.goto(f"/mail/message/{raise_em['id']}",
+                           reasoning="Budget update arrived — use the new cap.")
+            mm = re.search(r"\$(\d+)", raise_em.get("body", "") or "")
+            if mm:
+                budget = float(mm.group(1))
+            break
+        await ctx.wait(reasoning="Wait for any budget update before finalizing.")
+    # 2) Parse every refund request; determine eligibility.
+    world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
+    reqs = []
+    for e in world["mail"]["inbox"].values():
+        oid = e.get("order_id") or ""
+        if not oid.startswith("REF-"):
+            continue
+        body = (e.get("body") or "").lower()
+        m = re.search(r"order date:\s*(\d{4})-(\d{2})-(\d{2})", body)
+        if not m:
+            continue
+        od = date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+        shipped = "status: shipped" in body
+        final_sale = "final sale: yes" in body
+        eligible = (not shipped and not final_sale and 0 <= (today - od).days <= 30)
+        reqs.append({"oid": oid, "sender": e.get("sender"), "date": od,
+                     "amt": float(e.get("amount_total") or 0.0), "elig": eligible})
+    # 3) Running-total prefix over eligible, oldest-first.
+    elig = sorted([r for r in reqs if r["elig"]], key=lambda r: (r["date"], r["oid"]))
+    cum, approve, defer, stop = 0.0, [], [], False
+    for r in elig:
+        if not stop and cum + r["amt"] <= budget + 1e-9:
+            cum += r["amt"]
+            approve.append(r)
+        else:
+            stop = True
+            defer.append(r)
+    # 4) Reply to each eligible customer (approved set is what's graded).
+    async def _reply(r, verdict, line):
+        await ctx.goto("/mail/compose", reasoning=f"{verdict} {r['oid']}.")
+        await ctx.fill("input[data-test-id='input-compose-to']", r["sender"])
+        await ctx.fill("input[data-test-id='input-compose-subject']",
+                       f"Re: Refund request — {r['oid']}")
+        await ctx.fill("textarea[data-test-id='input-compose-body']", line)
+        await ctx.click("button[data-test-id='btn-send']")
+    for r in approve:
+        await _reply(r, "Approve",
+                     f"Approved — your refund of ${r['amt']:.2f} for order "
+                     f"{r['oid']} has been processed.")
+    for r in defer:
+        await _reply(r, "Defer",
+                     f"Deferred to tomorrow — order {r['oid']} will be handled "
+                     f"in tomorrow's batch.")
+
+
 async def solve_m19_coupon_minefield(ctx: BrowserCtx) -> None:
     """Read the coupon emails, buy keyboard+mouse on ValueMart (the cheaper
     store), try the salient 50% code (rejected — expired), fall back to the
@@ -1290,4 +1358,5 @@ SOLVERS = {
     "M24/procurement_puzzle":        solve_m24_procurement_puzzle,
     "M25/dispatch_desk":             solve_m25_dispatch_desk,
     "M26/calendar_purge_async":      solve_m26_calendar_purge,
+    "M27/budget_desk":               solve_m27_budget_desk,
 }

@@ -389,6 +389,26 @@ BRIEFS = {
         "and nothing removed that was supposed to stay."
     ),
 
+    "M27": (
+        "You're working my refund desk. My inbox has a batch of refund-request "
+        "emails (order ids look like REF-01). Process them by this policy:\n"
+        "1) A request is ELIGIBLE only if the order is unshipped, was placed "
+        "within the last 30 days (today is May 21, 2026), and is NOT a final-sale "
+        "item. Ignore anything that fails any of these — no matter how urgent it "
+        "sounds.\n"
+        "2) Go through the eligible requests OLDEST ORDER FIRST. Keep a running "
+        "total of the refund amounts you approve. Today's refund budget is $200: "
+        "approve each eligible request (reply to the customer saying 'Approved') "
+        "as long as your running approved total stays within $200. The first "
+        "eligible request that would push your total OVER $200 — and every "
+        "eligible request after it — gets a 'Deferred to tomorrow' reply instead.\n"
+        "3) Heads up: I may email you an updated budget while you work. If I do, "
+        "use the NEW number and re-check whether anything you deferred now fits.\n"
+        "In every reply, mention the order id (e.g. REF-01) and say clearly "
+        "'Approved' or 'Deferred to tomorrow'. Get the set of APPROVED orders "
+        "exactly right."
+    ),
+
     "M19": (
         "I need a Mechanical Keyboard AND a Wireless Mouse — buy the pair from "
         "whichever store is cheaper, use a ValueMart coupon to bring the price "
@@ -1076,6 +1096,9 @@ START_PATHS = {
     # M26 (calendar purge) starts on the agenda — must open Mail for the async
     # cancellation, then come back to delete exactly the right meetings.
     "M26/calendar_purge_async": "/calendar",
+    # M27 (budget desk) starts in the inbox — process the refund queue under a
+    # running-total budget that gets raised async mid-task.
+    "M27/budget_desk": "/mail",
 }
 
 
@@ -1615,6 +1638,88 @@ def task_m26_calendar_purge(seed: int) -> "WorldState":
     return world
 
 
+def task_m27_budget_desk(seed: int) -> "WorldState":
+    """BUDGET DESK — sequential constrained reconciliation (the running-total
+    breaker). Removes the 'independent per-item filter' escape hatch that let
+    Haiku ace M13/M24/M25/M26: here the approve/defer decision depends on a
+    CUMULATIVE total the agent must carry across ~13 emails over a long horizon,
+    and that total is NEVER shown on screen. Stacks five orthogonal stressors:
+      RUNNING TOTAL : approve eligible requests oldest-first while the cumulative
+                      approved amount stays <= the budget; the first that would
+                      exceed it (and all after) are deferred (a PREFIX rule, not
+                      independent filtering).
+      CONJUNCTION   : eligible = unshipped AND within 30 days AND not final-sale
+                      (3-field, with shipped / expired / final-sale decoys).
+      SALIENCE TRAP : an URGENT $150 SHIPPED request (ineligible) + a $200 VIP
+                      request that is eligible but BEYOND the cutoff (must defer).
+                      A salience-driven agent approves the loud ones (wrong).
+      ASYNC FLIP    : a manager email at step 8 RAISES the budget $200 -> $300,
+                      moving the cutoff later, so 3 previously-deferred requests
+                      now fit and must be approved (self-invalidating plan).
+      LONG TAIL     : ~13 requests -> 50+ steps -> premature-completion pressure.
+    Amounts are pinned so the cutoff is deterministic:
+      eligible oldest-first: 45, 60, 55, 50, 30, 40, 35, (VIP 200), 25
+      $200 budget -> approve {REF-01,02,03} (cum 160; +50 -> 210 > 200, stop)
+      $300 budget -> approve {REF-01,02,03,04,05,06} (cum 280; +35 -> 315 > 300)
+    So the FINAL correct approved set is {REF-01..06}. Greedy/no-budget approves
+    too many; ignoring the raise approves too few; yielding to URGENT/VIP approves
+    the wrong ones. Graded by set-equality on the approved set (stickiness-safe;
+    grading gated on the raise so the pre-raise $200 prefix can't prematurely
+    score success). Env-clean: the oracle computes the exact set deterministically."""
+    from server.apps.mail.state import Email, SEED_DATE
+    from server.apps import scheduler as _sched
+    world = _cross_app_world(seed, "M27/budget_desk", "hard")
+    m = world.mail
+    # (id, order_date, amount, shipped, final_sale, note)
+    reqs = [
+        ("REF-01", "2026-04-25", 45.0, False, False, ""),
+        ("REF-02", "2026-04-28", 60.0, False, False, ""),
+        ("REF-03", "2026-05-02", 55.0, False, False, ""),
+        ("REF-04", "2026-05-05", 50.0, False, False, ""),
+        ("REF-05", "2026-05-09", 30.0, False, False, ""),
+        ("REF-06", "2026-05-14", 40.0, False, False, ""),
+        ("REF-07", "2026-05-17", 35.0, False, False, ""),
+        ("REF-08", "2026-05-19", 25.0, False, False, ""),
+        ("REF-09", "2026-05-10", 70.0, True,  False, ""),   # SHIPPED -> ineligible
+        ("REF-10", "2026-04-05", 40.0, False, False, ""),   # EXPIRED (>30d) -> inelig
+        ("REF-11", "2026-05-08", 90.0, False, True,  ""),   # FINAL SALE -> ineligible
+        ("REF-12", "2026-05-16", 150.0, True, False,        # SHIPPED + URGENT trap
+         "URGENT!!! The customer is furious and threatening a chargeback — "
+         "please refund this one immediately."),
+        ("REF-13", "2026-05-18", 200.0, False, False,       # eligible but BEYOND cutoff
+         "Note: this is one of our highest-value VIP customers, please prioritize."),
+    ]
+    # Scramble the received order so inbox position != order-date order — the
+    # agent must sort by the 'Order date' in each body, not by list position.
+    order = [0, 8, 2, 10, 4, 11, 6, 12, 1, 9, 3, 7, 5]
+    clock = 8
+    for idx in order:
+        oid, od, amt, shipped, final_sale, note = reqs[idx]
+        status = "shipped" if shipped else "unshipped"
+        clock += 1
+        body = (
+            f"Hi, I'd like a refund for my order {oid}.\n\n"
+            f"Order date: {od}\n"
+            f"Amount: ${amt:.2f}\n"
+            f"Status: {status}\n"
+            + ("Final sale: yes\n" if final_sale else "")
+            + (f"\n{note}\n" if note else "")
+            + "\nThanks!\n")
+        eid = m.new_id()
+        m.inbox[eid] = Email(
+            id=eid, sender=f"{oid.lower().replace('-', '')}@customers.com",
+            to=m.account_email, subject=f"Refund request — {oid}",
+            body=body, received_at=f"{SEED_DATE}T09:{clock:02d}:00",
+            received_label="today", read=False, labels=["refund-request"],
+            order_id=oid, amount_total=amt)
+    # Async budget raise lands mid-task (step 8): $200 -> $300, moving the cutoff.
+    _sched.schedule_absolute(
+        world.schedule, id="se_m27_raise", fire_at_step=8,
+        emit_type="RefundBudgetRaised", source_app="mail", target_app="mail",
+        payload={"new_budget": 300})
+    return world
+
+
 def task_m19_coupon_minefield(seed: int) -> "WorldState":
     """COUPON MINEFIELD (decoy + validity reasoning + conjunctive budget). Buy a
     keyboard + mouse from the cheaper store, under a $125 budget, using a VALID
@@ -1779,6 +1884,7 @@ REQUIRED_FACTS = {
     "M24/procurement_puzzle":        ["market.basket_total"],
     "M25/dispatch_desk":             ["mail.alex_corrected_budget"],
     "M26/calendar_purge_async":      ["mail.cancelled_project"],
+    "M27/budget_desk":               ["mail.refund_budget"],
 }
 
 
@@ -1826,6 +1932,7 @@ TASKS = {
     "M24/procurement_puzzle":        task_m24_procurement_puzzle,
     "M25/dispatch_desk":             task_m25_dispatch_desk,
     "M26/calendar_purge_async":      task_m26_calendar_purge,
+    "M27/budget_desk":               task_m27_budget_desk,
 }
 
 

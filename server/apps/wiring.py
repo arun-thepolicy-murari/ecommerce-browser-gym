@@ -40,3 +40,6 @@ def register_default_subscribers() -> None:
     # Async project cancellation (M26): clear all of a project's meetings EXCEPT
     # one repurposed exception — a destructive exact-set purge with a kept event.
     bus.subscribe("ProjectCancelled", inbound.deliver_project_cancellation)
+    # Async refund-budget raise (M27): $200 -> $300 mid-task moves the running-
+    # total cutoff, forcing re-evaluation of already-deferred requests.
+    bus.subscribe("RefundBudgetRaised", inbound.deliver_budget_raise)

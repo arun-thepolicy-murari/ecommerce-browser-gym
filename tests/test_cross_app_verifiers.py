@@ -1088,6 +1088,114 @@ def test_m26_read_email_fires_read_level():
 
 
 # --------------------------------------------------------------------------- #
+# M27 (budget desk): sequential running-total reconciliation + async raise
+# --------------------------------------------------------------------------- #
+
+def _m27_reply(sim: _CrossSim, oid: str, verdict: str) -> None:
+    """Send a customer reply that the verifier matches: order id in subject/body
+    + 'approved' or 'deferred' keyword. verdict in {'approve','defer'}."""
+    body = (f"Order {oid} approved — refund processed." if verdict == "approve"
+            else f"Order {oid} deferred to tomorrow.")
+    mail_mut.send_email(sim.world.mail,
+                        to=f"{oid.lower().replace('-', '')}@customers.com",
+                        subject=f"Re: Refund request — {oid}", body=body)
+
+
+# The FINAL correct approved set (post-raise, $300 budget): the oldest-first
+# prefix 45+60+55+50+30+40 = 280 <= 300; next (REF-07, $35) -> 315 > 300, stop.
+_M27_APPROVE = ["REF-01", "REF-02", "REF-03", "REF-04", "REF-05", "REF-06"]
+
+
+def test_m27_raise_fires_at_step_8():
+    sim = _CrossSim("M27/budget_desk")
+    assert not bus.has_delivered(sim.world, "RefundBudgetRaised")
+    scheduler.advance_and_flush(sim.world, 8)
+    assert bus.has_delivered(sim.world, "RefundBudgetRaised")
+    raises = [e for e in sim.world.mail.inbox.values()
+              if "budget-raise" in (e.labels or [])]
+    assert len(raises) == 1 and "300" in raises[0].body
+
+
+def test_m27_full_path_scores_one():
+    """Approve exactly the $300 prefix {REF-01..06} -> success, 1.0."""
+    sim = _CrossSim("M27/budget_desk")
+    scheduler.advance_and_flush(sim.world, 8)        # raise lands -> budget 300
+    for oid in _M27_APPROVE:
+        _m27_reply(sim, oid, "approve")
+    res = sim._probe()
+    assert res["success"] is True
+    assert res["score"] == 1.0
+
+
+def test_m27_ignored_raise_underapproves_fails():
+    """Stuck on the original $200 cap -> approved only {01,02,03} -> incomplete."""
+    sim = _CrossSim("M27/budget_desk")
+    scheduler.advance_and_flush(sim.world, 8)
+    for oid in ["REF-01", "REF-02", "REF-03"]:
+        _m27_reply(sim, oid, "approve")
+    res = sim._probe()
+    assert res["success"] is False
+    assert "approved_all_correct" in res["missed_milestones"]
+    assert "approved_exactly_correct" in res["missed_milestones"]
+
+
+def test_m27_greedy_overapprove_busts_budget_fails():
+    """Approved every eligible request, ignoring the running budget -> over the
+    cap. Completeness fires, exact does not; the over-budget diagnostic fires."""
+    sim = _CrossSim("M27/budget_desk")
+    scheduler.advance_and_flush(sim.world, 8)
+    for oid in ["REF-01", "REF-02", "REF-03", "REF-04", "REF-05", "REF-06",
+                "REF-07", "REF-08", "REF-13"]:
+        _m27_reply(sim, oid, "approve")
+    res = sim._probe()
+    assert res["success"] is False
+    assert "approved_exactly_correct" in res["missed_milestones"]
+    assert "approved_all_correct" not in res["missed_milestones"]   # completeness ok
+    fired = {m["name"] for m in res["all_milestones"] if m["fired_at_step"] >= 0}
+    assert "over_budget_approved" in fired
+    assert res["score"] == 0.4
+
+
+def test_m27_approve_urgent_ineligible_fails():
+    """Yielded to the URGENT shipped request (REF-12, ineligible) on top of the
+    correct set -> over-approve; the ineligible diagnostic fires."""
+    sim = _CrossSim("M27/budget_desk")
+    scheduler.advance_and_flush(sim.world, 8)
+    for oid in _M27_APPROVE + ["REF-12"]:
+        _m27_reply(sim, oid, "approve")
+    res = sim._probe()
+    assert res["success"] is False
+    assert "approved_exactly_correct" in res["missed_milestones"]
+    fired = {m["name"] for m in res["all_milestones"] if m["fired_at_step"] >= 0}
+    assert "approved_an_ineligible" in fired
+
+
+def test_m27_approve_vip_over_cutoff_fails():
+    """Approved the salient $200 VIP (REF-13), which is eligible but beyond the
+    cutoff -> over-approve, exact fails."""
+    sim = _CrossSim("M27/budget_desk")
+    scheduler.advance_and_flush(sim.world, 8)
+    for oid in _M27_APPROVE + ["REF-13"]:
+        _m27_reply(sim, oid, "approve")
+    res = sim._probe()
+    assert res["success"] is False
+    assert "approved_exactly_correct" in res["missed_milestones"]
+
+
+def test_m27_no_credit_before_raise():
+    """Stickiness guard: matching the pre-raise $200 prefix {01,02,03} must NOT
+    score success before the budget raise delivers (grading is gated on it)."""
+    sim = _CrossSim("M27/budget_desk")
+    scheduler.advance_and_flush(sim.world, 5)        # before the step-8 raise
+    for oid in ["REF-01", "REF-02", "REF-03"]:
+        _m27_reply(sim, oid, "approve")
+    res = sim._probe()
+    assert res["success"] is False
+    assert "approved_all_correct" in res["missed_milestones"]
+    assert "approved_exactly_correct" in res["missed_milestones"]
+
+
+# --------------------------------------------------------------------------- #
 # Backward-compat: probe.state still aliases the shop GymState
 # --------------------------------------------------------------------------- #
 
