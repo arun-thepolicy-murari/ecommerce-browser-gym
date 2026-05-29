@@ -208,6 +208,84 @@ def deliver_dispatch_correction(world: "WorldState", event: "WorldEvent") -> Non
         read=False, labels=["dispatch-correction"])
 
 
+def deliver_sync_reschedule_1(world: "WorldState", event: "WorldEvent") -> None:
+    """SyncReschedule1 -> the FIRST async availability change (M29). Two attendees'
+    constraints shift so the unique valid slot moves from 2 PM to 4 PM, forcing the
+    agent to MOVE the already-booked event and re-notify. De-primed sender
+    (scheduling@, framed as an automated availability feed — not a person to reply
+    to). Idempotent on the label."""
+    mail = world.mail
+    if mail is None:
+        return
+    if any("sync-wave1" in (e.labels or []) for e in mail.inbox.values()):
+        return
+    eid = mail.new_id()
+    mail.inbox[eid] = Email(
+        id=eid, sender="scheduling@example.com", to=mail.account_email,
+        subject="Availability update — design sync",
+        body=(
+            "Automated availability update (no reply needed):\n\n"
+            "- Alex: my afternoon just freed up — please ignore my earlier "
+            "'nothing after 3 PM' limit, I'm flexible now.\n"
+            "- Priya: something came up, so I can now ONLY join after 4 PM.\n\n"
+            "Please re-pick the time so it still works for everyone and let the "
+            "team know.\n"),
+        received_at=f"{SEED_DATE}T12:05:00", received_label="now",
+        read=False, labels=["sync-wave1"])
+
+
+def deliver_sync_reschedule_2(world: "WorldState", event: "WorldEvent") -> None:
+    """SyncReschedule2 -> the SECOND async change (M29). Sam's window widens and a
+    NEW attendee (Dana, after 5 PM only) joins, so the unique valid slot moves
+    again from 4 PM to 5 PM — a second forced MOVE + re-notify, now to FOUR people
+    including a fresh address. Idempotent on the label."""
+    mail = world.mail
+    if mail is None:
+        return
+    if any("sync-wave2" in (e.labels or []) for e in mail.inbox.values()):
+        return
+    eid = mail.new_id()
+    mail.inbox[eid] = Email(
+        id=eid, sender="scheduling@example.com", to=mail.account_email,
+        subject="One more change — design sync",
+        body=(
+            "Automated availability update (no reply needed):\n\n"
+            "- Sam: good news, I can now stay as late as 6 PM.\n"
+            "- Dana (dana@example.com) is joining the sync too — Dana can ONLY "
+            "make it after 5 PM.\n\n"
+            "Please update the time so everyone (including Dana) can attend, and "
+            "confirm the final time with the whole group.\n"),
+        received_at=f"{SEED_DATE}T12:20:00", received_label="now",
+        read=False, labels=["sync-wave2"])
+
+
+def deliver_refund_correction(world: "WorldState", event: "WorldEvent") -> None:
+    """RefundCorrection -> a billing follow-up that CHANGES the refund amount mid-
+    task (M30): the restocking fee was reduced, so the refund is now higher than
+    the first approval email said. The agent must relay the LATEST figure (not the
+    first one it read, and not the salient order total). Idempotent on the label."""
+    mail = world.mail
+    if mail is None:
+        return
+    if any("refund-correction" in (e.labels or []) for e in mail.inbox.values()):
+        return
+    p = event.payload
+    amt = p.get("new_amount", 0.0)
+    eid = mail.new_id()
+    mail.inbox[eid] = Email(
+        id=eid, sender="billing@shopgym.com", to=mail.account_email,
+        subject=f"Correction to your refund for {p.get('order_id', '')}",
+        body=(
+            f"Hi Alice,\n\nGood news — we reviewed your return for order "
+            f"{p.get('order_id', '')} and reduced the restocking fee.\n\n"
+            f"Your refund has been UPDATED to ${amt:.2f} (this replaces the "
+            f"amount in our earlier email). Please use this corrected figure.\n\n"
+            f"- ShopGym Billing"),
+        received_at=f"{SEED_DATE}T15:10:00", received_label="now",
+        read=False, labels=["refund-correction"],
+        order_id=p.get("order_id"), amount_total=amt)
+
+
 def deliver_project_cancellation(world: "WorldState", event: "WorldEvent") -> None:
     """ProjectCancelled -> a manager email that cancels a project and instructs
     the agent to delete ALL its meetings EXCEPT one repurposed exception that must

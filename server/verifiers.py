@@ -2572,6 +2572,163 @@ def _suite_m28() -> TaskSuite:
     )
 
 
+def _suite_m29() -> TaskSuite:
+    """THE VANISHING SLOT — repeated revisit + derive-against-default. Two async
+    availability changes walk the unique valid slot 2 PM -> 4 PM -> 5 PM. Only the
+    FINAL state is graded, so an agent that stops after an earlier wave fails:
+      slot   -> meeting_at_5pm (a user event starting at EXACTLY 17:00 — the only
+                slot valid under the latest constraints; rejects the 7 PM default,
+                the 2 PM/4 PM earlier answers, and any other time)
+      clean  -> exactly_one_meeting (a single user event — catches stale leftovers
+                from creating-instead-of-moving across waves)
+      notify -> told_{priya,alex,sam,dana}_5pm (each attendee, incl. the late-added
+                Dana, has a sent email carrying the final 5 PM time)
+    Weight-0 gates expose the async deliveries + telling someone a stale time."""
+    from server.apps import bus as _bus
+    _FIVE = ("5:00", "5 pm", "5pm", "17:00", "5 o'clock")
+    _STALE = ("2:00", "2 pm", "2pm", "14:00", "4:00", "4 pm", "4pm", "16:00")
+
+    def _user_events(p: Probe) -> list:
+        cal = getattr(p.world, "calendar", None) if p.world else None
+        if cal is None:
+            return []
+        return [e for e in cal.events.values() if e.source == "user"]
+
+    def _meeting_at_5pm(p: Probe) -> bool:
+        return any((e.start or "") == "17:00" for e in _user_events(p))
+
+    def _exactly_one_meeting(p: Probe) -> bool:
+        return len(_user_events(p)) == 1
+
+    def _sent_to_with(p: Probe, who: str, tokens) -> bool:
+        mail = getattr(p.world, "mail", None) if p.world else None
+        if mail is None:
+            return False
+        return any(who in (se.to or "").lower()
+                   and any(t in (se.body or "").lower() for t in tokens)
+                   for se in mail.sent.values())
+
+    def _told_priya(p: Probe) -> bool: return _sent_to_with(p, "priya", _FIVE)
+    def _told_alex(p: Probe) -> bool:  return _sent_to_with(p, "alex", _FIVE)
+    def _told_sam(p: Probe) -> bool:   return _sent_to_with(p, "sam", _FIVE)
+    def _told_dana(p: Probe) -> bool:  return _sent_to_with(p, "dana", _FIVE)
+
+    def _wave1(p: Probe) -> bool:
+        return p.world is not None and _bus.has_delivered(p.world, "SyncReschedule1")
+
+    def _wave2(p: Probe) -> bool:
+        return p.world is not None and _bus.has_delivered(p.world, "SyncReschedule2")
+
+    def _told_stale(p: Probe) -> bool:
+        # Diagnostic: did the agent confirm an OLD time (2 or 4 PM) to anyone?
+        return any(_sent_to_with(p, who, _STALE)
+                   for who in ("priya", "alex", "sam", "dana"))
+
+    return TaskSuite(
+        task_id="M29/vanishing_slot",
+        milestones=[
+            Milestone("wave1_delivered", weight=0.0, check=_wave1,
+                      required_for_success=False),
+            Milestone("wave2_delivered", weight=0.0, check=_wave2,
+                      required_for_success=False),
+            Milestone("meeting_at_5pm", weight=0.3, check=_meeting_at_5pm,
+                      required_for_success=True),
+            Milestone("exactly_one_meeting", weight=0.1, check=_exactly_one_meeting,
+                      required_for_success=True),
+            Milestone("told_priya_5pm", weight=0.15, check=_told_priya,
+                      required_for_success=True),
+            Milestone("told_alex_5pm", weight=0.15, check=_told_alex,
+                      required_for_success=True),
+            Milestone("told_sam_5pm", weight=0.15, check=_told_sam,
+                      required_for_success=True),
+            Milestone("told_dana_5pm", weight=0.15, check=_told_dana,
+                      required_for_success=True),
+            Milestone("told_someone_stale_time", weight=0.0, check=_told_stale,
+                      required_for_success=False),
+        ],
+    )
+
+
+def _suite_m30() -> TaskSuite:
+    """THE MOVING REFUND — suppress-the-salient + use-the-LATEST + dual-cascade.
+    Return a $240 item; the refund is price minus a restocking fee ($204 first),
+    then a correction UPDATES it to $228. The agent must relay the LATEST figure
+    ($228) in BOTH a reply AND a calendar reminder title. Three numbers compete:
+    240 (salient total), 204 (first/stale), 228 (correct).
+      filed  -> return_filed (the headphones return exists)
+      reply  -> replied_228 (a sent reply body contains 228)
+      remind -> reminder_228 (a user calendar event title contains 228)
+    Weight-0 gates pin the failure direction: used_salient_240 / used_stale_204 /
+    cascade_split (one output 228, the other not)."""
+    from server.apps import bus as _bus
+
+    def _returns(p: Probe) -> list:
+        st = p.state
+        if st is None or not hasattr(st, "returns"):
+            return []
+        return [r for r in st.returns.values()
+                if r.order_id == "ORD-9001"
+                and "ln_headphones" in (r.item_ids or [])]
+
+    def _return_filed(p: Probe) -> bool:
+        return len(_returns(p)) >= 1
+
+    def _sent_bodies(p: Probe) -> list:
+        mail = getattr(p.world, "mail", None) if p.world else None
+        return [se.body or "" for se in mail.sent.values()] if mail else []
+
+    def _event_titles(p: Probe) -> list:
+        cal = getattr(p.world, "calendar", None) if p.world else None
+        if cal is None:
+            return []
+        return [e.title or "" for e in cal.events.values() if e.source == "user"]
+
+    def _reply_has(p: Probe, needle: str) -> bool:
+        return any(needle in b for b in _sent_bodies(p))
+
+    def _title_has(p: Probe, needle: str) -> bool:
+        return any(needle in t for t in _event_titles(p))
+
+    def _replied_228(p: Probe) -> bool:
+        return _reply_has(p, "228")
+
+    def _reminder_228(p: Probe) -> bool:
+        return _title_has(p, "228")
+
+    def _used_240(p: Probe) -> bool:
+        return _reply_has(p, "240") or _title_has(p, "240")
+
+    def _used_204(p: Probe) -> bool:
+        return _reply_has(p, "204") or _title_has(p, "204")
+
+    def _cascade_split(p: Probe) -> bool:
+        # Exactly one of the two outputs carries the correct figure.
+        return _replied_228(p) != _reminder_228(p)
+
+    def _correction_delivered(p: Probe) -> bool:
+        return p.world is not None and _bus.has_delivered(p.world, "RefundCorrection")
+
+    return TaskSuite(
+        task_id="M30/moving_refund",
+        milestones=[
+            Milestone("correction_delivered", weight=0.0,
+                      check=_correction_delivered, required_for_success=False),
+            Milestone("return_filed", weight=0.2, check=_return_filed,
+                      required_for_success=True),
+            Milestone("replied_228", weight=0.4, check=_replied_228,
+                      required_for_success=True),
+            Milestone("reminder_228", weight=0.4, check=_reminder_228,
+                      required_for_success=True),
+            Milestone("used_salient_total_240", weight=0.0, check=_used_240,
+                      required_for_success=False),
+            Milestone("used_stale_204", weight=0.0, check=_used_204,
+                      required_for_success=False),
+            Milestone("cascade_split", weight=0.0, check=_cascade_split,
+                      required_for_success=False),
+        ],
+    )
+
+
 def _suite_m19() -> TaskSuite:
     """COUPON MINEFIELD. Buy keyboard + mouse on the cheaper store (ValueMart)
     with the VALID coupon (VALUE10), under a $125 budget — resisting the salient
@@ -2786,6 +2943,8 @@ SUITE_FACTORIES = {
     "M26/calendar_purge_async":      _suite_m26,
     "M27/budget_desk":               _suite_m27,
     "M28/stockout_scramble":         _suite_m28,
+    "M29/vanishing_slot":            _suite_m29,
+    "M30/moving_refund":             _suite_m30,
 }
 
 

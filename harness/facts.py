@@ -469,6 +469,40 @@ def _facts_m28(world: dict, url: str) -> dict[str, Any]:
     return facts
 
 
+def _facts_m29(world: dict, url: str) -> dict[str, Any]:
+    """M29 vanishing slot — which async availability waves have landed (env truth)
+    + the LATEST required slot recorded only once both waves are read. 'used'
+    (book 5 PM + tell all four) is the verifier's job."""
+    facts: dict[str, Any] = {}
+    inbox = ((world.get("mail") or {}).get("inbox") or {}).values()
+    w1 = any("sync-wave1" in (e.get("labels") or []) for e in inbox)
+    w2 = any("sync-wave2" in (e.get("labels") or []) for e in inbox)
+    if w1:
+        facts["mail.wave1_delivered"] = True
+    if w2:
+        facts["mail.wave2_delivered"] = True
+        # once the second change is in, the unique valid slot is 5 PM
+        if any("sync-wave2" in (e.get("labels") or []) and e.get("read")
+               for e in inbox):
+            facts["mail.latest_slot"] = "17:00"
+    return facts
+
+
+def _facts_m30(world: dict, url: str) -> dict[str, Any]:
+    """M30 moving refund — the async correction's delivery (env truth) + the
+    CORRECTED refund amount recorded only when the agent READS the correction
+    (coverage = did it notice the figure changed). 'used' (relay $228 in both the
+    reply and the reminder) is the verifier's job."""
+    facts: dict[str, Any] = {}
+    for e in ((world.get("mail") or {}).get("inbox") or {}).values():
+        if "refund-correction" not in (e.get("labels") or []):
+            continue
+        facts["mail.correction_delivered"] = True
+        if e.get("read"):
+            facts["mail.corrected_refund"] = "228.00"
+    return facts
+
+
 def _facts_m23(world: dict, url: str) -> dict[str, Any]:
     """M23 offsite-keeps-moving — the async attendee-swap delivery (env truth) +
     Dana's address recorded ONLY when the agent READS the swap email (coverage =
@@ -579,6 +613,8 @@ FACT_EXTRACTORS: dict[str, Callable[[dict, str], dict]] = {
     "M26/calendar_purge_async":      _facts_m26,
     "M27/budget_desk":               _facts_m27,
     "M28/stockout_scramble":         _facts_m28,
+    "M29/vanishing_slot":            _facts_m29,
+    "M30/moving_refund":             _facts_m30,
 }
 
 

@@ -43,3 +43,10 @@ def register_default_subscribers() -> None:
     # Async refund-budget raise (M27): $200 -> $300 mid-task moves the running-
     # total cutoff, forcing re-evaluation of already-deferred requests.
     bus.subscribe("RefundBudgetRaised", inbound.deliver_budget_raise)
+    # Async availability changes (M29): two waves move the unique valid meeting
+    # slot, forcing the agent to re-derive + move the booking + re-notify.
+    bus.subscribe("SyncReschedule1", inbound.deliver_sync_reschedule_1)
+    bus.subscribe("SyncReschedule2", inbound.deliver_sync_reschedule_2)
+    # Async refund correction (M30): the refund amount changes mid-task, so the
+    # agent must relay the LATEST figure across both outputs.
+    bus.subscribe("RefundCorrection", inbound.deliver_refund_correction)

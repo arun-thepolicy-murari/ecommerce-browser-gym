@@ -1258,6 +1258,115 @@ async def solve_m28_stockout_scramble(ctx: BrowserCtx) -> None:
     await ctx.click("button[data-test-id='market-btn-place-order']")
 
 
+async def solve_m29_vanishing_slot(ctx: BrowserCtx) -> None:
+    """Gold trajectory for the vanishing slot. Book the unique valid slot (2 PM),
+    then WAIT for each async availability change and MOVE the same event to the
+    new unique slot (4 PM, then 5 PM), and finally confirm 5 PM to all four
+    attendees (including the late-added Dana). Uses edit-in-place so there's
+    exactly ONE event left (no stale duplicates)."""
+    def _user_event_id():
+        world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
+        for eid, ev in world["calendar"]["events"].items():
+            if ev.get("source") == "user":
+                return eid
+        return None
+
+    # 1) Book the initial unique slot: 2 PM (14:00-15:00).
+    await ctx.goto("/calendar/new", reasoning="Book the sync in the only slot "
+                   "that fits everyone so far: 2 PM.")
+    await ctx.fill("input[data-test-id='input-event-title']", "Design Sync")
+    await ctx.fill("input[data-test-id='input-event-start']", "14:00")
+    await ctx.fill("input[data-test-id='input-event-end']", "15:00")
+    await ctx.click("button[data-test-id='btn-save-event']")
+
+    # 2) Wait for the first availability change, then MOVE to 4 PM (16:00-17:00).
+    for _ in range(8):
+        world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
+        if any("sync-wave1" in (e.get("labels") or [])
+               for e in world["mail"]["inbox"].values()):
+            break
+        await ctx.wait(reasoning="Watch the inbox for availability changes.")
+    eid = _user_event_id()
+    await ctx.goto(f"/calendar/edit/{eid}",
+                   reasoning="Priya now needs after 4 PM — move the sync to 4 PM.")
+    await ctx.fill("input[data-test-id='input-edit-start']", "16:00")
+    await ctx.fill("input[data-test-id='input-edit-end']", "17:00")
+    await ctx.click("button[data-test-id='btn-update-event']")
+
+    # 3) Wait for the second change, then MOVE to 5 PM (17:00-18:00).
+    for _ in range(8):
+        world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
+        if any("sync-wave2" in (e.get("labels") or [])
+               for e in world["mail"]["inbox"].values()):
+            break
+        await ctx.wait(reasoning="Keep watching for further changes.")
+    eid = _user_event_id()
+    await ctx.goto(f"/calendar/edit/{eid}",
+                   reasoning="Dana can only do after 5 PM — move the sync to 5 PM.")
+    await ctx.fill("input[data-test-id='input-edit-start']", "17:00")
+    await ctx.fill("input[data-test-id='input-edit-end']", "18:00")
+    await ctx.click("button[data-test-id='btn-update-event']")
+
+    # 4) Confirm the final 5 PM time to ALL attendees, including Dana.
+    for who in ("priya@example.com", "alex@example.com", "sam@example.com",
+                "dana@example.com"):
+        await ctx.goto("/mail/compose", reasoning=f"Confirm 5 PM to {who}.")
+        await ctx.fill("input[data-test-id='input-compose-to']", who)
+        await ctx.fill("input[data-test-id='input-compose-subject']",
+                       "Design sync — confirmed time")
+        await ctx.fill("textarea[data-test-id='input-compose-body']",
+                       "Confirmed: our design sync is at 5:00 PM today. See you then!")
+        await ctx.click("button[data-test-id='btn-send']")
+
+
+async def solve_m30_moving_refund(ctx: BrowserCtx) -> None:
+    """Gold trajectory for the moving refund. File the headphones return, WAIT for
+    the refund-approval email ($204), then WAIT for the correction ($228), and
+    relay the LATEST figure ($228) in BOTH the reply AND a calendar reminder
+    titled 'Refund expected: $228.00'. Never uses the salient $240 total or the
+    stale $204."""
+    import re
+    # 1) File the return for the Studio Headphones (ORD-9001).
+    await ctx.goto("/account/returns/new?order_id=ORD-9001",
+                   reasoning="Open the return form for the headphones.")
+    await ctx.check("input[data-test-id='cb-return-item-ln_headphones']")
+    await ctx.select("select[data-test-id='select-return-reason']", "defective")
+    await ctx.click("input[data-test-id='radio-refund-original']")
+    await ctx.click("button[data-test-id='btn-submit-return']")
+    # 2) Wait for the FIRST refund email ($204), then the CORRECTION ($228).
+    correction = None
+    for _ in range(10):
+        world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
+        correction = next((e for e in world["mail"]["inbox"].values()
+                           if "refund-correction" in (e.get("labels") or [])), None)
+        if correction is not None:
+            break
+        await ctx.wait(reasoning="Wait for the refund — and any correction — to land.")
+    # The corrected (latest) amount is the one to use.
+    amt = None
+    if correction is not None:
+        amt = correction.get("amount_total")
+        if amt is None:
+            mm = re.search(r"\$(\d+(?:\.\d2)?)", correction.get("body", "") or "")
+            amt = float(mm.group(1)) if mm else None
+    amt = amt if amt is not None else 228.00
+    # 3) Reply to the correction email confirming the EXACT latest amount.
+    await ctx.goto(f"/mail/message/{correction['id']}",
+                   reasoning="Open the correction email with the latest refund.")
+    await ctx.click("a[data-test-id='btn-reply']")
+    await ctx.fill("textarea[data-test-id='input-compose-body']",
+                   f"Confirmed — the corrected refund of ${amt:.2f} is right. Thanks!")
+    await ctx.click("button[data-test-id='btn-send']")
+    # 4) Add the calendar reminder titled with that exact amount (free slot 7 AM).
+    await ctx.goto("/calendar/new",
+                   reasoning="Add the refund reminder with the corrected amount.")
+    await ctx.fill("input[data-test-id='input-event-title']",
+                   f"Refund expected: ${amt:.2f}")
+    await ctx.fill("input[data-test-id='input-event-start']", "07:00")
+    await ctx.fill("input[data-test-id='input-event-end']", "07:30")
+    await ctx.click("button[data-test-id='btn-save-event']")
+
+
 async def solve_m19_coupon_minefield(ctx: BrowserCtx) -> None:
     """Read the coupon emails, buy keyboard+mouse on ValueMart (the cheaper
     store), try the salient 50% code (rejected — expired), fall back to the
@@ -1391,4 +1500,6 @@ SOLVERS = {
     "M26/calendar_purge_async":      solve_m26_calendar_purge,
     "M27/budget_desk":               solve_m27_budget_desk,
     "M28/stockout_scramble":         solve_m28_stockout_scramble,
+    "M29/vanishing_slot":            solve_m29_vanishing_slot,
+    "M30/moving_refund":             solve_m30_moving_refund,
 }

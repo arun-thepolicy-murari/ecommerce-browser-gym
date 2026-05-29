@@ -1309,6 +1309,168 @@ def test_calendar_rejects_overlapping_booking():
 
 
 # --------------------------------------------------------------------------- #
+# M29 (vanishing slot): two async waves move the unique slot 2PM->4PM->5PM
+# --------------------------------------------------------------------------- #
+
+def _m29_book(sim: _CrossSim, start: str, end: str) -> None:
+    cal_mut.create_event(sim.world.calendar, title="Design Sync",
+                         day="2026-05-22", start=start, end=end)
+
+
+def _m29_notify(sim: _CrossSim, who: str, time_str: str = "5:00 PM") -> None:
+    mail_mut.send_email(sim.world.mail, to=who, subject="Design sync — confirmed",
+                        body=f"Confirmed: our design sync is at {time_str} today.")
+
+
+def test_m29_both_waves_fire():
+    sim = _CrossSim("M29/vanishing_slot")
+    scheduler.advance_and_flush(sim.world, 5)
+    assert bus.has_delivered(sim.world, "SyncReschedule1")
+    scheduler.advance_and_flush(sim.world, 9)
+    assert bus.has_delivered(sim.world, "SyncReschedule2")
+    labels = [l for e in sim.world.mail.inbox.values() for l in (e.labels or [])]
+    assert "sync-wave1" in labels and "sync-wave2" in labels
+
+
+def test_m29_full_path_scores_one():
+    """Final state only: sync at 5 PM (one event) + all four told 5 PM."""
+    sim = _CrossSim("M29/vanishing_slot")
+    scheduler.advance_and_flush(sim.world, 9)
+    _m29_book(sim, "17:00", "18:00")
+    for who in ("priya@example.com", "alex@example.com", "sam@example.com",
+                "dana@example.com"):
+        _m29_notify(sim, who)
+    res = sim._probe()
+    assert res["success"] is True
+    assert res["score"] == 1.0
+
+
+def test_m29_stopped_at_2pm_fails():
+    """Declared done after wave 0 — booked 2 PM, told everyone 2 PM."""
+    sim = _CrossSim("M29/vanishing_slot")
+    scheduler.advance_and_flush(sim.world, 9)
+    _m29_book(sim, "14:00", "15:00")
+    for who in ("priya@example.com", "alex@example.com", "sam@example.com"):
+        _m29_notify(sim, who, "2:00 PM")
+    res = sim._probe()
+    assert res["success"] is False
+    assert "meeting_at_5pm" in res["missed_milestones"]
+
+
+def test_m29_stale_duplicate_fails():
+    """Created a new 5 PM event without removing the old 2 PM one -> two events."""
+    sim = _CrossSim("M29/vanishing_slot")
+    scheduler.advance_and_flush(sim.world, 9)
+    _m29_book(sim, "14:00", "15:00")
+    _m29_book(sim, "17:00", "18:00")
+    for who in ("priya@example.com", "alex@example.com", "sam@example.com",
+                "dana@example.com"):
+        _m29_notify(sim, who)
+    res = sim._probe()
+    assert res["success"] is False
+    assert "exactly_one_meeting" in res["missed_milestones"]
+
+
+def test_m29_forgot_dana_fails():
+    """Booked 5 PM and re-told the original three, but never added Dana."""
+    sim = _CrossSim("M29/vanishing_slot")
+    scheduler.advance_and_flush(sim.world, 9)
+    _m29_book(sim, "17:00", "18:00")
+    for who in ("priya@example.com", "alex@example.com", "sam@example.com"):
+        _m29_notify(sim, who)
+    res = sim._probe()
+    assert res["success"] is False
+    assert "told_dana_5pm" in res["missed_milestones"]
+
+
+# --------------------------------------------------------------------------- #
+# M30 (moving refund): suppress salient $240, use LATEST $228 in BOTH outputs
+# --------------------------------------------------------------------------- #
+
+def _m30_file_return(sim: _CrossSim) -> None:
+    sim.shop.current_user_id = "u_alice"
+    r = mutations.initiate_return(sim.shop, "ORD-9001", ["ln_headphones"],
+                                  "defective", "original_payment")
+    assert r.get("ok"), r
+    shop_hooks.emit_return_filed(sim.world, return_id=r["return_id"],
+                                 order_id="ORD-9001")
+
+
+def _m30_reply(sim: _CrossSim, body: str) -> None:
+    mail_mut.send_email(sim.world.mail, to="billing@shopgym.com",
+                        subject="Re: refund", body=body)
+
+
+def _m30_reminder(sim: _CrossSim, title: str) -> None:
+    cal_mut.create_event(sim.world.calendar, title=title, day="2026-05-22",
+                         start="07:00", end="07:30")
+
+
+def test_m30_refund_then_correction_fire():
+    sim = _CrossSim("M30/moving_refund")
+    _m30_file_return(sim)
+    scheduler.advance_and_flush(sim.world, 12)
+    assert bus.has_delivered(sim.world, "RefundApproved")
+    assert bus.has_delivered(sim.world, "RefundCorrection")
+    corr = [e for e in sim.world.mail.inbox.values()
+            if "refund-correction" in (e.labels or [])]
+    assert len(corr) == 1 and "228" in corr[0].body
+
+
+def test_m30_full_path_scores_one():
+    sim = _CrossSim("M30/moving_refund")
+    _m30_file_return(sim)
+    scheduler.advance_and_flush(sim.world, 12)
+    _m30_reply(sim, "Confirmed — the corrected refund of $228.00 is right.")
+    _m30_reminder(sim, "Refund expected: $228.00")
+    res = sim._probe()
+    assert res["success"] is True
+    assert res["score"] == 1.0
+
+
+def test_m30_stale_204_fails():
+    """Locked in the FIRST refund ($204), never used the correction."""
+    sim = _CrossSim("M30/moving_refund")
+    _m30_file_return(sim)
+    scheduler.advance_and_flush(sim.world, 12)
+    _m30_reply(sim, "Confirmed — the refund of $204.00 is right.")
+    _m30_reminder(sim, "Refund expected: $204.00")
+    res = sim._probe()
+    assert res["success"] is False
+    assert "replied_228" in res["missed_milestones"]
+    assert "reminder_228" in res["missed_milestones"]
+    fired = {m["name"] for m in res["all_milestones"] if m["fired_at_step"] >= 0}
+    assert "used_stale_204" in fired
+
+
+def test_m30_salient_240_fails():
+    """Parroted the salient order total ($240) instead of the refund."""
+    sim = _CrossSim("M30/moving_refund")
+    _m30_file_return(sim)
+    scheduler.advance_and_flush(sim.world, 12)
+    _m30_reply(sim, "Confirmed — your refund of $240.00 is on its way.")
+    _m30_reminder(sim, "Refund expected: $240.00")
+    res = sim._probe()
+    assert res["success"] is False
+    fired = {m["name"] for m in res["all_milestones"] if m["fired_at_step"] >= 0}
+    assert "used_salient_total_240" in fired
+
+
+def test_m30_cascade_split_fails():
+    """Got the reply right ($228) but left the reminder stale ($204)."""
+    sim = _CrossSim("M30/moving_refund")
+    _m30_file_return(sim)
+    scheduler.advance_and_flush(sim.world, 12)
+    _m30_reply(sim, "Confirmed — the corrected refund of $228.00 is right.")
+    _m30_reminder(sim, "Refund expected: $204.00")
+    res = sim._probe()
+    assert res["success"] is False
+    assert "reminder_228" in res["missed_milestones"]
+    fired = {m["name"] for m in res["all_milestones"] if m["fired_at_step"] >= 0}
+    assert "cascade_split" in fired
+
+
+# --------------------------------------------------------------------------- #
 # Backward-compat: probe.state still aliases the shop GymState
 # --------------------------------------------------------------------------- #
 

@@ -414,6 +414,33 @@ BRIEFS = {
         "exactly right."
     ),
 
+    "M29": (
+        "Schedule a 1-hour design sync for this afternoon and confirm it with "
+        "everyone. Steps:\n"
+        "1) My teammates emailed their availability — read my inbox and work out "
+        "a 1-hour slot that fits EVERYONE and doesn't clash with anything already "
+        "on my calendar, then put the sync on my calendar.\n"
+        "2) Email each attendee to confirm the time.\n"
+        "Keep an eye on my inbox the entire time — people's availability may keep "
+        "changing while you work. When you're done, my calendar must show the sync "
+        "at the one time that works for everyone under the LATEST information "
+        "(nothing stale or duplicated left behind), and every attendee must have "
+        "been told that final time."
+    ),
+
+    "M30": (
+        "I want to return the Studio Headphones from order ORD-9001. Steps:\n"
+        "1) File the return for that item.\n"
+        "2) Once my refund is confirmed, reply to the refund email stating the "
+        "EXACT amount I'll be refunded.\n"
+        "3) Add a calendar event titled exactly 'Refund expected: $<amount>' "
+        "using that same exact amount.\n"
+        "Note: the refund is the item price minus any restocking fee — not the "
+        "full order total. And keep an eye on my inbox: if billing sends a "
+        "correction, both the reply and the calendar event must reflect their "
+        "LATEST figure."
+    ),
+
     "M28": (
         "I'm putting together an office gift bundle. Buy these four exact items "
         "and place the order(s): a Wireless Mouse, a Mechanical Keyboard, a "
@@ -1114,6 +1141,10 @@ START_PATHS = {
     # M28 (stockout scramble) starts at ShopGym — hit the out-of-stock items,
     # then recover them at ValueMart.
     "M28/stockout_scramble": "/",
+    # M29 (vanishing slot) starts in the inbox — read availability, then book.
+    "M29/vanishing_slot": "/mail",
+    # M30 (moving refund) starts in the inbox — read policy, then file the return.
+    "M30/moving_refund": "/mail",
 }
 
 
@@ -1769,6 +1800,141 @@ def task_m28_stockout_scramble(seed: int) -> "WorldState":
     return world
 
 
+def task_m29_vanishing_slot(seed: int) -> "WorldState":
+    """THE VANISHING SLOT — repeated-revisit + derive-against-default breaker.
+    The agent books a 1-hour design sync in the UNIQUE free slot that fits all
+    attendees, then TWO async availability changes move that unique slot, forcing
+    it to re-derive + MOVE the booking + re-notify each time. Fixed busy blocks;
+    the constraints change via email (proven email-only async), so the unique
+    valid slot walks 2 PM -> 4 PM -> 5 PM:
+      WAVE 0 (seeded RSVPs): Priya 'after 2 PM', Alex 'nothing after 3 PM',
+        Sam 'after 1 PM, end by 5 PM' -> only 14:00-15:00 fits -> 2 PM.
+      WAVE 1 (async step 5): Alex's limit lifted + Priya 'now only after 4 PM'
+        -> with Sam end<=5 -> only 16:00-17:00 -> 4 PM.
+      WAVE 2 (async step 9): Sam 'can stay till 6 PM' + NEW attendee Dana
+        'only after 5 PM' -> only 17:00-18:00 -> 5 PM.
+    Busy blocks (Lunch 13-14, Review 15-16) never overlap the valid slots, and
+    the new-event form defaults to 19:00 (7 PM) — the salient WRONG default at
+    every booking. The break: agents declare done after wave 0/1 (we watched
+    Sonnet finish() prematurely), leave a stale event behind, or forget to add
+    Dana. The final correct state is the ONLY thing graded (5 PM + all 4 told)."""
+    from server.apps.mail.state import Email, SEED_DATE
+    from server.apps.calendar.state import CalendarEvent, TOMORROW
+    from server.apps import scheduler as _sched
+    world = _cross_app_world(seed, "M29/vanishing_slot", "hard")
+    cal = world.calendar
+    cal.events.clear()
+    for title, st, en in [("Lunch", "13:00", "14:00"), ("Review", "15:00", "16:00")]:
+        eid = cal.new_id()
+        cal.events[eid] = CalendarEvent(
+            id=eid, title=title, day=TOMORROW,
+            day_label="Tomorrow (Fri May 22)", start=st, end=en, source="seed")
+    m = world.mail
+    rsvps = [
+        ("priya@example.com", "Re: design sync",
+         "Sounds good! I can join any time AFTER 2 PM today. — Priya"),
+        ("alex@example.com", "Re: design sync",
+         "I'm in. One thing: I have a hard stop, so please nothing scheduled "
+         "AFTER 3 PM. — Alex"),
+        ("sam@example.com", "Re: design sync",
+         "Works for me — I'm free after 1 PM, but I do need us to END BY 5 PM. "
+         "— Sam"),
+    ]
+    for sender, subj, body in rsvps:
+        eid = m.new_id()
+        m.inbox[eid] = Email(
+            id=eid, sender=sender, to=m.account_email, subject=subj, body=body,
+            received_at=f"{SEED_DATE}T09:00:00", received_label="9:00 AM",
+            read=False, labels=[])
+    # Two async availability changes walk the unique slot 2 PM -> 4 PM -> 5 PM.
+    _sched.schedule_absolute(
+        world.schedule, id="se_m29_w1", fire_at_step=5,
+        emit_type="SyncReschedule1", source_app="calendar", target_app="mail",
+        payload={"wave": 1})
+    _sched.schedule_absolute(
+        world.schedule, id="se_m29_w2", fire_at_step=9,
+        emit_type="SyncReschedule2", source_app="calendar", target_app="mail",
+        payload={"wave": 2})
+    return world
+
+
+# M30 — the refund amount the agent must relay: item $240, minus a 15% restocking
+# fee = $204 (the FIRST refund), then a correction reduces the fee to 5% = $228
+# (the LATEST, correct figure). $240 is the salient WRONG number (the order total).
+_M30_ITEM_PRICE = 240.00
+_M30_REFUND_FIRST = 204.00      # 240 - 15%
+_M30_REFUND_FINAL = 228.00      # 240 - 5% (after the correction)
+
+
+def task_m30_moving_refund(seed: int) -> "WorldState":
+    """THE MOVING REFUND — suppress-the-salient + use-the-LATEST + dual-cascade.
+    Return a delivered item ($240). The refund is the price minus a restocking
+    fee, so the agent must DERIVE $204 (not parrot the salient $240 total). An
+    async refund email confirms $204; then a correction email reduces the fee and
+    UPDATES the refund to $228. The agent must relay the LATEST figure ($228) in
+    BOTH outputs: a reply to the refund email AND a calendar reminder titled
+    'Refund expected: $228'. Three numbers compete — $240 (salient total), $204
+    (first/stale), $228 (correct) — and the answer must land in two places. The
+    break: parrot $240, lock in the first $204 and never revisit, or get one
+    output right and the other stale (the cascade-split)."""
+    from server.apps.mail.state import Email, SEED_DATE
+    from server.apps import scheduler as _sched
+    world = _cross_app_world(seed, "M30/moving_refund", "hard")
+    shop = world.shop
+    alice = shop.users["u_alice"]
+    addr = list(alice.addresses.values())[0]
+    pay = list(alice.payment_methods.values())[0]
+    item = OrderItem(
+        id="ln_headphones", product_id="p_hp_studio",
+        product_name="Studio Headphones", variant_id=None, variant_label="",
+        quantity=1, unit_price=_M30_ITEM_PRICE, gift_wrap=False, gift_message="",
+        ship_to_address_id=addr.id, scheduled_delivery=None)
+    sh = Shipment(
+        id="sh_9001", tracking_number="1Z999AA20000000002", carrier="UPS",
+        item_ids=["ln_headphones"], status="delivered",
+        estimated_delivery=(
+            datetime.now(timezone.utc) - timedelta(days=2)).date().isoformat(),
+        events=[
+            ShipmentEvent("2024-02-01T10:00:00Z", "label_created",
+                          "Distribution Center", "Shipping label created"),
+            ShipmentEvent("2024-02-03T14:20:00Z", "delivered",
+                          "Brooklyn, NY", "Delivered to mailbox"),
+        ])
+    shop.orders["ORD-9001"] = Order(
+        id="ORD-9001", user_id="u_alice", placed_at="2024-02-01T09:30:00Z",
+        items=[item], subtotal=_M30_ITEM_PRICE, discount=0.0,
+        tax=round(_M30_ITEM_PRICE * 0.085, 2), shipping=5.99,
+        total=round(_M30_ITEM_PRICE * 1.085 + 5.99, 2),
+        promo_code=None, payment_id=pay.id, status="delivered", shipments=[sh])
+    # Return-policy email: the 15% restocking fee the agent must apply to derive
+    # the first refund ($204) — NOT the salient $240 total.
+    m = world.mail
+    eid = m.new_id()
+    m.inbox[eid] = Email(
+        id=eid, sender="support@shopgym.com", to=m.account_email,
+        subject="Return policy for order ORD-9001",
+        body=("Hi Alice,\n\nYou're approved to return the Studio Headphones from "
+              "order ORD-9001.\n\nPlease note our returns policy: a 15% restocking "
+              "fee applies, which is deducted from the item price when we issue "
+              "your refund.\n\n- ShopGym Support"),
+        received_at=f"{SEED_DATE}T09:00:00", received_label="9:00 AM",
+        read=False, labels=["support"])
+    # Async, both keyed off the agent's ReturnFiled (so they always arrive AFTER
+    # the agent files, in order): refund-approved (+3) then a correction (+6).
+    _sched.schedule_relative(
+        world.schedule, id="se_m30_refund", after_event_type="ReturnFiled",
+        delay_steps=3, emit_type="RefundApproved", source_app="shop",
+        target_app="mail",
+        payload={"order_id": "ORD-9001", "refund_amount": _M30_REFUND_FIRST,
+                 "refund_method": "original payment"})
+    _sched.schedule_relative(
+        world.schedule, id="se_m30_correction", after_event_type="ReturnFiled",
+        delay_steps=6, emit_type="RefundCorrection", source_app="shop",
+        target_app="mail",
+        payload={"order_id": "ORD-9001", "new_amount": _M30_REFUND_FINAL})
+    return world
+
+
 def task_m19_coupon_minefield(seed: int) -> "WorldState":
     """COUPON MINEFIELD (decoy + validity reasoning + conjunctive budget). Buy a
     keyboard + mouse from the cheaper store, under a $125 budget, using a VALID
@@ -1935,6 +2101,8 @@ REQUIRED_FACTS = {
     "M26/calendar_purge_async":      ["mail.cancelled_project"],
     "M27/budget_desk":               ["mail.refund_budget"],
     "M28/stockout_scramble":         ["shop.oos_bundle_items"],
+    "M29/vanishing_slot":            ["mail.latest_slot"],
+    "M30/moving_refund":             ["mail.corrected_refund"],
 }
 
 
@@ -1984,6 +2152,8 @@ TASKS = {
     "M26/calendar_purge_async":      task_m26_calendar_purge,
     "M27/budget_desk":               task_m27_budget_desk,
     "M28/stockout_scramble":         task_m28_stockout_scramble,
+    "M29/vanishing_slot":            task_m29_vanishing_slot,
+    "M30/moving_refund":             task_m30_moving_refund,
 }
 
 
