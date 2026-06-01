@@ -1367,6 +1367,47 @@ async def solve_m30_moving_refund(ctx: BrowserCtx) -> None:
     await ctx.click("button[data-test-id='btn-save-event']")
 
 
+async def solve_m31_reconciliation_desk(ctx: BrowserCtx) -> None:
+    """Gold trajectory for the refund gauntlet. WAIT for the async policy update
+    (Electronics fee 15% -> 10%), then approve EXACTLY the eligible orders
+    {RR-01..05} with the correct post-fee amounts (electronics at the LATEST 10%),
+    and email the manager the grand total ($373.00). The ineligible decoys
+    (RR-06 shipped, RR-07 expired, RR-08 final-sale) are NOT approved."""
+    # 1) Wait for the electronics-fee update to land (fires at step 5).
+    for _ in range(10):
+        world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
+        if any("policy-update" in (e.get("labels") or [])
+               for e in world["mail"]["inbox"].values()):
+            break
+        await ctx.wait(reasoning="Wait for any policy update before computing refunds.")
+    # 2) Approve eligible orders with FINAL amounts (Electronics 10%, Apparel 5%,
+    #    Other 0%): RR-01 $36, RR-02 $19, RR-03 $108, RR-04 $30, RR-05 $180.
+    approvals = [
+        ("rr01@customers.com", "RR-01", 36.00),
+        ("rr02@customers.com", "RR-02", 19.00),
+        ("rr03@customers.com", "RR-03", 108.00),
+        ("rr04@customers.com", "RR-04", 30.00),
+        ("rr05@customers.com", "RR-05", 180.00),
+    ]
+    for to, oid, amt in approvals:
+        await ctx.goto("/mail/compose",
+                       reasoning=f"Approve {oid} at the correct post-fee amount.")
+        await ctx.fill("input[data-test-id='input-compose-to']", to)
+        await ctx.fill("input[data-test-id='input-compose-subject']",
+                       f"Re: Refund {oid}")
+        await ctx.fill("textarea[data-test-id='input-compose-body']",
+                       f"Approved — your refund for order {oid} is ${amt:.2f}.")
+        await ctx.click("button[data-test-id='btn-send']")
+    # 3) Email the manager the grand total of approved refunds.
+    await ctx.goto("/mail/compose", reasoning="Send the manager the grand total.")
+    await ctx.fill("input[data-test-id='input-compose-to']", "manager@example.com")
+    await ctx.fill("input[data-test-id='input-compose-subject']",
+                   "Refund grand total")
+    await ctx.fill("textarea[data-test-id='input-compose-body']",
+                   "The grand total of the approved refunds is $373.00.")
+    await ctx.click("button[data-test-id='btn-send']")
+
+
 async def solve_m19_coupon_minefield(ctx: BrowserCtx) -> None:
     """Read the coupon emails, buy keyboard+mouse on ValueMart (the cheaper
     store), try the salient 50% code (rejected — expired), fall back to the
@@ -1502,4 +1543,5 @@ SOLVERS = {
     "M28/stockout_scramble":         solve_m28_stockout_scramble,
     "M29/vanishing_slot":            solve_m29_vanishing_slot,
     "M30/moving_refund":             solve_m30_moving_refund,
+    "M31/reconciliation_desk":       solve_m31_reconciliation_desk,
 }

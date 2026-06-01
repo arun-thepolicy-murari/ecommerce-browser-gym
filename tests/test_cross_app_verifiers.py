@@ -1471,6 +1471,119 @@ def test_m30_cascade_split_fails():
 
 
 # --------------------------------------------------------------------------- #
+# M31 (reconciliation desk): eligibility + per-item post-fee amount + grand total
+# --------------------------------------------------------------------------- #
+
+# FINAL correct amounts (Electronics at the post-async 10%, Apparel 5%, Other 0%).
+_M31_CORRECT = [("RR-01", 36.00), ("RR-02", 19.00), ("RR-03", 108.00),
+                ("RR-04", 30.00), ("RR-05", 180.00)]
+_M31_GRAND = 373.00
+
+
+def _m31_approve(sim: _CrossSim, oid: str, amt: float) -> None:
+    mail_mut.send_email(
+        sim.world.mail, to=f"{oid.lower().replace('-', '')}@customers.com",
+        subject=f"Re: Refund {oid}",
+        body=f"Approved — your refund for order {oid} is ${amt:.2f}.")
+
+
+def _m31_manager(sim: _CrossSim, total: float) -> None:
+    mail_mut.send_email(sim.world.mail, to="manager@example.com",
+                        subject="Refund grand total",
+                        body=f"The grand total of approved refunds is ${total:.2f}.")
+
+
+def test_m31_policy_update_fires_at_step_5():
+    sim = _CrossSim("M31/reconciliation_desk")
+    assert not bus.has_delivered(sim.world, "RefundPolicyUpdate")
+    scheduler.advance_and_flush(sim.world, 5)
+    assert bus.has_delivered(sim.world, "RefundPolicyUpdate")
+    upd = [e for e in sim.world.mail.inbox.values()
+           if "policy-update" in (e.labels or [])]
+    assert len(upd) == 1 and "10%" in upd[0].body
+
+
+def test_m31_full_path_scores_one():
+    sim = _CrossSim("M31/reconciliation_desk")
+    scheduler.advance_and_flush(sim.world, 5)
+    for oid, amt in _M31_CORRECT:
+        _m31_approve(sim, oid, amt)
+    _m31_manager(sim, _M31_GRAND)
+    res = sim._probe()
+    assert res["success"] is True
+    assert res["score"] == 1.0
+
+
+def test_m31_stale_15pct_fee_fails():
+    """Used the OLD 15% electronics fee (RR-01 $34, RR-03 $102, RR-05 $170) +
+    the stale grand total $355."""
+    sim = _CrossSim("M31/reconciliation_desk")
+    scheduler.advance_and_flush(sim.world, 5)
+    stale = [("RR-01", 34.00), ("RR-02", 19.00), ("RR-03", 102.00),
+             ("RR-04", 30.00), ("RR-05", 170.00)]
+    for oid, amt in stale:
+        _m31_approve(sim, oid, amt)
+    _m31_manager(sim, 355.00)
+    res = sim._probe()
+    assert res["success"] is False
+    assert "amounts_correct" in res["missed_milestones"]
+    assert "grand_total_correct" in res["missed_milestones"]
+    fired = {m["name"] for m in res["all_milestones"] if m["fired_at_step"] >= 0}
+    assert "used_stale_15pct_fee" in fired
+
+
+def test_m31_sticker_price_fails():
+    """Refunded the salient sticker price (no fee deducted)."""
+    sim = _CrossSim("M31/reconciliation_desk")
+    scheduler.advance_and_flush(sim.world, 5)
+    for oid, amt in [("RR-01", 40.00), ("RR-02", 20.00), ("RR-03", 120.00),
+                     ("RR-04", 30.00), ("RR-05", 200.00)]:
+        _m31_approve(sim, oid, amt)
+    _m31_manager(sim, 410.00)
+    res = sim._probe()
+    assert res["success"] is False
+    assert "amounts_correct" in res["missed_milestones"]
+
+
+def test_m31_approved_an_ineligible_fails():
+    """Approved a final-sale / shipped / expired decoy on top of the eligible set."""
+    sim = _CrossSim("M31/reconciliation_desk")
+    scheduler.advance_and_flush(sim.world, 5)
+    for oid, amt in _M31_CORRECT:
+        _m31_approve(sim, oid, amt)
+    _m31_approve(sim, "RR-06", 47.50)            # shipped, not delivered -> ineligible
+    _m31_manager(sim, _M31_GRAND)
+    res = sim._probe()
+    assert res["success"] is False
+    assert "approved_exact_set" in res["missed_milestones"]
+
+
+def test_m31_missed_an_eligible_fails():
+    """Only approved four of the five eligible orders."""
+    sim = _CrossSim("M31/reconciliation_desk")
+    scheduler.advance_and_flush(sim.world, 5)
+    for oid, amt in _M31_CORRECT[:4]:
+        _m31_approve(sim, oid, amt)
+    _m31_manager(sim, 193.00)
+    res = sim._probe()
+    assert res["success"] is False
+    assert "approved_exact_set" in res["missed_milestones"]
+
+
+def test_m31_wrong_grand_total_fails():
+    """Per-item amounts all correct, but the grand total to the manager is wrong."""
+    sim = _CrossSim("M31/reconciliation_desk")
+    scheduler.advance_and_flush(sim.world, 5)
+    for oid, amt in _M31_CORRECT:
+        _m31_approve(sim, oid, amt)
+    _m31_manager(sim, 999.00)
+    res = sim._probe()
+    assert res["success"] is False
+    assert "grand_total_correct" in res["missed_milestones"]
+    assert "amounts_correct" not in res["missed_milestones"]   # amounts were fine
+
+
+# --------------------------------------------------------------------------- #
 # Backward-compat: probe.state still aliases the shop GymState
 # --------------------------------------------------------------------------- #
 

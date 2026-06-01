@@ -2729,6 +2729,140 @@ def _suite_m30() -> TaskSuite:
     )
 
 
+def _suite_m31() -> TaskSuite:
+    """RECONCILIATION DESK — three-derivation refund gauntlet. Ground truth is
+    parsed from the SEEDED customer emails (initial_world); the agent's work is
+    read from sent replies. The FINAL (post-async) Electronics fee is 10%, so the
+    correct amounts are computed at {Electronics 10%, Apparel 5%, Other 0%}.
+      approved_exact_set  -> the set of orders the agent APPROVED equals the
+                             eligible set {RR-01..05} (delivered AND <=30d AND not
+                             final-sale). Catches both approving an ineligible
+                             decoy and missing an eligible one.
+      amounts_correct     -> EACH eligible reply carries the correct post-fee
+                             amount (electronics at the LATEST 10%, not 15%, not
+                             the sticker).
+      grand_total_correct -> the manager message carries the exact sum ($373.00)
+                             — the cascade: wrong if any per-item amount is stale.
+    Weight-0 gates expose the async delivery + use of the stale 15% fee."""
+    import re as _re
+    from datetime import date as _date
+    from server.apps import bus as _bus
+
+    TODAY = _date(2026, 5, 21)
+    WINDOW_DAYS = 30
+    FINAL_FEE = {"electronics": 0.10, "apparel": 0.05, "other": 0.0}
+    STALE_ELEC_FEE = 0.15
+
+    def _orders(p: Probe) -> dict[str, dict]:
+        iw = p.initial_world
+        mail = getattr(iw, "mail", None) if iw else None
+        out: dict[str, dict] = {}
+        if mail is None:
+            return out
+        for e in mail.inbox.values():
+            oid = e.order_id or ""
+            if not oid.startswith("RR-"):
+                continue
+            body = (e.body or "").lower()
+            cat = ("electronics" if "category: electronics" in body else
+                   "apparel" if "category: apparel" in body else
+                   "other" if "category: other" in body else "")
+            m = _re.search(r"order date:\s*(\d{4})-(\d{2})-(\d{2})", body)
+            od = _date(int(m.group(1)), int(m.group(2)), int(m.group(3))) if m else None
+            out[oid] = {
+                "cat": cat,
+                "price": float(e.amount_total or 0.0),
+                "date": od,
+                "delivered": "status: delivered" in body,
+                "final": "final sale: yes" in body,
+            }
+        return out
+
+    def _eligible(p: Probe) -> set[str]:
+        out: set[str] = set()
+        for oid, d in _orders(p).items():
+            if d["date"] is None or not d["delivered"] or d["final"]:
+                continue
+            if 0 <= (TODAY - d["date"]).days <= WINDOW_DAYS:
+                out.add(oid)
+        return out
+
+    def _correct_amt(d: dict) -> float:
+        return round(d["price"] * (1.0 - FINAL_FEE.get(d["cat"], 0.0)), 2)
+
+    def _sent(p: Probe) -> list:
+        mail = getattr(p.world, "mail", None) if p.world else None
+        return list(mail.sent.values()) if mail else []
+
+    def _approved(p: Probe) -> set[str]:
+        out: set[str] = set()
+        for oid in _orders(p):
+            for se in _sent(p):
+                hay = (se.subject or "") + " " + (se.body or "")
+                if oid in hay and "approv" in (se.body or "").lower():
+                    out.add(oid)
+                    break
+        return out
+
+    def _approved_exact(p: Probe) -> bool:
+        elig = _eligible(p)
+        return bool(elig) and _approved(p) == elig
+
+    def _amounts_correct(p: Probe) -> bool:
+        orders = _orders(p)
+        elig = _eligible(p)
+        if not elig:
+            return False
+        for oid in elig:
+            needle = f"{_correct_amt(orders[oid]):.2f}"
+            ok = any(oid in ((se.subject or "") + " " + (se.body or ""))
+                     and needle in (se.body or "")
+                     for se in _sent(p))
+            if not ok:
+                return False
+        return True
+
+    def _grand_total_correct(p: Probe) -> bool:
+        orders = _orders(p)
+        elig = _eligible(p)
+        if not elig:
+            return False
+        total = round(sum(_correct_amt(orders[o]) for o in elig), 2)
+        needle = f"{total:.2f}"
+        return any("manager" in (se.to or "").lower() and needle in (se.body or "")
+                   for se in _sent(p))
+
+    def _policy_delivered(p: Probe) -> bool:
+        return p.world is not None and _bus.has_delivered(p.world, "RefundPolicyUpdate")
+
+    def _used_stale_fee(p: Probe) -> bool:
+        orders = _orders(p)
+        for oid, d in orders.items():
+            if d["cat"] != "electronics":
+                continue
+            stale = f"{round(d['price'] * (1.0 - STALE_ELEC_FEE), 2):.2f}"
+            if any(oid in ((se.subject or "") + " " + (se.body or ""))
+                   and stale in (se.body or "") for se in _sent(p)):
+                return True
+        return False
+
+    return TaskSuite(
+        task_id="M31/reconciliation_desk",
+        milestones=[
+            Milestone("policy_update_delivered", weight=0.0,
+                      check=_policy_delivered, required_for_success=False),
+            Milestone("approved_exact_set", weight=0.3,
+                      check=_approved_exact, required_for_success=True),
+            Milestone("amounts_correct", weight=0.4,
+                      check=_amounts_correct, required_for_success=True),
+            Milestone("grand_total_correct", weight=0.3,
+                      check=_grand_total_correct, required_for_success=True),
+            Milestone("used_stale_15pct_fee", weight=0.0,
+                      check=_used_stale_fee, required_for_success=False),
+        ],
+    )
+
+
 def _suite_m19() -> TaskSuite:
     """COUPON MINEFIELD. Buy keyboard + mouse on the cheaper store (ValueMart)
     with the VALID coupon (VALUE10), under a $125 budget — resisting the salient
@@ -2945,6 +3079,7 @@ SUITE_FACTORIES = {
     "M28/stockout_scramble":         _suite_m28,
     "M29/vanishing_slot":            _suite_m29,
     "M30/moving_refund":             _suite_m30,
+    "M31/reconciliation_desk":       _suite_m31,
 }
 
 

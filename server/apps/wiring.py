@@ -50,3 +50,6 @@ def register_default_subscribers() -> None:
     # Async refund correction (M30): the refund amount changes mid-task, so the
     # agent must relay the LATEST figure across both outputs.
     bus.subscribe("RefundCorrection", inbound.deliver_refund_correction)
+    # Async refund-policy update (M31): the electronics restocking fee changes
+    # mid-task, forcing every electronics refund + the grand total to recompute.
+    bus.subscribe("RefundPolicyUpdate", inbound.deliver_refund_policy_update)

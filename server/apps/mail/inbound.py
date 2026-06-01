@@ -208,6 +208,30 @@ def deliver_dispatch_correction(world: "WorldState", event: "WorldEvent") -> Non
         read=False, labels=["dispatch-correction"])
 
 
+def deliver_refund_policy_update(world: "WorldState", event: "WorldEvent") -> None:
+    """RefundPolicyUpdate -> the Electronics restocking fee drops 15% -> 10%
+    mid-task (M31). Every electronics refund the agent computed at 15% is now
+    stale and must be re-computed at the latest rate, and the grand total with
+    it. The agent must relay the LATEST policy, not the first one it read.
+    Idempotent on the label."""
+    mail = world.mail
+    if mail is None:
+        return
+    if any("policy-update" in (e.labels or []) for e in mail.inbox.values()):
+        return
+    eid = mail.new_id()
+    mail.inbox[eid] = Email(
+        id=eid, sender="policy@shopgym.com", to=mail.account_email,
+        subject="Policy update — electronics restocking fee",
+        body=(
+            "Policy update, effective immediately:\n\n"
+            "The Electronics restocking fee is reduced from 15% to 10%. Please "
+            "use 10% for all electronics refunds from now on. Apparel (5%) and "
+            "Other (0%) are unchanged.\n\n- Refunds Policy"),
+        received_at=f"{SEED_DATE}T10:30:00", received_label="now",
+        read=False, labels=["policy-update"])
+
+
 def deliver_sync_reschedule_1(world: "WorldState", event: "WorldEvent") -> None:
     """SyncReschedule1 -> the FIRST async availability change (M29). Two attendees'
     constraints shift so the unique valid slot moves from 2 PM to 4 PM, forcing the

@@ -469,6 +469,21 @@ def _facts_m28(world: dict, url: str) -> dict[str, Any]:
     return facts
 
 
+def _facts_m31(world: dict, url: str) -> dict[str, Any]:
+    """M31 reconciliation desk — the async policy update's delivery (env truth) +
+    the LATEST electronics fee recorded once the update is READ (coverage = did
+    the agent notice the fee changed). 'used' (approve the exact eligible set with
+    correct post-fee amounts + correct grand total) is the verifier's job."""
+    facts: dict[str, Any] = {}
+    for e in ((world.get("mail") or {}).get("inbox") or {}).values():
+        if "policy-update" not in (e.get("labels") or []):
+            continue
+        facts["mail.policy_update_delivered"] = True
+        if e.get("read"):
+            facts["mail.electronics_fee"] = "10%"
+    return facts
+
+
 def _facts_m29(world: dict, url: str) -> dict[str, Any]:
     """M29 vanishing slot — which async availability waves have landed (env truth)
     + the LATEST required slot recorded only once both waves are read. 'used'
@@ -615,6 +630,7 @@ FACT_EXTRACTORS: dict[str, Callable[[dict, str], dict]] = {
     "M28/stockout_scramble":         _facts_m28,
     "M29/vanishing_slot":            _facts_m29,
     "M30/moving_refund":             _facts_m30,
+    "M31/reconciliation_desk":       _facts_m31,
 }
 
 

@@ -428,6 +428,20 @@ BRIEFS = {
         "been told that final time."
     ),
 
+    "M31": (
+        "You're covering my refund desk. My inbox has the refund policy plus a "
+        "batch of customer refund requests (order ids look like RR-01). For each "
+        "request: first decide whether the order qualifies under the policy; if it "
+        "does, reply to that customer stating the EXACT refund amount they'll "
+        "receive (the item price minus the restocking fee — the rate depends on "
+        "the item's category, per the policy). Always include the order id and the "
+        "word 'Approved' in your reply. Then email my manager "
+        "(manager@example.com) a single message with the GRAND TOTAL of all the "
+        "refunds you approved. Heads up: the policy may be updated while you're "
+        "working — if anything changes, the amounts you give and your grand total "
+        "must reflect the LATEST policy, not the original."
+    ),
+
     "M30": (
         "I want to return the Studio Headphones from order ORD-9001. Steps:\n"
         "1) File the return for that item.\n"
@@ -1145,6 +1159,8 @@ START_PATHS = {
     "M29/vanishing_slot": "/mail",
     # M30 (moving refund) starts in the inbox — read policy, then file the return.
     "M30/moving_refund": "/mail",
+    # M31 (reconciliation desk) starts in the inbox — read policy + requests.
+    "M31/reconciliation_desk": "/mail",
 }
 
 
@@ -1935,6 +1951,98 @@ def task_m30_moving_refund(seed: int) -> "WorldState":
     return world
 
 
+# M31 — the refund desk. Eight customer requests (RR-01..08); eligible = DELIVERED
+# AND ordered within 30 days (today 2026-05-21) AND not final-sale -> {01..05}.
+# Refund = price - category restocking fee. The Electronics fee changes async
+# from 15% -> 10%, so the FINAL correct amounts are:
+#   RR-01 Electronics $40  -> 10% -> $36.00
+#   RR-02 Apparel     $20  -> 5%  -> $19.00
+#   RR-03 Electronics $120 -> 10% -> $108.00
+#   RR-04 Other       $30  -> 0%  -> $30.00
+#   RR-05 Electronics $200 -> 10% -> $180.00   grand total = $373.00
+_M31_REQUESTS = [
+    # (id, item, category, price, status, order_date, final_sale)
+    ("RR-01", "Wireless Mouse",      "Electronics", 40.00,  "delivered", "2026-05-10", False),
+    ("RR-02", "Cotton T-Shirt",      "Apparel",     20.00,  "delivered", "2026-05-05", False),
+    ("RR-03", "Mechanical Keyboard", "Electronics", 120.00, "delivered", "2026-05-15", False),
+    ("RR-04", "Desk Lamp",           "Other",       30.00,  "delivered", "2026-05-12", False),
+    ("RR-05", "24-inch Monitor",     "Electronics", 200.00, "delivered", "2026-05-18", False),
+    ("RR-06", "Hoodie",              "Apparel",     50.00,  "shipped",   "2026-05-19", False),  # not delivered
+    ("RR-07", "Headphones",          "Electronics", 80.00,  "delivered", "2026-03-01", False),  # >30 days
+    ("RR-08", "Sale Sneakers",       "Apparel",     60.00,  "delivered", "2026-05-08", True),   # final sale
+]
+
+
+def task_m31_reconciliation_desk(seed: int) -> "WorldState":
+    """RECONCILIATION DESK — three-derivation refund gauntlet (numerical breaker).
+    Process 8 customer refund requests, conjunctively:
+      DERIVE 1 (eligibility, M13-style conjunction): refund only orders that are
+        DELIVERED AND within 30 days AND not final-sale -> {RR-01..05}; the loud
+        decoys each fail exactly one clause (shipped / expired / final-sale).
+      DERIVE 2 (per-item amount, suppress-salient + async): refund = price minus a
+        category-dependent restocking fee (Electronics 15%, Apparel 5%, Other 0%)
+        -> NOT the salient sticker price. Mid-task the Electronics fee drops to 10%
+        (async), so all electronics amounts (and the total) are STALE and must be
+        recomputed at the LATEST rate.
+      DERIVE 3 (grand-total cascade): the total emailed to the manager is the sum
+        of the correct amounts -> wrong if ANY per-item amount is stale/wrong.
+    Each derivation is a different reasoning mode (filter / fee-lookup-with-async /
+    sum), so being good at one doesn't save the others; conjunctive grading means
+    one slip fails the task. Env-clean + deterministic; the oracle computes it 1.0."""
+    from server.apps.mail.state import Email, SEED_DATE
+    from server.apps import scheduler as _sched
+    world = _cross_app_world(seed, "M31/reconciliation_desk", "hard")
+    m = world.mail
+    # The policy email (eligibility rules + the INITIAL category fees).
+    pid = m.new_id()
+    m.inbox[pid] = Email(
+        id=pid, sender="policy@shopgym.com", to=m.account_email,
+        subject="Refund desk — today's policy",
+        body=(
+            "Please work today's refund queue under this policy:\n\n"
+            "ELIGIBILITY — only refund an order if ALL are true:\n"
+            "  - it has been DELIVERED (not just shipped),\n"
+            "  - it was ordered within the last 30 days (today is 2026-05-21),\n"
+            "  - it is NOT a final-sale item.\n\n"
+            "AMOUNT — refund the item price minus a restocking fee that depends on "
+            "the item's category:\n"
+            "  - Electronics: 15%\n"
+            "  - Apparel: 5%\n"
+            "  - Other: 0%\n\n"
+            "Reply to each eligible customer with their exact refund, then send me "
+            "the grand total.\n"),
+        received_at=f"{SEED_DATE}T09:00:00", received_label="9:00 AM",
+        read=False, labels=["policy"])
+    # The eight customer requests (order facts in the body; the verifier reads the
+    # same seeded text as ground truth).
+    clock = 0
+    for oid, item, cat, price, status, od, final_sale in _M31_REQUESTS:
+        clock += 1
+        eid = m.new_id()
+        m.inbox[eid] = Email(
+            id=eid, sender=f"{oid.lower().replace('-', '')}@customers.com",
+            to=m.account_email, subject=f"Refund request — {oid}",
+            body=(
+                f"Hello, I'd like a refund for my order {oid}.\n\n"
+                f"Order: {oid}\n"
+                f"Item: {item}\n"
+                f"Category: {cat}\n"
+                f"Price: ${price:.2f}\n"
+                f"Status: {status.capitalize()}\n"
+                f"Order date: {od}\n"
+                f"Final sale: {'yes' if final_sale else 'no'}\n\n"
+                f"Thanks!\n"),
+            received_at=f"{SEED_DATE}T09:{clock:02d}:00", received_label="today",
+            read=False, labels=["refund-request"],
+            order_id=oid, amount_total=price)
+    # Async policy update at step 5: Electronics fee 15% -> 10%.
+    _sched.schedule_absolute(
+        world.schedule, id="se_m31_policy", fire_at_step=5,
+        emit_type="RefundPolicyUpdate", source_app="mail", target_app="mail",
+        payload={"category": "electronics", "new_fee": 0.10})
+    return world
+
+
 def task_m19_coupon_minefield(seed: int) -> "WorldState":
     """COUPON MINEFIELD (decoy + validity reasoning + conjunctive budget). Buy a
     keyboard + mouse from the cheaper store, under a $125 budget, using a VALID
@@ -2103,6 +2211,7 @@ REQUIRED_FACTS = {
     "M28/stockout_scramble":         ["shop.oos_bundle_items"],
     "M29/vanishing_slot":            ["mail.latest_slot"],
     "M30/moving_refund":             ["mail.corrected_refund"],
+    "M31/reconciliation_desk":       ["mail.electronics_fee"],
 }
 
 
@@ -2154,6 +2263,7 @@ TASKS = {
     "M28/stockout_scramble":         task_m28_stockout_scramble,
     "M29/vanishing_slot":            task_m29_vanishing_slot,
     "M30/moving_refund":             task_m30_moving_refund,
+    "M31/reconciliation_desk":       task_m31_reconciliation_desk,
 }
 
 
