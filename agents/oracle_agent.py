@@ -1542,7 +1542,7 @@ async def solve_m35_lying_bounce(ctx: BrowserCtx) -> None:
     await ctx.fill("input[data-test-id='input-compose-subject']",
                    "Recent expense total")
     await ctx.fill("textarea[data-test-id='input-compose-body']",
-                   "Hi — my total spend across the recent orders is $480.00. "
+                   "Hi — my total spend across the recent orders is $500.00. "
                    "Thanks!")
     await ctx.click("button[data-test-id='btn-send']")
     # The lying bounce arrives one step after the send. The oracle has no
