@@ -1570,6 +1570,37 @@ def test_m31_missed_an_eligible_fails():
     assert "approved_exact_set" in res["missed_milestones"]
 
 
+def test_m31_approval_in_subject_counts():
+    """Robustness: an approval declared in the SUBJECT (not the body) still
+    counts — models phrase it either way; the verifier must not false-fail."""
+    sim = _CrossSim("M31/reconciliation_desk")
+    scheduler.advance_and_flush(sim.world, 5)
+    for oid, amt in _M31_CORRECT:
+        mail_mut.send_email(
+            sim.world.mail, to=f"{oid.lower().replace('-', '')}@customers.com",
+            subject=f"Refund for order {oid} - Approved",
+            body=f"Hello, your refund for {oid} is ${amt:.2f}. Thanks!")
+    _m31_manager(sim, _M31_GRAND)
+    res = sim._probe()
+    assert res["success"] is True
+    assert res["score"] == 1.0
+
+
+def test_m31_not_approved_does_not_count():
+    """Robustness: 'Not Approved' replies to eligible orders are NOT approvals,
+    so the eligible set is under-approved and the suite fails."""
+    sim = _CrossSim("M31/reconciliation_desk")
+    scheduler.advance_and_flush(sim.world, 5)
+    for oid, amt in _M31_CORRECT:
+        mail_mut.send_email(
+            sim.world.mail, to=f"{oid.lower().replace('-', '')}@customers.com",
+            subject=f"Refund for order {oid} - Not Approved",
+            body=f"Hello, your order {oid} request has been reviewed.")
+    res = sim._probe()
+    assert res["success"] is False
+    assert "approved_exact_set" in res["missed_milestones"]
+
+
 def test_m31_wrong_grand_total_fails():
     """Per-item amounts all correct, but the grand total to the manager is wrong."""
     sim = _CrossSim("M31/reconciliation_desk")

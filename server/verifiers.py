@@ -2794,12 +2794,25 @@ def _suite_m31() -> TaskSuite:
         mail = getattr(p.world, "mail", None) if p.world else None
         return list(mail.sent.values()) if mail else []
 
+    # An approval is an AFFIRMATIVE "approved" in the subject OR body (the brief
+    # tells the agent to write 'Approved'; models put it in either place), with
+    # negations excluded so a 'Not Approved' / 'declined' reply does NOT count.
+    _NEG = ("not approv", "n't approv", "cannot approv", "can not approv",
+            "unable to approv", "decline", "denied", "deny ", "deferred",
+            "ineligible", "not eligible", "does not qualif", "doesn't qualif",
+            "cannot refund", "will not be refund", "won't be refund",
+            "unable to refund")
+
     def _approved(p: Probe) -> set[str]:
         out: set[str] = set()
         for oid in _orders(p):
             for se in _sent(p):
-                hay = (se.subject or "") + " " + (se.body or "")
-                if oid in hay and "approv" in (se.body or "").lower():
+                subj = se.subject or ""
+                body = se.body or ""
+                hay = subj + " " + body
+                low = hay.lower()
+                if (oid in hay and "approv" in low
+                        and not any(n in low for n in _NEG)):
                     out.add(oid)
                     break
         return out
