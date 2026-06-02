@@ -8,7 +8,12 @@
   <div class="px-5 py-4 space-y-3">
     <label class="block">
       <span class="text-xs text-slate-500">To</span>
-      <input name="to" type="email" required value="{{ to_prefill or '' }}"
+      <!-- type=text (not email) so the browser never blocks a valid MULTI-recipient
+           string: the server validates ("@" required) and accepts comma-separated
+           recipients, matching real email clients. A single type=email input would
+           reject "a@x.com, b@x.com" client-side even though the backend accepts it. -->
+      <input name="to" type="text" required value="{{ to_prefill or '' }}"
+             placeholder="name@example.com (separate multiple recipients with commas)"
              data-test-id="input-compose-to" aria-label="To"
              class="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-indigo-500" />
     </label>
