@@ -15,6 +15,7 @@ from typing import Any
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
+from server.apps import bus
 from server.apps.mail import mutations as M
 
 router = APIRouter(prefix="/mail", tags=["mail"])
@@ -75,6 +76,12 @@ async def send(
     world = _deps["get_world"]()
     r = M.send_email(world.mail, to=to, subject=subject, body=body)
     if r.get("ok"):
+        # Generic MailSent trigger (target_app=mail, no default subscriber — a pure
+        # trigger that lands in world.events). It lets scheduled relative events
+        # fire AFTER the agent sends, e.g. M35's lying delivery bounce one step
+        # later. Harmless for tasks that don't schedule anything off it.
+        bus.emit(world, type="MailSent", source_app="mail", target_app="mail",
+                 payload={"to": r.get("to", to), "subject": subject})
         _deps["flash"](world.shop, "success", f"Email sent to {r['to']}.")
         return RedirectResponse("/mail?sent=1", 303)
     _deps["flash"](world.shop, "error", r.get("error", "Could not send email."))
