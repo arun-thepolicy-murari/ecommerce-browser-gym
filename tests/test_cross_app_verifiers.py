@@ -1584,6 +1584,115 @@ def test_m31_wrong_grand_total_fails():
 
 
 # --------------------------------------------------------------------------- #
+# M32 (coupled offsite): catering + ETA-coupled slot (async) + exact total +
+# multi-recipient — the temporal gauntlet
+# --------------------------------------------------------------------------- #
+
+def _m32_order(sim: _CrossSim, veggie: int = 2, classic: int = 0) -> None:
+    for _ in range(veggie):
+        food_mut.add_dish(sim.world.food, restaurant_id="r_burger",
+                          dish_id="d_veggie")
+    for _ in range(classic):
+        food_mut.add_dish(sim.world.food, restaurant_id="r_burger",
+                          dish_id="d_classic")
+    food_mut.place_food_order(sim.world)
+
+
+def _m32_book(sim: _CrossSim, start: str, end: str) -> None:
+    cal_mut.create_event(sim.world.calendar, title="Team Offsite",
+                         day="2026-05-22", start=start, end=end)
+
+
+def _m32_finance(sim: _CrossSim, amt: float) -> None:
+    mail_mut.send_email(sim.world.mail, to="finance@example.com",
+                        subject="Offsite catering cost",
+                        body=f"The catering was charged ${amt:.2f} in total.")
+
+
+def _m32_notify(sim: _CrossSim, who: str, time_str: str = "4:00 PM") -> None:
+    mail_mut.send_email(sim.world.mail, to=who, subject="Offsite — confirmed",
+                        body=f"Confirmed: the team offsite is at {time_str} today.")
+
+
+def test_m32_delay_fires_after_order():
+    sim = _CrossSim("M32/coupled_offsite")
+    assert not bus.has_delivered(sim.world, "DeliveryDelayed")
+    _m32_order(sim, veggie=2)
+    scheduler.advance_and_flush(sim.world, 6)
+    assert bus.has_delivered(sim.world, "DeliveryDelayed")
+    dly = [e for e in sim.world.mail.inbox.values()
+           if "delivery" in (e.labels or [])]
+    assert dly and "3:00 PM" in dly[0].body
+
+
+def test_m32_full_path_scores_one():
+    sim = _CrossSim("M32/coupled_offsite")
+    _m32_order(sim, veggie=2)                       # $19 + $1.50 = $20.50 < $40
+    scheduler.advance_and_flush(sim.world, 6)       # delivery delayed -> 3 PM
+    _m32_book(sim, "16:00", "17:00")                # only free slot after 3 PM
+    _m32_finance(sim, 20.50)                        # exact total charged
+    for who in ("priya@example.com", "alex@example.com", "sam@example.com"):
+        _m32_notify(sim, who)
+    res = sim._probe()
+    assert res["success"] is True
+    assert res["score"] == 1.0
+
+
+def test_m32_stale_1pm_slot_fails():
+    """Booked at the OLD 1 PM arrival (ignored the delay) -> wrong slot."""
+    sim = _CrossSim("M32/coupled_offsite")
+    _m32_order(sim, veggie=2)
+    scheduler.advance_and_flush(sim.world, 6)
+    _m32_book(sim, "13:00", "14:00")                # stale slot, not 16:00
+    _m32_finance(sim, 20.50)
+    for who in ("priya@example.com", "alex@example.com", "sam@example.com"):
+        _m32_notify(sim, who, "1:00 PM")
+    res = sim._probe()
+    assert res["success"] is False
+    assert "offsite_at_16" in res["missed_milestones"]
+
+
+def test_m32_subtotal_to_finance_fails():
+    """Reported the salient subtotal ($19) instead of the total charged ($20.50)."""
+    sim = _CrossSim("M32/coupled_offsite")
+    _m32_order(sim, veggie=2)
+    scheduler.advance_and_flush(sim.world, 6)
+    _m32_book(sim, "16:00", "17:00")
+    _m32_finance(sim, 19.00)                        # subtotal, not the total
+    for who in ("priya@example.com", "alex@example.com", "sam@example.com"):
+        _m32_notify(sim, who)
+    res = sim._probe()
+    assert res["success"] is False
+    assert "finance_told_exact_total" in res["missed_milestones"]
+
+
+def test_m32_forgot_attendee_fails():
+    """Confirmed to Priya and Alex but forgot Sam."""
+    sim = _CrossSim("M32/coupled_offsite")
+    _m32_order(sim, veggie=2)
+    scheduler.advance_and_flush(sim.world, 6)
+    _m32_book(sim, "16:00", "17:00")
+    _m32_finance(sim, 20.50)
+    _m32_notify(sim, "priya@example.com")
+    _m32_notify(sim, "alex@example.com")            # no Sam
+    res = sim._probe()
+    assert res["success"] is False
+    assert "attendees_notified" in res["missed_milestones"]
+
+
+def test_m32_over_budget_catering_fails():
+    """Catering has the veggie but busts Alex's $40 cap (1 veggie + 3 classic =
+    $39.50 + $1.50 delivery = $41.00)."""
+    sim = _CrossSim("M32/coupled_offsite")
+    _m32_order(sim, veggie=1, classic=3)
+    scheduler.advance_and_flush(sim.world, 6)
+    _m32_book(sim, "16:00", "17:00")
+    res = sim._probe()
+    assert res["success"] is False
+    assert "catering_veg_under_budget" in res["missed_milestones"]
+
+
+# --------------------------------------------------------------------------- #
 # Backward-compat: probe.state still aliases the shop GymState
 # --------------------------------------------------------------------------- #
 

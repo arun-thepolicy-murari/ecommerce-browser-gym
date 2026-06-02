@@ -2863,6 +2863,86 @@ def _suite_m31() -> TaskSuite:
     )
 
 
+def _suite_m32() -> TaskSuite:
+    """THE COUPLED OFFSITE — temporal gauntlet. Four coupled, conjunctive,
+    POSITIVE end-state checks; only the FINAL state is graded:
+      catering_veg_under_budget -> a Burger Barn order with the Veggie Burger AND
+        total < $40 (Priya's diet + Alex's cap).
+      offsite_at_16 -> a user calendar event starting EXACTLY 16:00 — the unique
+        free slot after the (delayed) 3 PM arrival; rejects the stale 1 PM slot,
+        the 7 PM form default, and the literal-3 PM busy slot.
+      finance_told_exact_total -> a sent email to finance@ carrying the order's
+        EXACT total charged (incl. delivery), not the salient subtotal.
+      attendees_notified -> Priya, Alex AND Sam each told the final 4 PM time.
+    The slot, the total, and the notified time all CASCADE off reading the new
+    ETA correctly. Weight-0 gate exposes the async delay delivery."""
+    from server.apps import bus as _bus
+    _TIME = ("4:00", "16:00", "4 pm", "4pm", "4 p.m")
+    _BUDGET = 40.0
+
+    def _burger_orders(p: Probe) -> list:
+        food = getattr(p.world, "food", None) if p.world else None
+        if food is None:
+            return []
+        return [o for o in food.orders.values() if o.restaurant_id == "r_burger"]
+
+    def _catering_ok(p: Probe) -> bool:
+        for o in _burger_orders(p):
+            if any(it.dish_id == "d_veggie" for it in o.items) and o.total < _BUDGET:
+                return True
+        return False
+
+    def _offsite_at_16(p: Probe) -> bool:
+        cal = getattr(p.world, "calendar", None) if p.world else None
+        if cal is None:
+            return False
+        return any(e.source == "user" and (e.start or "") == "16:00"
+                   for e in cal.events.values())
+
+    def _sent(p: Probe) -> list:
+        mail = getattr(p.world, "mail", None) if p.world else None
+        return list(mail.sent.values()) if mail else []
+
+    def _finance_told_total(p: Probe) -> bool:
+        orders = _burger_orders(p)
+        if not orders:
+            return False
+        for o in orders:
+            needle = f"{o.total:.2f}"
+            if any("finance" in (se.to or "").lower() and needle in (se.body or "")
+                   for se in _sent(p)):
+                return True
+        return False
+
+    def _sent_time_to(p: Probe, who: str) -> bool:
+        return any(who in (se.to or "").lower()
+                   and any(t in (se.body or "").lower() for t in _TIME)
+                   for se in _sent(p))
+
+    def _attendees_notified(p: Probe) -> bool:
+        return (_sent_time_to(p, "priya") and _sent_time_to(p, "alex")
+                and _sent_time_to(p, "sam"))
+
+    def _delay_delivered(p: Probe) -> bool:
+        return p.world is not None and _bus.has_delivered(p.world, "DeliveryDelayed")
+
+    return TaskSuite(
+        task_id="M32/coupled_offsite",
+        milestones=[
+            Milestone("delivery_delayed_delivered", weight=0.0,
+                      check=_delay_delivered, required_for_success=False),
+            Milestone("catering_veg_under_budget", weight=0.25,
+                      check=_catering_ok, required_for_success=True),
+            Milestone("offsite_at_16", weight=0.25,
+                      check=_offsite_at_16, required_for_success=True),
+            Milestone("finance_told_exact_total", weight=0.25,
+                      check=_finance_told_total, required_for_success=True),
+            Milestone("attendees_notified", weight=0.25,
+                      check=_attendees_notified, required_for_success=True),
+        ],
+    )
+
+
 def _suite_m19() -> TaskSuite:
     """COUPON MINEFIELD. Buy keyboard + mouse on the cheaper store (ValueMart)
     with the VALID coupon (VALUE10), under a $125 budget — resisting the salient
@@ -3080,6 +3160,7 @@ SUITE_FACTORIES = {
     "M29/vanishing_slot":            _suite_m29,
     "M30/moving_refund":             _suite_m30,
     "M31/reconciliation_desk":       _suite_m31,
+    "M32/coupled_offsite":           _suite_m32,
 }
 
 

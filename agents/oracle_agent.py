@@ -1408,6 +1408,61 @@ async def solve_m31_reconciliation_desk(ctx: BrowserCtx) -> None:
     await ctx.click("button[data-test-id='btn-send']")
 
 
+async def solve_m32_coupled_offsite(ctx: BrowserCtx) -> None:
+    """Gold trajectory for the coupled offsite. Order veg-friendly catering under
+    budget (which emits FoodOrderPlaced and schedules the delay), WAIT for the
+    delivery-delay notice, then book the offsite at 16:00 (the unique free slot
+    after the new 3 PM arrival), email finance the EXACT total charged, and
+    confirm the 4 PM time to all three attendees."""
+    # 1) Order catering: 2 Veggie Burgers ($19 + $1.50 delivery = $20.50 < $40).
+    await ctx.goto("/food/restaurant/r_burger",
+                   reasoning="Order vegetarian-friendly catering under the $40 cap.")
+    await ctx.click("button[data-test-id='btn-add-d_veggie']")
+    await ctx.click("button[data-test-id='btn-add-d_veggie']")
+    await ctx.goto("/food/cart")
+    await ctx.click("button[data-test-id='btn-place-food-order']")
+    # 2) Wait for the delivery-delay notice (fires a few steps after the order).
+    for _ in range(8):
+        world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
+        delayed = next((e for e in world["mail"]["inbox"].values()
+                        if "delivery" in (e.get("labels") or [])), None)
+        if delayed is not None:
+            await ctx.goto(f"/mail/message/{delayed['id']}",
+                           reasoning="Delivery delayed — read the new arrival time.")
+            break
+        await ctx.wait(reasoning="Wait for the delivery time to settle before booking.")
+    # 3) Book the offsite at 16:00 — the only free slot after the new 3 PM arrival.
+    await ctx.goto("/calendar/new",
+                   reasoning="Book the offsite after the food arrives, in the free "
+                             "4 PM slot (3 PM and 7 PM are busy).")
+    await ctx.fill("input[data-test-id='input-event-title']", "Team Offsite")
+    await ctx.fill("input[data-test-id='input-event-start']", "16:00")
+    await ctx.fill("input[data-test-id='input-event-end']", "17:00")
+    await ctx.click("button[data-test-id='btn-save-event']")
+    # 4) Email finance the EXACT total charged (read off the receipt).
+    world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
+    receipt = next((e for e in world["mail"]["inbox"].values()
+                    if "receipts" in (e.get("labels") or [])), None)
+    total = receipt.get("amount_total") if receipt else None
+    total_str = f"${total:.2f}" if total is not None else "the catering total"
+    await ctx.goto("/mail/compose", reasoning="Send finance the exact charged total.")
+    await ctx.fill("input[data-test-id='input-compose-to']", "finance@example.com")
+    await ctx.fill("input[data-test-id='input-compose-subject']",
+                   "Offsite catering cost")
+    await ctx.fill("textarea[data-test-id='input-compose-body']",
+                   f"The catering was charged {total_str} in total.")
+    await ctx.click("button[data-test-id='btn-send']")
+    # 5) Confirm the final 4 PM time to each attendee.
+    for who in ("priya@example.com", "alex@example.com", "sam@example.com"):
+        await ctx.goto("/mail/compose", reasoning=f"Confirm 4 PM to {who}.")
+        await ctx.fill("input[data-test-id='input-compose-to']", who)
+        await ctx.fill("input[data-test-id='input-compose-subject']",
+                       "Team offsite — confirmed time")
+        await ctx.fill("textarea[data-test-id='input-compose-body']",
+                       "Confirmed: the team offsite is at 4:00 PM today. See you there!")
+        await ctx.click("button[data-test-id='btn-send']")
+
+
 async def solve_m19_coupon_minefield(ctx: BrowserCtx) -> None:
     """Read the coupon emails, buy keyboard+mouse on ValueMart (the cheaper
     store), try the salient 50% code (rejected — expired), fall back to the
@@ -1544,4 +1599,5 @@ SOLVERS = {
     "M29/vanishing_slot":            solve_m29_vanishing_slot,
     "M30/moving_refund":             solve_m30_moving_refund,
     "M31/reconciliation_desk":       solve_m31_reconciliation_desk,
+    "M32/coupled_offsite":           solve_m32_coupled_offsite,
 }

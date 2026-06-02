@@ -469,6 +469,24 @@ def _facts_m28(world: dict, url: str) -> dict[str, Any]:
     return facts
 
 
+def _facts_m32(world: dict, url: str) -> dict[str, Any]:
+    """M32 coupled offsite — the async delivery-delay's delivery (env truth) + the
+    NEW arrival time recorded once the agent READS the delay notice (coverage =
+    did it notice the ETA shift), plus the charged total from the receipt. 'used'
+    (book 16:00 + tell finance the exact total + notify attendees) is the
+    verifier's job."""
+    facts: dict[str, Any] = {}
+    for e in ((world.get("mail") or {}).get("inbox") or {}).values():
+        labels = e.get("labels") or []
+        if "delivery" in labels:
+            facts["mail.delay_delivered"] = True
+            if e.get("read"):
+                facts["mail.new_eta"] = e.get("eta") or "3:00 PM"
+        if "receipts" in labels and e.get("amount_total") is not None:
+            facts["food.charged_total"] = f"{e.get('amount_total'):.2f}"
+    return facts
+
+
 def _facts_m31(world: dict, url: str) -> dict[str, Any]:
     """M31 reconciliation desk — the async policy update's delivery (env truth) +
     the LATEST electronics fee recorded once the update is READ (coverage = did
@@ -631,6 +649,7 @@ FACT_EXTRACTORS: dict[str, Callable[[dict, str], dict]] = {
     "M29/vanishing_slot":            _facts_m29,
     "M30/moving_refund":             _facts_m30,
     "M31/reconciliation_desk":       _facts_m31,
+    "M32/coupled_offsite":           _facts_m32,
 }
 
 

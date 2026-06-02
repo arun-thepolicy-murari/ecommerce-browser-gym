@@ -428,6 +428,20 @@ BRIEFS = {
         "been told that final time."
     ),
 
+    "M32": (
+        "Plan tomorrow's team offsite. My teammates emailed their RSVPs and "
+        "constraints — read them. Then:\n"
+        "1) Order catering from Burger Barn that suits everyone's needs and stays "
+        "within the budget they mentioned.\n"
+        "2) Book the offsite on my calendar in a slot that starts AFTER the food "
+        "is set to arrive and doesn't clash with anything already booked.\n"
+        "3) Email finance (finance@example.com) the exact amount we were actually "
+        "charged, and email each attendee the final start time.\n"
+        "Keep an eye on my inbox while you work — the delivery time may change. If "
+        "it does, the calendar slot and the time you tell everyone must reflect "
+        "the LATEST arrival, with nothing stale left behind."
+    ),
+
     "M31": (
         "You're covering my refund desk. My inbox has the refund policy plus a "
         "batch of customer refund requests (order ids look like RR-01). For each "
@@ -1161,6 +1175,8 @@ START_PATHS = {
     "M30/moving_refund": "/mail",
     # M31 (reconciliation desk) starts in the inbox — read policy + requests.
     "M31/reconciliation_desk": "/mail",
+    # M32 (coupled offsite) starts in the inbox — read RSVPs, then orchestrate.
+    "M32/coupled_offsite": "/mail",
 }
 
 
@@ -2043,6 +2059,88 @@ def task_m31_reconciliation_desk(seed: int) -> "WorldState":
     return world
 
 
+_M32_OLD_ETA = "1:00 PM"
+_M32_NEW_ETA = "3:00 PM"     # after the async delay -> the offsite must move to 16:00
+_M32_DELAY_AFTER = 4         # steps after the food order is placed
+_M32_BUDGET = 40.0
+
+
+def task_m32_coupled_offsite(seed: int) -> "WorldState":
+    """THE COUPLED OFFSITE — temporal-reasoning gauntlet (the higher-ceiling
+    breaker). Three coupled derivations + an async ETA shift, conjunctive:
+      DERIVE 1 (catering, M23-style): a Burger Barn order that includes the
+        Veggie Burger (Priya is vegetarian) AND totals under the budget Alex
+        named -> resisting the salient Classic Cheeseburger.
+      DERIVE 2 (ETA-coupled slot, M16+M23): the offsite must start AFTER the food
+        arrives, in a free non-clashing slot. The arrival time is read off the
+        receipt (a derived cross-app value), and an async DeliveryDelayed pushes
+        it from 1 PM to 3 PM -> the unique free slot after 3 PM is 16:00 (busy
+        15:00-16:00 + 17:00-22:00; the 3 PM literal collides with Quarterly
+        Review). So the agent must notice the delay, re-derive, and MOVE the
+        booking to 16:00 (the form's 19:00 default is also busy).
+      DERIVE 3 (exact value + multi-recipient): email finance the EXACT total
+        charged (incl. delivery, NOT the salient subtotal), and email each
+        attendee the final 4 PM time.
+    Each derivation is a different reasoning mode, coupled so an early error
+    cascades; only the final state is graded. Reuses the proven M16 delivery-delay
+    + M23 calendar mechanics; oracle scores 1.0."""
+    from server.apps.mail.state import Email, SEED_DATE
+    from server.apps.calendar.state import CalendarEvent, TOMORROW
+    from server.apps import scheduler as _sched
+    world = _cross_app_world(seed, "M32/coupled_offsite", "hard")
+    # Catering arrives at 1 PM initially; cheaper delivery so the team CAN be fed
+    # under the cap (mirrors the M23 fix).
+    world.food.restaurants["r_burger"].eta_label = _M32_OLD_ETA
+    world.food.restaurants["r_burger"].delivery_fee = 1.50
+    # RSVPs: diet (Priya) + budget (Alex) + plain attendee (Sam).
+    m = world.mail
+    rsvps = [
+        ("priya@example.com", "Re: team offsite",
+         "Excited! Quick note — I'm vegetarian, so please make sure the catering "
+         "has something I can eat. — Priya"),
+        ("alex@example.com", "Re: team offsite",
+         "I'm in. Let's keep the catering under $40 total, please. — Alex"),
+        ("sam@example.com", "Re: team offsite",
+         "Count me in, whatever time works. — Sam"),
+    ]
+    for sender, subj, body in rsvps:
+        eid = m.new_id()
+        m.inbox[eid] = Email(
+            id=eid, sender=sender, to=m.account_email, subject=subj, body=body,
+            received_at=f"{SEED_DATE}T09:00:00", received_label="9:00 AM",
+            read=False, labels=[])
+    # Finance contact (so the agent has the address to report the total to).
+    fid = m.new_id()
+    m.inbox[fid] = Email(
+        id=fid, sender="finance@example.com", to=m.account_email,
+        subject="Offsite catering cost",
+        body=("Hi — once you've booked the offsite catering, please send me the "
+              "exact amount we were charged for it so I can expense it. Thanks! "
+              "— Finance"),
+        received_at=f"{SEED_DATE}T09:05:00", received_label="9:05 AM",
+        read=False, labels=[])
+    # Calendar busy blocks (same as M23): the unique free slot after 3 PM is
+    # 16:00-17:00, and the new-event form's 19:00 default is a busy slot.
+    cal = world.calendar
+    cal.events.clear()
+    for title, s, e in [("Quarterly Review", "15:00", "16:00"),
+                        ("Budget Review", "17:00", "19:00"),
+                        ("Investor Call", "19:00", "22:00")]:
+        eid = cal.new_id()
+        cal.events[eid] = CalendarEvent(
+            id=eid, title=title, day=TOMORROW,
+            day_label="Tomorrow (Fri May 22)", start=s, end=e, source="seed")
+    # Async delivery delay: the catering slips from 1 PM to 3 PM, a few steps
+    # after the food order is placed -> the offsite must move to 16:00.
+    _sched.schedule_relative(
+        world.schedule, id="se_m32_delay",
+        after_event_type="FoodOrderPlaced", delay_steps=_M32_DELAY_AFTER,
+        emit_type="DeliveryDelayed", source_app="food", target_app="mail",
+        payload={"restaurant": "Burger Barn",
+                 "old_eta_label": _M32_OLD_ETA, "new_eta_label": _M32_NEW_ETA})
+    return world
+
+
 def task_m19_coupon_minefield(seed: int) -> "WorldState":
     """COUPON MINEFIELD (decoy + validity reasoning + conjunctive budget). Buy a
     keyboard + mouse from the cheaper store, under a $125 budget, using a VALID
@@ -2212,6 +2310,7 @@ REQUIRED_FACTS = {
     "M29/vanishing_slot":            ["mail.latest_slot"],
     "M30/moving_refund":             ["mail.corrected_refund"],
     "M31/reconciliation_desk":       ["mail.electronics_fee"],
+    "M32/coupled_offsite":           ["mail.new_eta", "food.charged_total"],
 }
 
 
@@ -2264,6 +2363,7 @@ TASKS = {
     "M29/vanishing_slot":            task_m29_vanishing_slot,
     "M30/moving_refund":             task_m30_moving_refund,
     "M31/reconciliation_desk":       task_m31_reconciliation_desk,
+    "M32/coupled_offsite":           task_m32_coupled_offsite,
 }
 
 
