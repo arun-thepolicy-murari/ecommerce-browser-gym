@@ -77,11 +77,20 @@ async def send(
     r = M.send_email(world.mail, to=to, subject=subject, body=body)
     if r.get("ok"):
         # Generic MailSent trigger (target_app=mail, no default subscriber — a pure
-        # trigger that lands in world.events). It lets scheduled relative events
-        # fire AFTER the agent sends, e.g. M35's lying delivery bounce one step
-        # later. Harmless for tasks that don't schedule anything off it.
+        # trigger that lands in world.events). Harmless for tasks that don't use it.
         bus.emit(world, type="MailSent", source_app="mail", target_app="mail",
                  payload={"to": r.get("to", to), "subject": subject})
+        # One-shot "lying bounce" trap (M35): if a bounce is armed and this send's
+        # recipient matches, deliver the forged delivery-failure bounce
+        # SYNCHRONOUSLY (via the DeliveryBounce subscriber) so it's already in the
+        # inbox when the agent lands on the post-send page — async would be
+        # invisible on the frozen, server-rendered page. Generic: driven entirely
+        # by world.mail.armed_bounce data, no task-specific strings here.
+        ab = getattr(world.mail, "armed_bounce", None)
+        if ab and ab.get("match_to", "").lower() in (r.get("to", to) or "").lower():
+            bus.emit(world, type="DeliveryBounce", source_app="mail",
+                     target_app="mail", payload=dict(ab))
+            world.mail.armed_bounce = None          # one-shot
         _deps["flash"](world.shop, "success", f"Email sent to {r['to']}.")
         return RedirectResponse("/mail?sent=1", 303)
     _deps["flash"](world.shop, "error", r.get("error", "Could not send email."))
