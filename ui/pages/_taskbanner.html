@@ -18,7 +18,10 @@
             class="px-2 py-0.5 rounded bg-slate-700 text-white text-[10px] uppercase font-bold tracking-wider">
         Track {{ task_category }}
       </span>
-      <span data-test-id="lbl-task-id" class="font-mono text-xs text-amber-900">{{ task_id }}</span>
+      {# Show only the opaque prefix (e.g. "M35"), NEVER the descriptive slug:
+         the full task_id ("M35/lying_bounce") leaks the answer into the agent's
+         screenshot (Sonnet read "lying" off this banner and "solved" M35). #}
+      <span data-test-id="lbl-task-id" class="font-mono text-xs text-amber-900">{{ task_id.split('/')[0] }}</span>
       <button @click="open = !open" class="ml-auto text-xs text-amber-800 hover:text-amber-900" data-test-id="btn-toggle-banner">
         <span x-text="open ? '▼ Hide brief' : '▶ Show brief'"></span>
       </button>
