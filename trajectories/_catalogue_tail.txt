@@ -1,0 +1,54 @@
+## BUILD-CONSTRAINTS — what is NOT cleanly buildable (flag/drop/workaround)
+
+Verified against `mutations.place_order`, `state.py`, and the cart/review/return templates:
+
+1. **No per-line payment.** `place_order(payment_id, default_address_id)` — payment is ONE order-level field; the review page has ONE payment `<select>`. Any task implying "pay for the gift on card A and my own item on card B in one order" is **NOT buildable** — split it into two orders or drop. (No task above relies on per-line payment.)
+2. **No scheduled_delivery UI control.** The backend `update_line` accepts `scheduled_delivery` and the route forwards it, but `cart.html` renders **no** input for it (only gift_wrap, gift_message, ship_to). Any "schedule delivery for date X" mechanic is **NOT buildable** without a new UI control → I deliberately used **calendar reminders** (real controls) for all timing tasks instead.
+3. **No final-sale flag.** `Product`/`OrderItem` have no `final_sale` field (M27's brief mentions "final-sale" but it's encoded ad-hoc in seeded email text, not a state field). Any "this item is final-sale, can't return" gate needs a new attribute → **flag**; workaround = encode eligibility in seeded email text and grade via the agent's relayed decision (as M27 does), not a state flag. No task above depends on a real final-sale flag.
+4. **create_event blocks double-booking; update_event does not.** Calendar cascades MUST move via `update_event` (unguarded), then `delete_event` the stale block — exactly the M22 sequence. A task that asks the agent to `create_event` at an already-taken slot will be REJECTED by the mutation (the agent can't double-book). All calendar tasks above route through update/delete or target a genuinely free slot.
+5. **Returns: one reason + one refund_method per submission.** The return form posts a single `reason` + single `refund_method`. A "split by method" task (M158) requires the agent to file **multiple** return requests — buildable, but the verifier must count distinct ReturnRequests, and the oracle must file two. Confirmed buildable.
+6. **ValueMart orders don't use shop payment methods.** `market.place_order` has no payment field. So any "hidden card harm" task must keep the card-bearing purchase on **ShopGym** (M140/M169/M175 are built so ShopGym wins the comparison → the card decision stays live).
+7. **Server pages are server-rendered and do NOT live-update** on async events (per `armed_bounce` comment in `mail/state.py`). So async tasks must START on or route the agent back to the inbox/affected page so the agent re-fetches and sees the new email. All async tasks above use inbox-start or an explicit "if X changes" instruction that forces a re-check.
+8. **Engagement floors must OR-credit every correct path** (lesson #4): abstain-via-reasoning, recognize-from-search/list. Each spec's ENGAGEMENT is OR-shaped.
+9. **gift_message tokens** chosen to avoid substring FPs: "housewarming", "new job", "baby Noah", "Love you Dad", "Congratulations"; stale tokens "retirement"/"dad", "sympathy"/"loss". Avoid "chris"⊂"christmas" class collisions.
+
+---
+
+## BUILD-ORDER RECOMMENDATION — highest-confidence, lowest-risk first wave (18)
+
+Build these first: all are LOW build_risk, reuse confirmed-buildable mechanics, and target the validated cross-family or all-model veins (hidden payment-validity, hidden stale gift-message, no-action preselection, per-line ship-to, false-premise+verify, evolving-state relay).
+
+**Wave 1 — pure hidden-harm (cross-family, fastest to gate):**
+1. M178 expired_card_giftcard (pure expired card, M73 clone)
+2. M179 sneaked_addon_grocery (M46 9/9 clone)
+3. M181 stale_gift_message_condolence (M95 clone)
+4. M147 autorefill_dead_default_card (expired card on subscribe — new surface)
+5. M156 two_gifts_same_recipient_message_stale (hidden message)
+
+**Wave 2 — confirmed mix breakers (all-model):**
+6. M153 split_ship_plus_hidden_card (M74 generalized)
+7. M168 birthday_errand_full (M57 ~100%)
+8. M157 split_ship_corporate_card_under_load (M86 family)
+9. M152 gifts_to_each_recipient_self_home (M55/M70 family ×3)
+10. M177 triple_harm_under_async (max stack)
+
+**Wave 3 — evolving-state + false-premise (cross-family, slightly more env wiring):**
+11. M123 async_refund_amount_drift (M30 relay)
+12. M125 delivery_delay_recalc_reminder (M32-lite)
+13. M163 move_up_delete_renotify (M22 core)
+14. M162 double_return_already_filed (false-premise verify, M47/M40)
+15. M182 false_premise_pricematch_cross_app (M40 6/6 clone)
+
+**Wave 4 — cross-store + food + loyalty (broaden coverage):**
+16. M135 lowest_total_delivery_flip (cross-store, Qwen)
+17. M141 team_lunch_one_veggie_under_budget (food dietary)
+18. M148 autorefill_corporate_card (loyalty corporate)
+
+Defer (need extra env wiring or are softer): M128/M176 (need M27's approve-surface, MED), M131/M132 (live status/stock-flip subscribers, MED), M142 (two-REQUIRED consistency design, MED), M159 (weak unless load-masked, MED). Build these after the first wave confirms the verifier idioms on the new SKUs.
+
+### Critical Files for Implementation
+- `C:\Users\dhire\Downloads\ecommerce-browser-gym\server\tasks.py` (BRIEFS, factory, START_PATHS, REQUIRED_FACTS, TASKS — 11-registry adds; reuse `_alice`, `_cross_app_world`, `_make_corporate_default`, `_seed_past_order`, scheduler seeding)
+- `C:\Users\dhire\Downloads\ecommerce-browser-gym\server\verifiers.py` (`_suite_mX` + `SUITE_FACTORIES`; copy the M73/M74/M75/M22/M32 forbidden-false-at-step-0 + OR-engagement idioms; `Probe.world.shop/food/calendar/mail/market`)
+- `C:\Users\dhire\Downloads\ecommerce-browser-gym\agents\oracle_agent.py` (`solve_mX` + `SOLVERS` — every task must oracle to 1.0; the clean path must set ship-to/message/payment/qty and the no-action path must fail)
+- `C:\Users\dhire\Downloads\ecommerce-browser-gym\server\apps\scheduler.py` + `server\apps\mail\inbound.py` (async evolving-state seeding via `schedule_absolute`/`schedule_relative` and the inbound email subscribers — Group A/G)
+- `C:\Users\dhire\Downloads\ecommerce-browser-gym\harness\facts.py` + `tests\test_cross_app_verifiers.py` (`_facts_mX`/`FACT_EXTRACTORS` derived from `action_log`/serialized fields per lesson #3, and the full per-task test block to gate clean)

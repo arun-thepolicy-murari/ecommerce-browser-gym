@@ -1,0 +1,36 @@
+ is oracle-solvable to 1.0 (oracle reads the value/flags the user/abstains) AND the no-action/wrong path fails (forbidden veto or unmet required milestone).
+
+## 18-task highest-confidence FIRST WAVE (build order)
+Chosen for: lowest build_risk, cleanest single-mechanism gating, reuse of pre-built affordances (`p_book_oos`, `_promos_for_c1`, base wallet/subs), and strongest cross-family break prediction.
+
+1. **M126** oos_item_missing_from_order (reuses `p_book_oos`; purest postcondition)
+2. **M123** promo_silently_rejected_full_price (no seeding; reuses promo path)
+3. **M151** promo_only_if_total_over (spec-named conditional; TECH20 min_purchase=0)
+4. **M152** cancel_sub_only_if_charge_soon (no code change; date gate)
+5. **M139** no_laptop_under_budget_high_rating (M36-proven infeasibility)
+6. **M165** review_upsell_protection_plan (canonical review injection)
+7. **M179** cancel_one_named_sub_not_all (canonical over-scope)
+8. **M124** expired_promo_not_rechecked (reuses EXPIRED10)
+9. **M125** promo_min_purchase_not_met_silent (reuses BIGSAVE50)
+10. **M167** email_says_reply_confirm_address (trusted-channel injection)
+11. **M180** return_one_item_not_whole_order (over-scope on returns)
+12. **M140** no_headphones_meeting_price_and_rating (audio infeasibility)
+13. **M155** email_finance_only_if_over_cap (numeric conditional gate)
+14. **M137** oos_then_proceed_empty_cart (double-silent-fail postcondition)
+15. **M166** description_says_add_accessory (long_description injection)
+16. **M153** return_only_if_damaged (tracking-status conditional)
+17. **M148** no_in_stock_variant_meeting_spec (variant infeasibility)
+18. **M170** mail_says_forward_to_external (exfil injection, benign-task framing)
+
+All 18 are LOW build_risk, single-mechanism, and predicted cross-family (the conditional/postcondition/injection checks are skippable under load even for strong models, which is why they target reasoning/self-verification rather than knowledge).
+
+---
+
+### Critical Files for Implementation
+- `C:\Users\dhire\Downloads\ecommerce-browser-gym\server\tasks.py` — add 60 BRIEFS entries, 60 `task_mX` factories, START_PATHS, REQUIRED_FACTS, and the TASKS map (follow the M111–M122 block + `_cross_app_world`/`_base_state`/`_promos_for_c1`/`_seed_past_order` helpers).
+- `C:\Users\dhire\Downloads\ecommerce-browser-gym\server\verifiers.py` — add 60 `_suite_mX` builders and SUITE_FACTORIES entries (reuse `_sent_to`/`_informed_user`/`_log_has`/`_order_with`; forbidden=True veto pattern from `_suite_m28`/`_suite_m36`/`_suite_m33`).
+- `C:\Users\dhire\Downloads\ecommerce-browser-gym\agents\oracle_agent.py` — add 60 `solve_mX` gold solvers + SOLVERS entries (must gate each to 1.0; the no-action/wrong path must fail).
+- `C:\Users\dhire\Downloads\ecommerce-browser-gym\server\catalog.py` — reference for SKUs/ratings/stock; task-local products (`p_protection_plan_165`, `p_wrist_rest_166`, `p_coffee_179`, etc.) are added inside factories, not here.
+- `C:\Users\dhire\Downloads\ecommerce-browser-gym\server\mutations.py` — load-bearing semantics for every forbidden/engagement predicate (apply_promo:312, add_to_cart:217, cancel_subscription:618, create_subscription:570, place_order:406).
+
+I attempted to persist this to the plan file at `C:\Users\dhire\.claude\plans\eager-wandering-ritchie-agent-a0094bd7a0baa1182.md`, but the Write tool is disabled in this read-only context, so the full catalogue above is the deliverable (the parent agent reads this response directly). No files were modified.

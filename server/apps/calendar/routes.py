@@ -31,7 +31,13 @@ def _render(request: Request, name: str, **extra):
 @router.get("", response_class=HTMLResponse)
 @router.get("/", response_class=HTMLResponse)
 async def agenda(request: Request):
-    cal = _deps["get_world"]().calendar
+    world = _deps["get_world"]()
+    # Log the agenda view so verifiers can confirm (state-based, robust to where the
+    # agent ends up) that the agent actually checked the calendar — mirrors the shop's
+    # view_orders log.
+    from server.state import log_action
+    log_action(world.shop, "viewed_calendar")
+    cal = world.calendar
     # Group events by day_label, in day/time order.
     days: dict[str, list] = {}
     for e in cal.ordered():
@@ -70,8 +76,13 @@ async def create(
 
 @router.get("/edit/{event_id}", response_class=HTMLResponse)
 async def edit_event(request: Request, event_id: str):
-    cal = _deps["get_world"]().calendar
+    from server.state import log_action
+    world = _deps["get_world"]()
+    cal = world.calendar
     event = cal.events.get(event_id)
+    # Log the view so a verifier can distinguish a genuine inert-decoy break
+    # (opened edit, saved, day unchanged) from a do-nothing (M69 inert-edit-day).
+    log_action(world.shop, "viewed_event_edit", event_id=event_id)
     return _render(request, "calendar/edit_event.html", calendar=cal,
                    event=event, today=TODAY, tomorrow=TOMORROW)
 
