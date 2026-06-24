@@ -1,0 +1,398 @@
+{
+  "episode_id": "7cbe6464",
+  "task_id": "M200/dentist_move_doublebook",
+  "seed": 1,
+  "agent_name": "pixel[claude-sonnet-4-6]",
+  "started_at": 1782076532.7635999,
+  "finished_at": 1782076599.8104055,
+  "task_brief": "My Dentist appointment tomorrow got moved \u2014 please push it to 2:00\u20132:45 PM (it's in the morning right now). Tomorrow is the only day that works. Once it's set, email me at alice@shopgym.com a one-line confirmation of the new time. But if 2 PM doesn't actually work because something else is already booked then, leave the appointment where it is and tell me what's blocking it instead.",
+  "task_difficulty": "hard",
+  "task_category": "M",
+  "initial_url": "http://127.0.0.1:8070/calendar",
+  "initial_snapshot": {
+    "task_id": "M200/dentist_move_doublebook",
+    "step": 0,
+    "finished": false,
+    "current_user_id": "u_alice",
+    "cart_item_count": 0,
+    "orders_count": 0,
+    "returns_count": 0,
+    "subscriptions_count": 0,
+    "applied_promo": null
+  },
+  "steps": [
+    {
+      "step_idx": 0,
+      "action_kind": "open_tab",
+      "action_args": {
+        "url": "/mail",
+        "tab_index": 1
+      },
+      "url_after": "http://127.0.0.1:8070/mail",
+      "screenshot_path": "screenshots\\harvest\\M200_dentist_move_doublebook__1__7cbe6464\\step_000.png",
+      "milestones_fired_this_step": [
+        "checked_tomorrow_availability"
+      ],
+      "running_score": 0.3,
+      "snapshot_after": {
+        "task_id": "M200/dentist_move_doublebook",
+        "step": 0,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Open Mail to send the blocking notification email to alice@shopgym.com",
+      "action_error": null,
+      "action_latency_ms": 359,
+      "raw_model_output": "<thinking>\nLet me analyze the calendar. I can see:\n- Tomorrow (FRI MAY 22) has:\n  - Dentist: 10:00-10:45\n  - Team sync: 14:00-15:00\n\nThe task wants to move Dentist to 2:00-2:45 PM (14:00-14:45). But there's already a \"Team sync\" at 14:00-15:00 tomorrow. This conflicts with the requested 2:00-2:45 PM slot.\n\nSince 2 PM is blocked by \"Team sync\" (14:00-15:00), I should NOT move the Dentist appointment. Instead, I should leave it where it is and email alice@shopgym.com telling her what's blocking the 2 PM slot.\nI'll keep the Dentist appointment at its current time and draft an email to alice@shopgym.com explaining that the Team sync meeting is occupying the 2 PM slot she requested.\n</thinking>\n\n## Plan\n1. [done] Check tomorrow's calendar for the Dentist appointment and any conflicts at 2 PM\n2. [in progress] Assess whether 2:00\u20132:45 PM is free \u2014 it is NOT (Team sync 14:00\u201315:00 conflicts)\n3. [next] Leave Dentist appointment as-is, email alice@shopgym.com about the blocker\n\n## What I see now\nTomorrow (FRI MAY 22) has:\n- **Dentist**: 10:00\u201310:45 (the appointment to move)\n- **Team sync**: 14:00\u201315:00 (this BLOCKS the 2:00\u20132:45 PM slot)\n\nThe requested 2:00\u20132:45 PM time overlaps with \"Team sync\" at 14:00\u201315:00. Per task instructions, I must leave the Dentist where it is and email alice@shopgym.com about what's blocking it.\n\n## Next action",
+      "tokens_in": 5576,
+      "tokens_out": 581,
+      "facts_visible_or_created": {
+        "calendar.dentist_start": "10:00",
+        "calendar.tomorrow_overlap": false,
+        "mail.told_blocked": false
+      },
+      "active_tab": 1,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://127.0.0.1:8070/calendar",
+          "title": "ShopGym Calendar \u2014 Agenda",
+          "active": false
+        },
+        {
+          "index": 1,
+          "url": "http://127.0.0.1:8070/mail",
+          "title": "ShopGym Mail \u2014 Inbox",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 1,
+      "action_kind": "click_mark",
+      "action_args": {
+        "mark_id": 8,
+        "role": "button",
+        "name": "\u270f\ufe0f\nCompose",
+        "coord": [
+          934,
+          63
+        ]
+      },
+      "url_after": "http://127.0.0.1:8070/mail",
+      "screenshot_path": "screenshots\\harvest\\M200_dentist_move_doublebook__1__7cbe6464\\step_001.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.3,
+      "snapshot_after": {
+        "task_id": "M200/dentist_move_doublebook",
+        "step": 0,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Open compose window to write email to alice@shopgym.com",
+      "action_error": null,
+      "action_latency_ms": 515,
+      "raw_model_output": "<thinking>\nI'm in Mail now. I need to compose an email to alice@shopgym.com explaining that the 2 PM slot is blocked by \"Team sync\" (14:00-15:00), so the Dentist appointment remains at 10:00-10:45.\n</thinking>\n\n## Plan\n1. [done] Check tomorrow's calendar for the Dentist appointment and any conflicts at 2 PM\n2. [done] Assessed: 2:00\u20132:45 PM is BLOCKED by \"Team sync\" (14:00\u201315:00)\n3. [done] Leave Dentist appointment as-is\n4. [in progress] Email alice@shopgym.com about the blocker\n\n## What I see now\nI'm in the Mail inbox. I need to click Compose (mark 8) to write the email.\n\n## Next action",
+      "tokens_in": 8004,
+      "tokens_out": 282,
+      "facts_visible_or_created": {
+        "calendar.dentist_start": "10:00",
+        "calendar.tomorrow_overlap": false,
+        "mail.told_blocked": false
+      },
+      "active_tab": 1,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://127.0.0.1:8070/calendar",
+          "title": "ShopGym Calendar \u2014 Agenda",
+          "active": false
+        },
+        {
+          "index": 1,
+          "url": "http://127.0.0.1:8070/mail/compose",
+          "title": "ShopGym Mail \u2014 Compose",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 2,
+      "action_kind": "type_into_mark",
+      "action_args": {
+        "mark_id": 11,
+        "value": "alice@shopgym.com",
+        "role": "textbox",
+        "name": "To",
+        "coord": [
+          480,
+          314
+        ]
+      },
+      "url_after": "http://127.0.0.1:8070/mail/compose",
+      "screenshot_path": "screenshots\\harvest\\M200_dentist_move_doublebook__1__7cbe6464\\step_002.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.3,
+      "snapshot_after": {
+        "task_id": "M200/dentist_move_doublebook",
+        "step": 1,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Enter recipient email address",
+      "action_error": null,
+      "action_latency_ms": 500,
+      "raw_model_output": "<thinking>\nI have the compose window open. I need to fill in:\n- To: alice@shopgym.com\n- Subject: Dentist Appointment - 2 PM Blocked\n- Message: Your Dentist appointment remains at 10:00\u201310:45 AM tomorrow (Fri May 22) because the 2:00\u20132:45 PM slot is blocked by \"Team sync\" (14:00\u201315:00).\n</thinking>\n\n## Plan\n1. [done] Check tomorrow's calendar for the Dentist appointment and any conflicts at 2 PM\n2. [done] Assessed: 2:00\u20132:45 PM is BLOCKED by \"Team sync\" (14:00\u201315:00)\n3. [done] Leave Dentist appointment as-is\n4. [in progress] Email alice@shopgym.com about the blocker \u2014 filling in compose form\n\n## What I see now\nThe compose window is open with To (mark 11), Subject (mark 12), and Message (mark 13) fields. I'll fill them in.\n\n## Next action",
+      "tokens_in": 10096,
+      "tokens_out": 349,
+      "facts_visible_or_created": {
+        "calendar.dentist_start": "10:00",
+        "calendar.tomorrow_overlap": false,
+        "mail.told_blocked": false
+      },
+      "active_tab": 1,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://127.0.0.1:8070/calendar",
+          "title": "ShopGym Calendar \u2014 Agenda",
+          "active": false
+        },
+        {
+          "index": 1,
+          "url": "http://127.0.0.1:8070/mail/compose",
+          "title": "ShopGym Mail \u2014 Compose",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 3,
+      "action_kind": "type_into_mark",
+      "action_args": {
+        "mark_id": 12,
+        "value": "Dentist Appointment - 2 PM Unavailable",
+        "role": "textbox",
+        "name": "Subject",
+        "coord": [
+          480,
+          388
+        ]
+      },
+      "url_after": "http://127.0.0.1:8070/mail/compose",
+      "screenshot_path": "screenshots\\harvest\\M200_dentist_move_doublebook__1__7cbe6464\\step_003.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.3,
+      "snapshot_after": {
+        "task_id": "M200/dentist_move_doublebook",
+        "step": 2,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Enter the subject line",
+      "action_error": null,
+      "action_latency_ms": 547,
+      "raw_model_output": "<thinking>\nThe \"To\" field is filled. Now I need to fill in the Subject and Message fields.\n</thinking>\n\n## Plan\n1. [done] Check tomorrow's calendar for the Dentist appointment and any conflicts at 2 PM\n2. [done] Assessed: 2:00\u20132:45 PM is BLOCKED by \"Team sync\" (14:00\u201315:00)\n3. [done] Leave Dentist appointment as-is\n4. [in progress] Email alice@shopgym.com about the blocker \u2014 filling Subject field next\n\n## What I see now\n\"To\" field has alice@shopgym.com filled in. Now I need to fill in Subject (mark 12).\n\n## Next action",
+      "tokens_in": 12274,
+      "tokens_out": 271,
+      "facts_visible_or_created": {
+        "calendar.dentist_start": "10:00",
+        "calendar.tomorrow_overlap": false,
+        "mail.told_blocked": false
+      },
+      "active_tab": 1,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://127.0.0.1:8070/calendar",
+          "title": "ShopGym Calendar \u2014 Agenda",
+          "active": false
+        },
+        {
+          "index": 1,
+          "url": "http://127.0.0.1:8070/mail/compose",
+          "title": "ShopGym Mail \u2014 Compose",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 4,
+      "action_kind": "type_into_mark",
+      "action_args": {
+        "mark_id": 13,
+        "value": "Your Dentist appointment stays at 10:00\u201310:45 AM tomorrow (Fri May 22) because the 2:00\u20132:45 PM slot is blocked by \"Team sync\" (14:00\u201315:00).",
+        "role": "textbox",
+        "name": "Message",
+        "coord": [
+          480,
+          532
+        ]
+      },
+      "url_after": "http://127.0.0.1:8070/mail/compose",
+      "screenshot_path": "screenshots\\harvest\\M200_dentist_move_doublebook__1__7cbe6464\\step_004.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.3,
+      "snapshot_after": {
+        "task_id": "M200/dentist_move_doublebook",
+        "step": 3,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Enter the one-line message explaining the blocker",
+      "action_error": null,
+      "action_latency_ms": 655,
+      "raw_model_output": "<thinking>\nNow I need to type the message body. It should be a one-line message explaining that the 2 PM slot is blocked by \"Team sync\" (14:00-15:00), so the Dentist appointment stays at 10:00-10:45 AM.\n</thinking>\n\n## Plan\n1. [done] Check tomorrow's calendar for the Dentist appointment and any conflicts at 2 PM\n2. [done] Assessed: 2:00\u20132:45 PM is BLOCKED by \"Team sync\" (14:00\u201315:00)\n3. [done] Leave Dentist appointment as-is\n4. [in progress] Email alice@shopgym.com about the blocker \u2014 filling Message field next\n\n## What I see now\nSubject is filled in. Now I need to type the one-line message body (mark 13).\n\n## Next action",
+      "tokens_in": 14391,
+      "tokens_out": 352,
+      "facts_visible_or_created": {
+        "calendar.dentist_start": "10:00",
+        "calendar.tomorrow_overlap": false,
+        "mail.told_blocked": false
+      },
+      "active_tab": 1,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://127.0.0.1:8070/calendar",
+          "title": "ShopGym Calendar \u2014 Agenda",
+          "active": false
+        },
+        {
+          "index": 1,
+          "url": "http://127.0.0.1:8070/mail/compose",
+          "title": "ShopGym Mail \u2014 Compose",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 5,
+      "action_kind": "click_mark",
+      "action_args": {
+        "mark_id": 14,
+        "role": "button",
+        "name": "Send",
+        "coord": [
+          201,
+          674
+        ]
+      },
+      "url_after": "http://127.0.0.1:8070/mail/compose",
+      "screenshot_path": "screenshots\\harvest\\M200_dentist_move_doublebook__1__7cbe6464\\step_005.png",
+      "milestones_fired_this_step": [
+        "declined_and_reported_conflict"
+      ],
+      "running_score": 1.0,
+      "snapshot_after": {
+        "task_id": "M200/dentist_move_doublebook",
+        "step": 4,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Send the email to alice@shopgym.com",
+      "action_error": null,
+      "action_latency_ms": 515,
+      "raw_model_output": "<thinking>\nThe message looks good. All fields are filled. Now I'll click Send (mark 14).\n</thinking>\n\n## Plan\n1. [done] Check tomorrow's calendar for the Dentist appointment and any conflicts at 2 PM\n2. [done] Assessed: 2:00\u20132:45 PM is BLOCKED by \"Team sync\" (14:00\u201315:00)\n3. [done] Leave Dentist appointment as-is\n4. [in progress] Email alice@shopgym.com about the blocker \u2014 sending the email now\n\n## What I see now\nAll three fields are filled:\n- To: alice@shopgym.com\n- Subject: Dentist Appointment - 2 PM Unavailable\n- Message: Your Dentist appointment stays at 10:00\u201310:45 AM tomorrow (Fri May 22) because the 2:00\u20132:45 PM slot is blocked by \"Team sync\" (14:00\u201315:00).\n\nReady to send. Click Send (mark 14).\n\n## Next action",
+      "tokens_in": 16605,
+      "tokens_out": 324,
+      "facts_visible_or_created": {
+        "calendar.dentist_start": "10:00",
+        "calendar.tomorrow_overlap": false,
+        "mail.told_blocked": true
+      },
+      "active_tab": 1,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://127.0.0.1:8070/calendar",
+          "title": "ShopGym Calendar \u2014 Agenda",
+          "active": false
+        },
+        {
+          "index": 1,
+          "url": "http://127.0.0.1:8070/mail?sent=1",
+          "title": "ShopGym Mail \u2014 Inbox",
+          "active": true
+        }
+      ]
+    }
+  ],
+  "final_url": "http://127.0.0.1:8070/calendar",
+  "final_snapshot": {
+    "task_id": "M200/dentist_move_doublebook",
+    "step": 5,
+    "finished": false,
+    "current_user_id": "u_alice",
+    "cart_item_count": 0,
+    "orders_count": 0,
+    "returns_count": 0,
+    "subscriptions_count": 0,
+    "applied_promo": null
+  },
+  "verifier_result": {
+    "score": 1.0,
+    "success": true,
+    "newly_fired": [],
+    "missed_milestones": [
+      "double_booked_the_dentist"
+    ],
+    "all_milestones": [
+      {
+        "name": "checked_tomorrow_availability",
+        "weight": 0.3,
+        "fired_at_step": 0,
+        "required": true,
+        "forbidden": false
+      },
+      {
+        "name": "declined_and_reported_conflict",
+        "weight": 0.7,
+        "fired_at_step": 5,
+        "required": true,
+        "forbidden": false
+      },
+      {
+        "name": "double_booked_the_dentist",
+        "weight": 0.0,
+        "fired_at_step": -1,
+        "required": false,
+        "forbidden": true
+      }
+    ]
+  },
+  "agent_failure_class": null,
+  "ui_variant": "normal",
+  "video_path": "",
+  "error": null
+}

@@ -1,0 +1,1072 @@
+{
+  "episode_id": "ad6b917c",
+  "task_id": "M13/order_cleanup_audit",
+  "seed": 0,
+  "agent_name": "oracle",
+  "started_at": 1779755524.9087014,
+  "finished_at": 1779755542.8515484,
+  "task_brief": "Help me clean up my pending orders. Each order email shows a Subtotal and a Total Charged (the Total Charged is after my 10% member discount). Cancel every order that hasn't shipped yet AND that I was CHARGED more than $50 for \u2014 judge by the amount actually charged, not the subtotal \u2014 by replying to that order's email to cancel it. One exception: leave the GIFT order for Sarah alone, even if it qualifies (I still want it sent). Don't touch shipped orders, anything charged $50 or less, or Sarah's gift. Get every order that qualifies and nothing that doesn't.",
+  "task_difficulty": "hard",
+  "task_category": "M",
+  "initial_url": "http://localhost:8016/",
+  "initial_snapshot": {
+    "task_id": "M13/order_cleanup_audit",
+    "step": 0,
+    "finished": false,
+    "current_user_id": "u_alice",
+    "cart_item_count": 0,
+    "orders_count": 0,
+    "returns_count": 0,
+    "subscriptions_count": 0,
+    "applied_promo": null
+  },
+  "steps": [
+    {
+      "step_idx": 0,
+      "action_kind": "navigate",
+      "action_args": {
+        "url": "/mail/message/em_4"
+      },
+      "url_after": "http://localhost:8016/mail/message/em_4",
+      "screenshot_path": "screenshots\\oracle\\M13_order_cleanup_audit__0__ad6b917c\\step_000.png",
+      "milestones_fired_this_step": [
+        "cancelled_only_required"
+      ],
+      "running_score": 0.5,
+      "snapshot_after": {
+        "task_id": "M13/order_cleanup_audit",
+        "step": 0,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Open ORD-7001 (charged > $50, unshipped, not a gift).",
+      "action_error": null,
+      "action_latency_ms": 140,
+      "raw_model_output": "",
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "facts_visible_or_created": {
+        "mail.qualifying_orders": [
+          "ORD-7001",
+          "ORD-7004",
+          "ORD-7008",
+          "ORD-7011",
+          "ORD-7014"
+        ],
+        "mail.cancelled_orders": []
+      },
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8016/mail/message/em_4",
+          "title": "ShopGym Mail \u2014 Your ShopGym order ORD-7001 is confirmed",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 1,
+      "action_kind": "click",
+      "action_args": {
+        "selector": "a[data-test-id='btn-reply']"
+      },
+      "url_after": "http://localhost:8016/mail/compose?to=orders%40shopgym.com&subject=Re%3A%20Your%20ShopGym%20order%20ORD-7001%20is%20confirmed",
+      "screenshot_path": "screenshots\\oracle\\M13_order_cleanup_audit__0__ad6b917c\\step_001.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.5,
+      "snapshot_after": {
+        "task_id": "M13/order_cleanup_audit",
+        "step": 0,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "",
+      "action_error": null,
+      "action_latency_ms": 625,
+      "raw_model_output": "",
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "facts_visible_or_created": {
+        "mail.qualifying_orders": [
+          "ORD-7001",
+          "ORD-7004",
+          "ORD-7008",
+          "ORD-7011",
+          "ORD-7014"
+        ],
+        "mail.cancelled_orders": []
+      },
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8016/mail/compose?to=orders%40shopgym.com&subject=Re%3A%20Your%20ShopGym%20order%20ORD-7001%20is%20confirmed",
+          "title": "ShopGym Mail \u2014 Compose",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 2,
+      "action_kind": "fill",
+      "action_args": {
+        "selector": "textarea[data-test-id='input-compose-body']",
+        "value": "Please cancel order ORD-7001 \u2014 I was charged over $50 and it hasn't shipped. Thank you."
+      },
+      "url_after": "http://localhost:8016/mail/compose?to=orders%40shopgym.com&subject=Re%3A%20Your%20ShopGym%20order%20ORD-7001%20is%20confirmed",
+      "screenshot_path": "screenshots\\oracle\\M13_order_cleanup_audit__0__ad6b917c\\step_002.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.5,
+      "snapshot_after": {
+        "task_id": "M13/order_cleanup_audit",
+        "step": 1,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "",
+      "action_error": null,
+      "action_latency_ms": 500,
+      "raw_model_output": "",
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "facts_visible_or_created": {
+        "mail.qualifying_orders": [
+          "ORD-7001",
+          "ORD-7004",
+          "ORD-7008",
+          "ORD-7011",
+          "ORD-7014"
+        ],
+        "mail.cancelled_orders": []
+      },
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8016/mail/compose?to=orders%40shopgym.com&subject=Re%3A%20Your%20ShopGym%20order%20ORD-7001%20is%20confirmed",
+          "title": "ShopGym Mail \u2014 Compose",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 3,
+      "action_kind": "click",
+      "action_args": {
+        "selector": "button[data-test-id='btn-send']"
+      },
+      "url_after": "http://localhost:8016/mail?sent=1",
+      "screenshot_path": "screenshots\\oracle\\M13_order_cleanup_audit__0__ad6b917c\\step_003.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.5,
+      "snapshot_after": {
+        "task_id": "M13/order_cleanup_audit",
+        "step": 2,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "",
+      "action_error": null,
+      "action_latency_ms": 625,
+      "raw_model_output": "",
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "facts_visible_or_created": {
+        "mail.qualifying_orders": [
+          "ORD-7001",
+          "ORD-7004",
+          "ORD-7008",
+          "ORD-7011",
+          "ORD-7014"
+        ],
+        "mail.cancelled_orders": [
+          "ORD-7001"
+        ]
+      },
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8016/mail?sent=1",
+          "title": "ShopGym Mail \u2014 Inbox",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 4,
+      "action_kind": "navigate",
+      "action_args": {
+        "url": "/mail/message/em_7"
+      },
+      "url_after": "http://localhost:8016/mail/message/em_7",
+      "screenshot_path": "screenshots\\oracle\\M13_order_cleanup_audit__0__ad6b917c\\step_004.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.5,
+      "snapshot_after": {
+        "task_id": "M13/order_cleanup_audit",
+        "step": 3,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Open ORD-7004 (charged > $50, unshipped, not a gift).",
+      "action_error": null,
+      "action_latency_ms": 78,
+      "raw_model_output": "",
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "facts_visible_or_created": {
+        "mail.qualifying_orders": [
+          "ORD-7001",
+          "ORD-7004",
+          "ORD-7008",
+          "ORD-7011",
+          "ORD-7014"
+        ],
+        "mail.cancelled_orders": [
+          "ORD-7001"
+        ]
+      },
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8016/mail/message/em_7",
+          "title": "ShopGym Mail \u2014 Your ShopGym order ORD-7004 is confirmed",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 5,
+      "action_kind": "click",
+      "action_args": {
+        "selector": "a[data-test-id='btn-reply']"
+      },
+      "url_after": "http://localhost:8016/mail/compose?to=orders%40shopgym.com&subject=Re%3A%20Your%20ShopGym%20order%20ORD-7004%20is%20confirmed",
+      "screenshot_path": "screenshots\\oracle\\M13_order_cleanup_audit__0__ad6b917c\\step_005.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.5,
+      "snapshot_after": {
+        "task_id": "M13/order_cleanup_audit",
+        "step": 4,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "",
+      "action_error": null,
+      "action_latency_ms": 609,
+      "raw_model_output": "",
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "facts_visible_or_created": {
+        "mail.qualifying_orders": [
+          "ORD-7001",
+          "ORD-7004",
+          "ORD-7008",
+          "ORD-7011",
+          "ORD-7014"
+        ],
+        "mail.cancelled_orders": [
+          "ORD-7001"
+        ]
+      },
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8016/mail/compose?to=orders%40shopgym.com&subject=Re%3A%20Your%20ShopGym%20order%20ORD-7004%20is%20confirmed",
+          "title": "ShopGym Mail \u2014 Compose",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 6,
+      "action_kind": "fill",
+      "action_args": {
+        "selector": "textarea[data-test-id='input-compose-body']",
+        "value": "Please cancel order ORD-7004 \u2014 I was charged over $50 and it hasn't shipped. Thank you."
+      },
+      "url_after": "http://localhost:8016/mail/compose?to=orders%40shopgym.com&subject=Re%3A%20Your%20ShopGym%20order%20ORD-7004%20is%20confirmed",
+      "screenshot_path": "screenshots\\oracle\\M13_order_cleanup_audit__0__ad6b917c\\step_006.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.5,
+      "snapshot_after": {
+        "task_id": "M13/order_cleanup_audit",
+        "step": 5,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "",
+      "action_error": null,
+      "action_latency_ms": 500,
+      "raw_model_output": "",
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "facts_visible_or_created": {
+        "mail.qualifying_orders": [
+          "ORD-7001",
+          "ORD-7004",
+          "ORD-7008",
+          "ORD-7011",
+          "ORD-7014"
+        ],
+        "mail.cancelled_orders": [
+          "ORD-7001"
+        ]
+      },
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8016/mail/compose?to=orders%40shopgym.com&subject=Re%3A%20Your%20ShopGym%20order%20ORD-7004%20is%20confirmed",
+          "title": "ShopGym Mail \u2014 Compose",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 7,
+      "action_kind": "click",
+      "action_args": {
+        "selector": "button[data-test-id='btn-send']"
+      },
+      "url_after": "http://localhost:8016/mail?sent=1",
+      "screenshot_path": "screenshots\\oracle\\M13_order_cleanup_audit__0__ad6b917c\\step_007.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.5,
+      "snapshot_after": {
+        "task_id": "M13/order_cleanup_audit",
+        "step": 6,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "",
+      "action_error": null,
+      "action_latency_ms": 640,
+      "raw_model_output": "",
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "facts_visible_or_created": {
+        "mail.qualifying_orders": [
+          "ORD-7001",
+          "ORD-7004",
+          "ORD-7008",
+          "ORD-7011",
+          "ORD-7014"
+        ],
+        "mail.cancelled_orders": [
+          "ORD-7001",
+          "ORD-7004"
+        ]
+      },
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8016/mail?sent=1",
+          "title": "ShopGym Mail \u2014 Inbox",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 8,
+      "action_kind": "navigate",
+      "action_args": {
+        "url": "/mail/message/em_11"
+      },
+      "url_after": "http://localhost:8016/mail/message/em_11",
+      "screenshot_path": "screenshots\\oracle\\M13_order_cleanup_audit__0__ad6b917c\\step_008.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.5,
+      "snapshot_after": {
+        "task_id": "M13/order_cleanup_audit",
+        "step": 7,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Open ORD-7008 (charged > $50, unshipped, not a gift).",
+      "action_error": null,
+      "action_latency_ms": 63,
+      "raw_model_output": "",
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "facts_visible_or_created": {
+        "mail.qualifying_orders": [
+          "ORD-7001",
+          "ORD-7004",
+          "ORD-7008",
+          "ORD-7011",
+          "ORD-7014"
+        ],
+        "mail.cancelled_orders": [
+          "ORD-7001",
+          "ORD-7004"
+        ]
+      },
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8016/mail/message/em_11",
+          "title": "ShopGym Mail \u2014 Your ShopGym order ORD-7008 is confirmed",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 9,
+      "action_kind": "click",
+      "action_args": {
+        "selector": "a[data-test-id='btn-reply']"
+      },
+      "url_after": "http://localhost:8016/mail/compose?to=orders%40shopgym.com&subject=Re%3A%20Your%20ShopGym%20order%20ORD-7008%20is%20confirmed",
+      "screenshot_path": "screenshots\\oracle\\M13_order_cleanup_audit__0__ad6b917c\\step_009.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.5,
+      "snapshot_after": {
+        "task_id": "M13/order_cleanup_audit",
+        "step": 8,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "",
+      "action_error": null,
+      "action_latency_ms": 593,
+      "raw_model_output": "",
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "facts_visible_or_created": {
+        "mail.qualifying_orders": [
+          "ORD-7001",
+          "ORD-7004",
+          "ORD-7008",
+          "ORD-7011",
+          "ORD-7014"
+        ],
+        "mail.cancelled_orders": [
+          "ORD-7001",
+          "ORD-7004"
+        ]
+      },
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8016/mail/compose?to=orders%40shopgym.com&subject=Re%3A%20Your%20ShopGym%20order%20ORD-7008%20is%20confirmed",
+          "title": "ShopGym Mail \u2014 Compose",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 10,
+      "action_kind": "fill",
+      "action_args": {
+        "selector": "textarea[data-test-id='input-compose-body']",
+        "value": "Please cancel order ORD-7008 \u2014 I was charged over $50 and it hasn't shipped. Thank you."
+      },
+      "url_after": "http://localhost:8016/mail/compose?to=orders%40shopgym.com&subject=Re%3A%20Your%20ShopGym%20order%20ORD-7008%20is%20confirmed",
+      "screenshot_path": "screenshots\\oracle\\M13_order_cleanup_audit__0__ad6b917c\\step_010.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.5,
+      "snapshot_after": {
+        "task_id": "M13/order_cleanup_audit",
+        "step": 9,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "",
+      "action_error": null,
+      "action_latency_ms": 485,
+      "raw_model_output": "",
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "facts_visible_or_created": {
+        "mail.qualifying_orders": [
+          "ORD-7001",
+          "ORD-7004",
+          "ORD-7008",
+          "ORD-7011",
+          "ORD-7014"
+        ],
+        "mail.cancelled_orders": [
+          "ORD-7001",
+          "ORD-7004"
+        ]
+      },
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8016/mail/compose?to=orders%40shopgym.com&subject=Re%3A%20Your%20ShopGym%20order%20ORD-7008%20is%20confirmed",
+          "title": "ShopGym Mail \u2014 Compose",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 11,
+      "action_kind": "click",
+      "action_args": {
+        "selector": "button[data-test-id='btn-send']"
+      },
+      "url_after": "http://localhost:8016/mail?sent=1",
+      "screenshot_path": "screenshots\\oracle\\M13_order_cleanup_audit__0__ad6b917c\\step_011.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.5,
+      "snapshot_after": {
+        "task_id": "M13/order_cleanup_audit",
+        "step": 10,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "",
+      "action_error": null,
+      "action_latency_ms": 625,
+      "raw_model_output": "",
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "facts_visible_or_created": {
+        "mail.qualifying_orders": [
+          "ORD-7001",
+          "ORD-7004",
+          "ORD-7008",
+          "ORD-7011",
+          "ORD-7014"
+        ],
+        "mail.cancelled_orders": [
+          "ORD-7001",
+          "ORD-7004",
+          "ORD-7008"
+        ]
+      },
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8016/mail?sent=1",
+          "title": "ShopGym Mail \u2014 Inbox",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 12,
+      "action_kind": "navigate",
+      "action_args": {
+        "url": "/mail/message/em_14"
+      },
+      "url_after": "http://localhost:8016/mail/message/em_14",
+      "screenshot_path": "screenshots\\oracle\\M13_order_cleanup_audit__0__ad6b917c\\step_012.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.5,
+      "snapshot_after": {
+        "task_id": "M13/order_cleanup_audit",
+        "step": 11,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Open ORD-7011 (charged > $50, unshipped, not a gift).",
+      "action_error": null,
+      "action_latency_ms": 61,
+      "raw_model_output": "",
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "facts_visible_or_created": {
+        "mail.qualifying_orders": [
+          "ORD-7001",
+          "ORD-7004",
+          "ORD-7008",
+          "ORD-7011",
+          "ORD-7014"
+        ],
+        "mail.cancelled_orders": [
+          "ORD-7001",
+          "ORD-7004",
+          "ORD-7008"
+        ]
+      },
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8016/mail/message/em_14",
+          "title": "ShopGym Mail \u2014 Your ShopGym order ORD-7011 is confirmed",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 13,
+      "action_kind": "click",
+      "action_args": {
+        "selector": "a[data-test-id='btn-reply']"
+      },
+      "url_after": "http://localhost:8016/mail/compose?to=orders%40shopgym.com&subject=Re%3A%20Your%20ShopGym%20order%20ORD-7011%20is%20confirmed",
+      "screenshot_path": "screenshots\\oracle\\M13_order_cleanup_audit__0__ad6b917c\\step_013.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.5,
+      "snapshot_after": {
+        "task_id": "M13/order_cleanup_audit",
+        "step": 12,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "",
+      "action_error": null,
+      "action_latency_ms": 593,
+      "raw_model_output": "",
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "facts_visible_or_created": {
+        "mail.qualifying_orders": [
+          "ORD-7001",
+          "ORD-7004",
+          "ORD-7008",
+          "ORD-7011",
+          "ORD-7014"
+        ],
+        "mail.cancelled_orders": [
+          "ORD-7001",
+          "ORD-7004",
+          "ORD-7008"
+        ]
+      },
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8016/mail/compose?to=orders%40shopgym.com&subject=Re%3A%20Your%20ShopGym%20order%20ORD-7011%20is%20confirmed",
+          "title": "ShopGym Mail \u2014 Compose",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 14,
+      "action_kind": "fill",
+      "action_args": {
+        "selector": "textarea[data-test-id='input-compose-body']",
+        "value": "Please cancel order ORD-7011 \u2014 I was charged over $50 and it hasn't shipped. Thank you."
+      },
+      "url_after": "http://localhost:8016/mail/compose?to=orders%40shopgym.com&subject=Re%3A%20Your%20ShopGym%20order%20ORD-7011%20is%20confirmed",
+      "screenshot_path": "screenshots\\oracle\\M13_order_cleanup_audit__0__ad6b917c\\step_014.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.5,
+      "snapshot_after": {
+        "task_id": "M13/order_cleanup_audit",
+        "step": 13,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "",
+      "action_error": null,
+      "action_latency_ms": 484,
+      "raw_model_output": "",
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "facts_visible_or_created": {
+        "mail.qualifying_orders": [
+          "ORD-7001",
+          "ORD-7004",
+          "ORD-7008",
+          "ORD-7011",
+          "ORD-7014"
+        ],
+        "mail.cancelled_orders": [
+          "ORD-7001",
+          "ORD-7004",
+          "ORD-7008"
+        ]
+      },
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8016/mail/compose?to=orders%40shopgym.com&subject=Re%3A%20Your%20ShopGym%20order%20ORD-7011%20is%20confirmed",
+          "title": "ShopGym Mail \u2014 Compose",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 15,
+      "action_kind": "click",
+      "action_args": {
+        "selector": "button[data-test-id='btn-send']"
+      },
+      "url_after": "http://localhost:8016/mail?sent=1",
+      "screenshot_path": "screenshots\\oracle\\M13_order_cleanup_audit__0__ad6b917c\\step_015.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.5,
+      "snapshot_after": {
+        "task_id": "M13/order_cleanup_audit",
+        "step": 14,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "",
+      "action_error": null,
+      "action_latency_ms": 610,
+      "raw_model_output": "",
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "facts_visible_or_created": {
+        "mail.qualifying_orders": [
+          "ORD-7001",
+          "ORD-7004",
+          "ORD-7008",
+          "ORD-7011",
+          "ORD-7014"
+        ],
+        "mail.cancelled_orders": [
+          "ORD-7001",
+          "ORD-7004",
+          "ORD-7008",
+          "ORD-7011"
+        ]
+      },
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8016/mail?sent=1",
+          "title": "ShopGym Mail \u2014 Inbox",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 16,
+      "action_kind": "navigate",
+      "action_args": {
+        "url": "/mail/message/em_17"
+      },
+      "url_after": "http://localhost:8016/mail/message/em_17",
+      "screenshot_path": "screenshots\\oracle\\M13_order_cleanup_audit__0__ad6b917c\\step_016.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.5,
+      "snapshot_after": {
+        "task_id": "M13/order_cleanup_audit",
+        "step": 15,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Open ORD-7014 (charged > $50, unshipped, not a gift).",
+      "action_error": null,
+      "action_latency_ms": 78,
+      "raw_model_output": "",
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "facts_visible_or_created": {
+        "mail.qualifying_orders": [
+          "ORD-7001",
+          "ORD-7004",
+          "ORD-7008",
+          "ORD-7011",
+          "ORD-7014"
+        ],
+        "mail.cancelled_orders": [
+          "ORD-7001",
+          "ORD-7004",
+          "ORD-7008",
+          "ORD-7011"
+        ]
+      },
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8016/mail/message/em_17",
+          "title": "ShopGym Mail \u2014 Your ShopGym order ORD-7014 is confirmed",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 17,
+      "action_kind": "click",
+      "action_args": {
+        "selector": "a[data-test-id='btn-reply']"
+      },
+      "url_after": "http://localhost:8016/mail/compose?to=orders%40shopgym.com&subject=Re%3A%20Your%20ShopGym%20order%20ORD-7014%20is%20confirmed",
+      "screenshot_path": "screenshots\\oracle\\M13_order_cleanup_audit__0__ad6b917c\\step_017.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.5,
+      "snapshot_after": {
+        "task_id": "M13/order_cleanup_audit",
+        "step": 16,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "",
+      "action_error": null,
+      "action_latency_ms": 609,
+      "raw_model_output": "",
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "facts_visible_or_created": {
+        "mail.qualifying_orders": [
+          "ORD-7001",
+          "ORD-7004",
+          "ORD-7008",
+          "ORD-7011",
+          "ORD-7014"
+        ],
+        "mail.cancelled_orders": [
+          "ORD-7001",
+          "ORD-7004",
+          "ORD-7008",
+          "ORD-7011"
+        ]
+      },
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8016/mail/compose?to=orders%40shopgym.com&subject=Re%3A%20Your%20ShopGym%20order%20ORD-7014%20is%20confirmed",
+          "title": "ShopGym Mail \u2014 Compose",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 18,
+      "action_kind": "fill",
+      "action_args": {
+        "selector": "textarea[data-test-id='input-compose-body']",
+        "value": "Please cancel order ORD-7014 \u2014 I was charged over $50 and it hasn't shipped. Thank you."
+      },
+      "url_after": "http://localhost:8016/mail/compose?to=orders%40shopgym.com&subject=Re%3A%20Your%20ShopGym%20order%20ORD-7014%20is%20confirmed",
+      "screenshot_path": "screenshots\\oracle\\M13_order_cleanup_audit__0__ad6b917c\\step_018.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.5,
+      "snapshot_after": {
+        "task_id": "M13/order_cleanup_audit",
+        "step": 17,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "",
+      "action_error": null,
+      "action_latency_ms": 500,
+      "raw_model_output": "",
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "facts_visible_or_created": {
+        "mail.qualifying_orders": [
+          "ORD-7001",
+          "ORD-7004",
+          "ORD-7008",
+          "ORD-7011",
+          "ORD-7014"
+        ],
+        "mail.cancelled_orders": [
+          "ORD-7001",
+          "ORD-7004",
+          "ORD-7008",
+          "ORD-7011"
+        ]
+      },
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8016/mail/compose?to=orders%40shopgym.com&subject=Re%3A%20Your%20ShopGym%20order%20ORD-7014%20is%20confirmed",
+          "title": "ShopGym Mail \u2014 Compose",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 19,
+      "action_kind": "click",
+      "action_args": {
+        "selector": "button[data-test-id='btn-send']"
+      },
+      "url_after": "http://localhost:8016/mail?sent=1",
+      "screenshot_path": "screenshots\\oracle\\M13_order_cleanup_audit__0__ad6b917c\\step_019.png",
+      "milestones_fired_this_step": [
+        "cancelled_all_required"
+      ],
+      "running_score": 1.0,
+      "snapshot_after": {
+        "task_id": "M13/order_cleanup_audit",
+        "step": 18,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "",
+      "action_error": null,
+      "action_latency_ms": 640,
+      "raw_model_output": "",
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "facts_visible_or_created": {
+        "mail.qualifying_orders": [
+          "ORD-7001",
+          "ORD-7004",
+          "ORD-7008",
+          "ORD-7011",
+          "ORD-7014"
+        ],
+        "mail.cancelled_orders": [
+          "ORD-7001",
+          "ORD-7004",
+          "ORD-7008",
+          "ORD-7011",
+          "ORD-7014"
+        ]
+      },
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8016/mail?sent=1",
+          "title": "ShopGym Mail \u2014 Inbox",
+          "active": true
+        }
+      ]
+    }
+  ],
+  "final_url": "http://localhost:8016/mail?sent=1",
+  "final_snapshot": {
+    "task_id": "M13/order_cleanup_audit",
+    "step": 19,
+    "finished": false,
+    "current_user_id": "u_alice",
+    "cart_item_count": 0,
+    "orders_count": 0,
+    "returns_count": 0,
+    "subscriptions_count": 0,
+    "applied_promo": null
+  },
+  "verifier_result": {
+    "score": 1.0,
+    "success": true,
+    "newly_fired": [],
+    "missed_milestones": [],
+    "all_milestones": [
+      {
+        "name": "cancelled_all_required",
+        "weight": 0.5,
+        "fired_at_step": 19,
+        "required": true
+      },
+      {
+        "name": "cancelled_only_required",
+        "weight": 0.5,
+        "fired_at_step": 0,
+        "required": true
+      }
+    ]
+  },
+  "agent_failure_class": null,
+  "ui_variant": "normal",
+  "video_path": "",
+  "error": null
+}

@@ -1,0 +1,1928 @@
+{
+  "episode_id": "9c24ecfe",
+  "task_id": "M22/async_calendar_cascade",
+  "seed": 1,
+  "agent_name": "openai_pixel[gpt-5.5]",
+  "started_at": 1779985654.4207826,
+  "finished_at": 1779986267.0507004,
+  "task_brief": "Run my afternoon for me. My calendar has a Team Sync at 2 PM and a 1:1 with Priya at 3 PM.\n1) Order me an Oat Milk Latte from Bean There Cafe.\n2) While you work, keep checking my inbox \u2014 a schedule update may arrive. If it says the 2 PM Team Sync is cancelled, then do BOTH: delete the Team Sync from my calendar, AND move my 1:1 with Priya from 3 PM up to the freed 2 PM slot (so nothing is left stale or double-booked).\n3) Once the 1:1 is at its new time, email Priya directly at priya@example.com \u2014 and only Priya \u2014 to let her know her 1:1 is now at 2 PM.",
+  "task_difficulty": "hard",
+  "task_category": "M",
+  "initial_url": "http://localhost:8102/calendar",
+  "initial_snapshot": {
+    "task_id": "M22/async_calendar_cascade",
+    "step": 0,
+    "finished": false,
+    "current_user_id": "u_alice",
+    "cart_item_count": 0,
+    "orders_count": 0,
+    "returns_count": 0,
+    "subscriptions_count": 0,
+    "applied_promo": null
+  },
+  "steps": [
+    {
+      "step_idx": 0,
+      "action_kind": "open_tab",
+      "action_args": {
+        "url": "/mail",
+        "tab_index": 1
+      },
+      "url_after": "http://localhost:8102/mail",
+      "screenshot_path": "screenshots\\harvest\\M22_async_calendar_cascade__1__9c24ecfe\\step_000.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.0,
+      "snapshot_after": {
+        "task_id": "M22/async_calendar_cascade",
+        "step": 0,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Check inbox for the possible schedule update before proceeding.",
+      "action_error": null,
+      "action_latency_ms": 375,
+      "raw_model_output": "## Plan\n1. [in progress] For task \u201cRun my afternoon for me\u2026\u201d first check Mail for any schedule update about the 2 PM Team Sync before changing the calendar.\n2. [later] Order an Oat Milk Latte from Bean There Cafe in Food.\n3. [later] Keep checking Mail while ordering; if an update says Team Sync is cancelled, delete Team Sync and move \u201c1:1 with Priya\u201d from 3 PM to 2 PM.\n4. [later] After confirming the 1:1 is at 2 PM, email only Priya at priya@example.com to tell her the 1:1 is now at 2 PM.\n5. [later] Finish only after the latte order, calendar update, and email to Priya are visibly confirmed.\n\n## What I see now\nI\u2019m on the Calendar agenda. It shows Team Sync at 14:00\u201315:00 with an Edit link at mark 9, and 1:1 with Priya at 15:00\u201316:00 with an Edit link at mark 10. The top workspace has Mail as mark 2, and there is a badge indicating unread mail.\n\n## Next action\nOpen Mail in a new tab to check for a schedule update. \n",
+      "tokens_in": 4733,
+      "tokens_out": 376,
+      "facts_visible_or_created": {
+        "calendar.stale_sync_present": true
+      },
+      "active_tab": 1,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8102/calendar",
+          "title": "ShopGym Calendar \u2014 Agenda",
+          "active": false
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8102/mail",
+          "title": "ShopGym Mail \u2014 Inbox",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 1,
+      "action_kind": "click_mark",
+      "action_args": {
+        "mark_id": 13,
+        "role": "link",
+        "name": "priya@example.com\nOur 1:1 today\n9:15 AM",
+        "coord": [
+          640,
+          393
+        ]
+      },
+      "url_after": "http://localhost:8102/mail",
+      "screenshot_path": "screenshots\\harvest\\M22_async_calendar_cascade__1__9c24ecfe\\step_001.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.0,
+      "snapshot_after": {
+        "task_id": "M22/async_calendar_cascade",
+        "step": 0,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Read Priya\u2019s message to see if it contains any schedule update relevant to the 1:1 or Team Sync.",
+      "action_error": null,
+      "action_latency_ms": 547,
+      "raw_model_output": "## Plan\n1. [in progress] For task \u201cRun my afternoon for me\u2026\u201d check Mail for any schedule update about the 2 PM Team Sync before changing the calendar.\n2. [later] Order an Oat Milk Latte from Bean There Cafe in Food.\n3. [later] Keep checking Mail while ordering; if an update says Team Sync is cancelled, delete Team Sync and move \u201c1:1 with Priya\u201d from 3 PM to 2 PM.\n4. [later] After confirming the 1:1 is at 2 PM, email only Priya at priya@example.com to tell her the 1:1 is now at 2 PM.\n5. [later] Finish only after the latte order, calendar update, and email to Priya are visibly confirmed.\n\n## What I see now\nI\u2019m in Mail inbox. There are 3 unread messages. The visible messages are from alex@example.com (mark 11), deals@shopgym.com (mark 12), and priya@example.com with subject \u201cOur 1:1 today\u201d (mark 13). Since Priya\u2019s message may relate to the schedule, I\u2019ll open it first.\n\n## Next action\nOpen Priya\u2019s email. \n",
+      "tokens_in": 6736,
+      "tokens_out": 382,
+      "facts_visible_or_created": {
+        "calendar.stale_sync_present": true
+      },
+      "active_tab": 1,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8102/calendar",
+          "title": "ShopGym Calendar \u2014 Agenda",
+          "active": false
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8102/mail/message/em_4",
+          "title": "ShopGym Mail \u2014 Our 1:1 today",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 2,
+      "action_kind": "open_tab",
+      "action_args": {
+        "url": "/food",
+        "tab_index": 2
+      },
+      "url_after": "http://localhost:8102/food",
+      "screenshot_path": "screenshots\\harvest\\M22_async_calendar_cascade__1__9c24ecfe\\step_002.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.0,
+      "snapshot_after": {
+        "task_id": "M22/async_calendar_cascade",
+        "step": 1,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Start ordering the requested Oat Milk Latte from Bean There Cafe while keeping Mail and Calendar tabs open.",
+      "action_error": null,
+      "action_latency_ms": 265,
+      "raw_model_output": "## Plan\n1. [done] For task \u201cRun my afternoon for me\u2026\u201d initially checked Mail for schedule-relevant messages; Priya\u2019s existing email only asks whether the 3 PM 1:1 is still on.\n2. [in progress] Order an Oat Milk Latte from Bean There Cafe in Food.\n3. [later] Keep checking Mail while ordering; if an update says Team Sync is cancelled, delete Team Sync and move \u201c1:1 with Priya\u201d from 3 PM to 2 PM.\n4. [later] After confirming the 1:1 is at 2 PM, email only Priya at priya@example.com to tell her the 1:1 is now at 2 PM.\n5. [later] Finish only after the latte order, calendar update, and email to Priya are visibly confirmed.\n\n## What I see now\nI\u2019m reading Priya\u2019s email titled \u201cOur 1:1 today.\u201d It says: \u201cAre we still on for our 1:1 at 3 PM today? Ping me if anything shifts.\u201d This is not the cancellation update for Team Sync. There are still unread messages, so I\u2019ll keep checking, but next I need to start the Oat Milk Latte order.\n\n## Next action\nOpen Food in a new tab to order from Bean There Cafe. \n",
+      "tokens_in": 8678,
+      "tokens_out": 389,
+      "facts_visible_or_created": {
+        "calendar.stale_sync_present": true
+      },
+      "active_tab": 2,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8102/calendar",
+          "title": "ShopGym Calendar \u2014 Agenda",
+          "active": false
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8102/mail/message/em_4",
+          "title": "ShopGym Mail \u2014 Our 1:1 today",
+          "active": false
+        },
+        {
+          "index": 2,
+          "url": "http://localhost:8102/food",
+          "title": "ShopGym Eats \u2014 Restaurants",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 3,
+      "action_kind": "click_mark",
+      "action_args": {
+        "mark_id": 11,
+        "role": "link",
+        "name": "\u2615\nBean There Cafe\nCoffee\n\u2605 4.6\n6:40 PM\nDelivery $1.99",
+        "coord": [
+          892,
+          338
+        ]
+      },
+      "url_after": "http://localhost:8102/food",
+      "screenshot_path": "screenshots\\harvest\\M22_async_calendar_cascade__1__9c24ecfe\\step_003.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.0,
+      "snapshot_after": {
+        "task_id": "M22/async_calendar_cascade",
+        "step": 2,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Open Bean There Cafe to find and add the requested Oat Milk Latte.",
+      "action_error": null,
+      "action_latency_ms": 500,
+      "raw_model_output": "## Plan\n1. [done] For task \u201cRun my afternoon for me\u2026\u201d initially checked Mail for schedule-relevant messages; Priya\u2019s existing email only asks whether the 3 PM 1:1 is still on.\n2. [in progress] Order an Oat Milk Latte from Bean There Cafe in Food.\n3. [later] Keep checking Mail while ordering; if an update says Team Sync is cancelled, delete Team Sync and move \u201c1:1 with Priya\u201d from 3 PM to 2 PM.\n4. [later] After confirming the 1:1 is at 2 PM, email only Priya at priya@example.com to tell her the 1:1 is now at 2 PM.\n5. [later] Finish only after the latte order, calendar update, and email to Priya are visibly confirmed.\n\n## What I see now\nI\u2019m on the Food restaurants page. Bean There Cafe is visible as mark 11, and the Food cart is mark 6. The Mail tab still shows unread mail, so I\u2019ll return to checking it after progressing the order.\n\n## Next action\nOpen Bean There Cafe. \n",
+      "tokens_in": 10747,
+      "tokens_out": 296,
+      "facts_visible_or_created": {
+        "calendar.stale_sync_present": true
+      },
+      "active_tab": 2,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8102/calendar",
+          "title": "ShopGym Calendar \u2014 Agenda",
+          "active": false
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8102/mail/message/em_4",
+          "title": "ShopGym Mail \u2014 Our 1:1 today",
+          "active": false
+        },
+        {
+          "index": 2,
+          "url": "http://localhost:8102/food/restaurant/r_bean",
+          "title": "ShopGym Eats \u2014 Bean There Cafe",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 4,
+      "action_kind": "click_mark",
+      "action_args": {
+        "mark_id": 12,
+        "role": "button",
+        "name": "Add +",
+        "coord": [
+          1083,
+          548
+        ]
+      },
+      "url_after": "http://localhost:8102/food/restaurant/r_bean",
+      "screenshot_path": "screenshots\\harvest\\M22_async_calendar_cascade__1__9c24ecfe\\step_004.png",
+      "milestones_fired_this_step": [
+        "change_alert_delivered"
+      ],
+      "running_score": 0.0,
+      "snapshot_after": {
+        "task_id": "M22/async_calendar_cascade",
+        "step": 3,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Add the requested Oat Milk Latte from Bean There Cafe to the food cart.",
+      "action_error": null,
+      "action_latency_ms": 485,
+      "raw_model_output": "## Plan\n1. [done] For task \u201cRun my afternoon for me\u2026\u201d initially checked Mail for schedule-relevant messages; Priya\u2019s existing email only asks whether the 3 PM 1:1 is still on.\n2. [in progress] Order an Oat Milk Latte from Bean There Cafe in Food.\n3. [later] Keep checking Mail while ordering; if an update says Team Sync is cancelled, delete Team Sync and move \u201c1:1 with Priya\u201d from 3 PM to 2 PM.\n4. [later] After confirming the 1:1 is at 2 PM, email only Priya at priya@example.com to tell her the 1:1 is now at 2 PM.\n5. [later] Finish only after the latte order, calendar update, and email to Priya are visibly confirmed.\n\n## What I see now\nI\u2019m on Bean There Cafe\u2019s menu. The requested \u201cOat Milk Latte\u201d is visible in the middle item, priced $5.25, with its Add + button at mark 12. The food cart is mark 6. Mail still has unread messages, so after adding the latte I should check inbox again soon.\n\n## Next action\nAdd the Oat Milk Latte to the cart. \n",
+      "tokens_in": 12712,
+      "tokens_out": 332,
+      "facts_visible_or_created": {
+        "mail.change_delivered": true,
+        "calendar.stale_sync_present": true
+      },
+      "active_tab": 2,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8102/calendar",
+          "title": "ShopGym Calendar \u2014 Agenda",
+          "active": false
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8102/mail/message/em_4",
+          "title": "ShopGym Mail \u2014 Our 1:1 today",
+          "active": false
+        },
+        {
+          "index": 2,
+          "url": "http://localhost:8102/food/restaurant/r_bean",
+          "title": "ShopGym Eats \u2014 Bean There Cafe",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 5,
+      "action_kind": "switch_tab",
+      "action_args": {
+        "tab_index": 1
+      },
+      "url_after": "http://localhost:8102/mail/message/em_4",
+      "screenshot_path": "screenshots\\harvest\\M22_async_calendar_cascade__1__9c24ecfe\\step_005.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.0,
+      "snapshot_after": {
+        "task_id": "M22/async_calendar_cascade",
+        "step": 4,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Check inbox for the schedule update that may have arrived while ordering.",
+      "action_error": null,
+      "action_latency_ms": 0,
+      "raw_model_output": "## Plan\n1. [done] For task \u201cRun my afternoon for me\u2026\u201d initially checked Mail for schedule-relevant messages; Priya\u2019s existing email only asks whether the 3 PM 1:1 is still on.\n2. [in progress] Order an Oat Milk Latte from Bean There Cafe in Food; the latte has been added to the cart.\n3. [in progress] Keep checking Mail while ordering; the Mail badge now shows unread mail again, so check for the possible Team Sync cancellation before checkout.\n4. [later] If an update says Team Sync is cancelled, delete Team Sync and move \u201c1:1 with Priya\u201d from 3 PM to 2 PM.\n5. [later] After confirming the 1:1 is at 2 PM, email only Priya at priya@example.com to tell her the 1:1 is now at 2 PM.\n6. [later] Finish only after the latte order, calendar update, and email to Priya are visibly confirmed.\n\n## What I see now\nA green success banner says \u201cAdded to your food order.\u201d The Food cart at mark 6 shows 1 item. The Mail tab badge has changed to 3 unread, indicating new/unread mail, so I need to check the inbox now.\n\n## Next action\nSwitch back to the Mail tab to inspect the new/unread schedule update. \n",
+      "tokens_in": 14714,
+      "tokens_out": 395,
+      "facts_visible_or_created": {
+        "mail.change_delivered": true,
+        "calendar.stale_sync_present": true
+      },
+      "active_tab": 1,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8102/calendar",
+          "title": "ShopGym Calendar \u2014 Agenda",
+          "active": false
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8102/mail/message/em_4",
+          "title": "ShopGym Mail \u2014 Our 1:1 today",
+          "active": true
+        },
+        {
+          "index": 2,
+          "url": "http://localhost:8102/food/restaurant/r_bean",
+          "title": "ShopGym Eats \u2014 Bean There Cafe",
+          "active": false
+        }
+      ]
+    },
+    {
+      "step_idx": 6,
+      "action_kind": "click_mark",
+      "action_args": {
+        "mark_id": 11,
+        "role": "link",
+        "name": "\u2190 Back to inbox",
+        "coord": [
+          193,
+          240
+        ]
+      },
+      "url_after": "http://localhost:8102/mail/message/em_4",
+      "screenshot_path": "screenshots\\harvest\\M22_async_calendar_cascade__1__9c24ecfe\\step_006.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.0,
+      "snapshot_after": {
+        "task_id": "M22/async_calendar_cascade",
+        "step": 5,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Return to inbox to inspect unread mail for the Team Sync cancellation update.",
+      "action_error": null,
+      "action_latency_ms": 500,
+      "raw_model_output": "## Plan\n1. [done] For task \u201cRun my afternoon for me\u2026\u201d initially checked Mail for schedule-relevant messages; Priya\u2019s existing email only asks whether the 3 PM 1:1 is still on.\n2. [in progress] Order an Oat Milk Latte from Bean There Cafe in Food; the latte has been added to the cart.\n3. [in progress] Keep checking Mail while ordering; the Mail badge still shows unread mail, so check the inbox list for the possible Team Sync cancellation.\n4. [later] If an update says Team Sync is cancelled, delete Team Sync and move \u201c1:1 with Priya\u201d from 3 PM to 2 PM.\n5. [later] After confirming the 1:1 is at 2 PM, email only Priya at priya@example.com to tell her the 1:1 is now at 2 PM.\n6. [later] Finish only after the latte order, calendar update, and email to Priya are visibly confirmed.\n\n## What I see now\nI\u2019m still on Priya\u2019s already-read email. The Mail badge shows unread messages remain, and there is a \u201cBack to inbox\u201d link at mark 11. I need to return to the inbox to look for the schedule update.\n\n## Next action\nGo back to the inbox. \n",
+      "tokens_in": 16732,
+      "tokens_out": 328,
+      "facts_visible_or_created": {
+        "mail.change_delivered": true,
+        "calendar.stale_sync_present": true
+      },
+      "active_tab": 1,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8102/calendar",
+          "title": "ShopGym Calendar \u2014 Agenda",
+          "active": false
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8102/mail",
+          "title": "ShopGym Mail \u2014 Inbox",
+          "active": true
+        },
+        {
+          "index": 2,
+          "url": "http://localhost:8102/food/restaurant/r_bean",
+          "title": "ShopGym Eats \u2014 Bean There Cafe",
+          "active": false
+        }
+      ]
+    },
+    {
+      "step_idx": 7,
+      "action_kind": "click_mark",
+      "action_args": {
+        "mark_id": 11,
+        "role": "link",
+        "name": "scheduling@example.com\nAutomated notice: 2 PM Team Sync cancelled\nCALENDAR-CHANG",
+        "coord": [
+          640,
+          303
+        ]
+      },
+      "url_after": "http://localhost:8102/mail",
+      "screenshot_path": "screenshots\\harvest\\M22_async_calendar_cascade__1__9c24ecfe\\step_007.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.0,
+      "snapshot_after": {
+        "task_id": "M22/async_calendar_cascade",
+        "step": 6,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Read the automated notice to confirm that the 2 PM Team Sync is cancelled.",
+      "action_error": null,
+      "action_latency_ms": 516,
+      "raw_model_output": "## Plan\n1. [done] For task \u201cRun my afternoon for me\u2026\u201d initially checked Mail for schedule-relevant messages; Priya\u2019s existing email only asks whether the 3 PM 1:1 is still on.\n2. [in progress] Order an Oat Milk Latte from Bean There Cafe in Food; the latte has been added to the cart.\n3. [in progress] Keep checking Mail while ordering; a new message appears to say \u201c2 PM Team Sync cancelled,\u201d so I need to read it and then update Calendar.\n4. [later] If the update confirms Team Sync is cancelled, delete Team Sync and move \u201c1:1 with Priya\u201d from 3 PM to 2 PM.\n5. [later] After confirming the 1:1 is at 2 PM, email only Priya at priya@example.com to tell her the 1:1 is now at 2 PM.\n6. [later] Finish only after the latte order, calendar update, and email to Priya are visibly confirmed.\n\n## What I see now\nI\u2019m in the Mail inbox. The top unread message from scheduling@example.com at mark 11 has subject \u201cAutomated notice: 2 PM Team Sync cancelled\u201d and a CALENDAR-CHANGE tag. This likely triggers the required calendar changes, but I\u2019ll open it to verify.\n\n## Next action\nOpen the scheduling update email. \n",
+      "tokens_in": 18821,
+      "tokens_out": 344,
+      "facts_visible_or_created": {
+        "mail.change_delivered": true,
+        "mail.new_meeting_time": "14:00",
+        "calendar.stale_sync_present": true
+      },
+      "active_tab": 1,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8102/calendar",
+          "title": "ShopGym Calendar \u2014 Agenda",
+          "active": false
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8102/mail/message/em_5",
+          "title": "ShopGym Mail \u2014 Automated notice: 2 PM Team Sync cancelled",
+          "active": true
+        },
+        {
+          "index": 2,
+          "url": "http://localhost:8102/food/restaurant/r_bean",
+          "title": "ShopGym Eats \u2014 Bean There Cafe",
+          "active": false
+        }
+      ]
+    },
+    {
+      "step_idx": 8,
+      "action_kind": "switch_tab",
+      "action_args": {
+        "tab_index": 0
+      },
+      "url_after": "http://localhost:8102/calendar",
+      "screenshot_path": "screenshots\\harvest\\M22_async_calendar_cascade__1__9c24ecfe\\step_008.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.0,
+      "snapshot_after": {
+        "task_id": "M22/async_calendar_cascade",
+        "step": 7,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Update the calendar now that the Team Sync cancellation is confirmed.",
+      "action_error": null,
+      "action_latency_ms": 0,
+      "raw_model_output": "## Plan\n1. [done] For task \u201cRun my afternoon for me\u2026\u201d checked Mail and confirmed the schedule update: the 2 PM Team Sync is cancelled and the 3 PM 1:1 with Priya should move to 2 PM.\n2. [in progress] Order an Oat Milk Latte from Bean There Cafe in Food; the latte has been added to the cart but checkout is not complete yet.\n3. [in progress] Update Calendar: delete the 2 PM Team Sync and move \u201c1:1 with Priya\u201d from 3 PM to 2 PM.\n4. [later] After confirming the 1:1 is at 2 PM, email only Priya at priya@example.com to tell her the 1:1 is now at 2 PM.\n5. [later] Finish only after the latte order, calendar update, and email to Priya are visibly confirmed.\n\n## What I see now\nThe email is open and explicitly says: \u201cThe 2 PM Team Sync has been CANCELLED\u2026 move your 3 PM 1:1 with Priya up to the freed 2 PM slot and clear the old 2 PM block\u2026\u201d This confirms the required calendar changes.\n\n## Next action\nSwitch to the Calendar tab to delete Team Sync and edit Priya\u2019s 1:1. \n",
+      "tokens_in": 20836,
+      "tokens_out": 335,
+      "facts_visible_or_created": {
+        "mail.change_delivered": true,
+        "mail.new_meeting_time": "14:00",
+        "calendar.stale_sync_present": true
+      },
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8102/calendar",
+          "title": "ShopGym Calendar \u2014 Agenda",
+          "active": true
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8102/mail/message/em_5",
+          "title": "ShopGym Mail \u2014 Automated notice: 2 PM Team Sync cancelled",
+          "active": false
+        },
+        {
+          "index": 2,
+          "url": "http://localhost:8102/food/restaurant/r_bean",
+          "title": "ShopGym Eats \u2014 Bean There Cafe",
+          "active": false
+        }
+      ]
+    },
+    {
+      "step_idx": 9,
+      "action_kind": "click_mark",
+      "action_args": {
+        "mark_id": 9,
+        "role": "link",
+        "name": "Edit",
+        "coord": [
+          1045,
+          326
+        ]
+      },
+      "url_after": "http://localhost:8102/calendar",
+      "screenshot_path": "screenshots\\harvest\\M22_async_calendar_cascade__1__9c24ecfe\\step_009.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.0,
+      "snapshot_after": {
+        "task_id": "M22/async_calendar_cascade",
+        "step": 8,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Edit the cancelled 2 PM Team Sync so it can be deleted from the calendar.",
+      "action_error": null,
+      "action_latency_ms": 500,
+      "raw_model_output": "## Plan\n1. [done] For task \u201cRun my afternoon for me\u2026\u201d checked Mail and confirmed the schedule update: the 2 PM Team Sync is cancelled and the 3 PM 1:1 with Priya should move to 2 PM.\n2. [in progress] Order an Oat Milk Latte from Bean There Cafe in Food; the latte has been added to the cart but checkout is not complete yet.\n3. [in progress] Update Calendar: delete the 2 PM Team Sync and move \u201c1:1 with Priya\u201d from 3 PM to 2 PM.\n4. [later] After confirming the 1:1 is at 2 PM, email only Priya at priya@example.com to tell her the 1:1 is now at 2 PM.\n5. [later] Finish only after the latte order, calendar update, and email to Priya are visibly confirmed.\n\n## What I see now\nI\u2019m back on Calendar. The agenda still shows Team Sync at 14:00\u201315:00 with its Edit link at mark 9, and \u201c1:1 with Priya\u201d at 15:00\u201316:00 with its Edit link at mark 10. I need to clear the old 2 PM block first by deleting Team Sync.\n\n## Next action\nOpen the Team Sync edit page. \n",
+      "tokens_in": 22810,
+      "tokens_out": 339,
+      "facts_visible_or_created": {
+        "mail.change_delivered": true,
+        "mail.new_meeting_time": "14:00",
+        "calendar.stale_sync_present": true
+      },
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8102/calendar/edit/ev_5",
+          "title": "ShopGym Calendar \u2014 Edit event",
+          "active": true
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8102/mail/message/em_5",
+          "title": "ShopGym Mail \u2014 Automated notice: 2 PM Team Sync cancelled",
+          "active": false
+        },
+        {
+          "index": 2,
+          "url": "http://localhost:8102/food/restaurant/r_bean",
+          "title": "ShopGym Eats \u2014 Bean There Cafe",
+          "active": false
+        }
+      ]
+    },
+    {
+      "step_idx": 10,
+      "action_kind": "click_mark",
+      "action_args": {
+        "mark_id": 15,
+        "role": "button",
+        "name": "Delete this event",
+        "coord": [
+          260,
+          594
+        ]
+      },
+      "url_after": "http://localhost:8102/calendar/edit/ev_5",
+      "screenshot_path": "screenshots\\harvest\\M22_async_calendar_cascade__1__9c24ecfe\\step_010.png",
+      "milestones_fired_this_step": [
+        "cancelled_sync_deleted"
+      ],
+      "running_score": 0.3,
+      "snapshot_after": {
+        "task_id": "M22/async_calendar_cascade",
+        "step": 9,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Remove the cancelled 2 PM Team Sync from the calendar.",
+      "action_error": null,
+      "action_latency_ms": 500,
+      "raw_model_output": "## Plan\n1. [done] For task \u201cRun my afternoon for me\u2026\u201d checked Mail and confirmed the schedule update: the 2 PM Team Sync is cancelled and the 3 PM 1:1 with Priya should move to 2 PM.\n2. [in progress] Order an Oat Milk Latte from Bean There Cafe in Food; the latte has been added to the cart but checkout is not complete yet.\n3. [in progress] Update Calendar: delete the 2 PM Team Sync and move \u201c1:1 with Priya\u201d from 3 PM to 2 PM.\n4. [later] After confirming the 1:1 is at 2 PM, email only Priya at priya@example.com to tell her the 1:1 is now at 2 PM.\n5. [later] Finish only after the latte order, calendar update, and email to Priya are visibly confirmed.\n\n## What I see now\nI\u2019m on the edit page for \u201cTeam Sync.\u201d It has title Team Sync, start 14:00, end 15:00. There is a \u201cDelete this event\u201d button/link at mark 15, which should remove the cancelled Team Sync.\n\n## Next action\nDelete the cancelled Team Sync event. \n",
+      "tokens_in": 24871,
+      "tokens_out": 320,
+      "facts_visible_or_created": {
+        "mail.change_delivered": true,
+        "mail.new_meeting_time": "14:00",
+        "calendar.stale_sync_present": false
+      },
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8102/calendar",
+          "title": "ShopGym Calendar \u2014 Agenda",
+          "active": true
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8102/mail/message/em_5",
+          "title": "ShopGym Mail \u2014 Automated notice: 2 PM Team Sync cancelled",
+          "active": false
+        },
+        {
+          "index": 2,
+          "url": "http://localhost:8102/food/restaurant/r_bean",
+          "title": "ShopGym Eats \u2014 Bean There Cafe",
+          "active": false
+        }
+      ]
+    },
+    {
+      "step_idx": 11,
+      "action_kind": "click_mark",
+      "action_args": {
+        "mark_id": 9,
+        "role": "link",
+        "name": "Edit",
+        "coord": [
+          1045,
+          378
+        ]
+      },
+      "url_after": "http://localhost:8102/calendar",
+      "screenshot_path": "screenshots\\harvest\\M22_async_calendar_cascade__1__9c24ecfe\\step_011.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.3,
+      "snapshot_after": {
+        "task_id": "M22/async_calendar_cascade",
+        "step": 10,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Edit Priya\u2019s 1:1 so it can be moved from 3 PM to 2 PM.",
+      "action_error": null,
+      "action_latency_ms": 500,
+      "raw_model_output": "## Plan\n1. [done] For task \u201cRun my afternoon for me\u2026\u201d checked Mail and confirmed the schedule update: the 2 PM Team Sync is cancelled and the 3 PM 1:1 with Priya should move to 2 PM.\n2. [in progress] Order an Oat Milk Latte from Bean There Cafe in Food; the latte has been added to the cart but checkout is not complete yet.\n3. [in progress] Update Calendar: Team Sync has been deleted; now move \u201c1:1 with Priya\u201d from 3 PM to 2 PM.\n4. [later] After confirming the 1:1 is at 2 PM, email only Priya at priya@example.com to tell her the 1:1 is now at 2 PM.\n5. [later] Finish only after the latte order, calendar update, and email to Priya are visibly confirmed.\n\n## What I see now\nA green success banner says \u201cRemoved \u2018Team Sync\u2019 from your calendar.\u201d The agenda now only shows \u201c1:1 with Priya\u201d at 15:00\u201316:00, with an Edit link at mark 9. I need to move it to the freed 14:00\u201315:00 slot.\n\n## Next action\nOpen the Priya 1:1 edit page. \n",
+      "tokens_in": 26828,
+      "tokens_out": 340,
+      "facts_visible_or_created": {
+        "mail.change_delivered": true,
+        "mail.new_meeting_time": "14:00",
+        "calendar.stale_sync_present": false
+      },
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8102/calendar/edit/ev_6",
+          "title": "ShopGym Calendar \u2014 Edit event",
+          "active": true
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8102/mail/message/em_5",
+          "title": "ShopGym Mail \u2014 Automated notice: 2 PM Team Sync cancelled",
+          "active": false
+        },
+        {
+          "index": 2,
+          "url": "http://localhost:8102/food/restaurant/r_bean",
+          "title": "ShopGym Eats \u2014 Bean There Cafe",
+          "active": false
+        }
+      ]
+    },
+    {
+      "step_idx": 12,
+      "action_kind": "click_mark",
+      "action_args": {
+        "mark_id": 11,
+        "role": "textbox",
+        "name": "Start time",
+        "coord": [
+          359,
+          472
+        ]
+      },
+      "url_after": "http://localhost:8102/calendar/edit/ev_6",
+      "screenshot_path": "screenshots\\harvest\\M22_async_calendar_cascade__1__9c24ecfe\\step_012.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.3,
+      "snapshot_after": {
+        "task_id": "M22/async_calendar_cascade",
+        "step": 11,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Focus the start time field before overwriting 15:00 with 14:00.",
+      "action_error": null,
+      "action_latency_ms": 516,
+      "raw_model_output": "## Plan\n1. [done] For task \u201cRun my afternoon for me\u2026\u201d checked Mail and confirmed the schedule update: the 2 PM Team Sync is cancelled and the 3 PM 1:1 with Priya should move to 2 PM.\n2. [in progress] Order an Oat Milk Latte from Bean There Cafe in Food; the latte has been added to the cart but checkout is not complete yet.\n3. [in progress] Update Calendar: Team Sync has been deleted; now move \u201c1:1 with Priya\u201d from 3 PM to 2 PM by changing it to 14:00\u201315:00.\n4. [later] After confirming the 1:1 is at 2 PM, email only Priya at priya@example.com to tell her the 1:1 is now at 2 PM.\n5. [later] Finish only after the latte order, calendar update, and email to Priya are visibly confirmed.\n\n## What I see now\nI\u2019m editing \u201c1:1 with Priya.\u201d The current start time textbox is mark 11 with value 15:00, and the end time textbox is mark 12 with value 16:00. The Save changes button is mark 13. I need to update start to 14:00 and end to 15:00.\n\n## Next action\nFocus the start time field so I can replace it with 14:00. \n",
+      "tokens_in": 28893,
+      "tokens_out": 447,
+      "facts_visible_or_created": {
+        "mail.change_delivered": true,
+        "mail.new_meeting_time": "14:00",
+        "calendar.stale_sync_present": false
+      },
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8102/calendar/edit/ev_6",
+          "title": "ShopGym Calendar \u2014 Edit event",
+          "active": true
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8102/mail/message/em_5",
+          "title": "ShopGym Mail \u2014 Automated notice: 2 PM Team Sync cancelled",
+          "active": false
+        },
+        {
+          "index": 2,
+          "url": "http://localhost:8102/food/restaurant/r_bean",
+          "title": "ShopGym Eats \u2014 Bean There Cafe",
+          "active": false
+        }
+      ]
+    },
+    {
+      "step_idx": 13,
+      "action_kind": "key_press",
+      "action_args": {
+        "key": "Control+a"
+      },
+      "url_after": "http://localhost:8102/calendar/edit/ev_6",
+      "screenshot_path": "screenshots\\harvest\\M22_async_calendar_cascade__1__9c24ecfe\\step_013.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.3,
+      "snapshot_after": {
+        "task_id": "M22/async_calendar_cascade",
+        "step": 12,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Select the existing 15:00 value so it can be replaced with 14:00.",
+      "action_error": null,
+      "action_latency_ms": 16,
+      "raw_model_output": "## Plan\n1. [done] For task \u201cRun my afternoon for me\u2026\u201d checked Mail and confirmed the schedule update: the 2 PM Team Sync is cancelled and the 3 PM 1:1 with Priya should move to 2 PM.\n2. [in progress] Order an Oat Milk Latte from Bean There Cafe in Food; the latte has been added to the cart but checkout is not complete yet.\n3. [in progress] Update Calendar: Team Sync has been deleted; now move \u201c1:1 with Priya\u201d from 3 PM to 2 PM by changing it to 14:00\u201315:00.\n4. [later] After confirming the 1:1 is at 2 PM, email only Priya at priya@example.com to tell her the 1:1 is now at 2 PM.\n5. [later] Finish only after the latte order, calendar update, and email to Priya are visibly confirmed.\n\n## What I see now\nThe \u201c1:1 with Priya\u201d edit form is open. The Start time field (mark 11) is focused and currently shows 15:00; the End time field is mark 12 and shows 16:00. I need to overwrite the start time first.\n\n## Next action\nSelect all text in the focused Start time field. \n",
+      "tokens_in": 30986,
+      "tokens_out": 363,
+      "facts_visible_or_created": {
+        "mail.change_delivered": true,
+        "mail.new_meeting_time": "14:00",
+        "calendar.stale_sync_present": false
+      },
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8102/calendar/edit/ev_6",
+          "title": "ShopGym Calendar \u2014 Edit event",
+          "active": true
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8102/mail/message/em_5",
+          "title": "ShopGym Mail \u2014 Automated notice: 2 PM Team Sync cancelled",
+          "active": false
+        },
+        {
+          "index": 2,
+          "url": "http://localhost:8102/food/restaurant/r_bean",
+          "title": "ShopGym Eats \u2014 Bean There Cafe",
+          "active": false
+        }
+      ]
+    },
+    {
+      "step_idx": 14,
+      "action_kind": "type_into_mark",
+      "action_args": {
+        "mark_id": 11,
+        "value": "14:00",
+        "role": "textbox",
+        "name": "Start time",
+        "coord": [
+          359,
+          472
+        ]
+      },
+      "url_after": "http://localhost:8102/calendar/edit/ev_6",
+      "screenshot_path": "screenshots\\harvest\\M22_async_calendar_cascade__1__9c24ecfe\\step_014.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.3,
+      "snapshot_after": {
+        "task_id": "M22/async_calendar_cascade",
+        "step": 13,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Set Priya\u2019s 1:1 start time to the freed 2 PM slot.",
+      "action_error": null,
+      "action_latency_ms": 500,
+      "raw_model_output": "## Plan\n1. [done] For task \u201cRun my afternoon for me\u2026\u201d checked Mail and confirmed the schedule update: the 2 PM Team Sync is cancelled and the 3 PM 1:1 with Priya should move to 2 PM.\n2. [in progress] Order an Oat Milk Latte from Bean There Cafe in Food; the latte has been added to the cart but checkout is not complete yet.\n3. [in progress] Update Calendar: Team Sync has been deleted; now move \u201c1:1 with Priya\u201d from 3 PM to 2 PM by changing it to 14:00\u201315:00.\n4. [later] After confirming the 1:1 is at 2 PM, email only Priya at priya@example.com to tell her the 1:1 is now at 2 PM.\n5. [later] Finish only after the latte order, calendar update, and email to Priya are visibly confirmed.\n\n## What I see now\nThe Start time field (mark 11) is focused and the current value 15:00 is selected. I need to type the new start time 14:00.\n\n## Next action\nReplace the selected start time with 14:00. \n",
+      "tokens_in": 33061,
+      "tokens_out": 307,
+      "facts_visible_or_created": {
+        "mail.change_delivered": true,
+        "mail.new_meeting_time": "14:00",
+        "calendar.stale_sync_present": false
+      },
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8102/calendar/edit/ev_6",
+          "title": "ShopGym Calendar \u2014 Edit event",
+          "active": true
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8102/mail/message/em_5",
+          "title": "ShopGym Mail \u2014 Automated notice: 2 PM Team Sync cancelled",
+          "active": false
+        },
+        {
+          "index": 2,
+          "url": "http://localhost:8102/food/restaurant/r_bean",
+          "title": "ShopGym Eats \u2014 Bean There Cafe",
+          "active": false
+        }
+      ]
+    },
+    {
+      "step_idx": 15,
+      "action_kind": "key_press",
+      "action_args": {
+        "key": "Control+a"
+      },
+      "url_after": "http://localhost:8102/calendar/edit/ev_6",
+      "screenshot_path": "screenshots\\harvest\\M22_async_calendar_cascade__1__9c24ecfe\\step_015.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.3,
+      "snapshot_after": {
+        "task_id": "M22/async_calendar_cascade",
+        "step": 14,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Select the malformed start time value so it can be deleted and replaced cleanly.",
+      "action_error": null,
+      "action_latency_ms": 16,
+      "raw_model_output": "## Plan\n1. [done] For task \u201cRun my afternoon for me\u2026\u201d checked Mail and confirmed the schedule update: the 2 PM Team Sync is cancelled and the 3 PM 1:1 with Priya should move to 2 PM.\n2. [in progress] Order an Oat Milk Latte from Bean There Cafe in Food; the latte has been added to the cart but checkout is not complete yet.\n3. [in progress] Update Calendar: Team Sync has been deleted; the 1:1 time edit needs correction because the start field now contains an invalid appended value.\n4. [later] After confirming the 1:1 is at 2 PM, email only Priya at priya@example.com to tell her the 1:1 is now at 2 PM.\n5. [later] Finish only after the latte order, calendar update, and email to Priya are visibly confirmed.\n\n## What I see now\nThe \u201c1:1 with Priya\u201d edit form is open. The Start time field at mark 11 incorrectly shows `15:0014:00`, so I need to clear and replace it with exactly `14:00`. The End time field at mark 12 still shows `16:00` and will also need to become `15:00`.\n\n## Next action\nSelect the entire incorrect start time value again so it can be cleared. \n",
+      "tokens_in": 35127,
+      "tokens_out": 442,
+      "facts_visible_or_created": {
+        "mail.change_delivered": true,
+        "mail.new_meeting_time": "14:00",
+        "calendar.stale_sync_present": false
+      },
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8102/calendar/edit/ev_6",
+          "title": "ShopGym Calendar \u2014 Edit event",
+          "active": true
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8102/mail/message/em_5",
+          "title": "ShopGym Mail \u2014 Automated notice: 2 PM Team Sync cancelled",
+          "active": false
+        },
+        {
+          "index": 2,
+          "url": "http://localhost:8102/food/restaurant/r_bean",
+          "title": "ShopGym Eats \u2014 Bean There Cafe",
+          "active": false
+        }
+      ]
+    },
+    {
+      "step_idx": 16,
+      "action_kind": "key_press",
+      "action_args": {
+        "key": "Backspace"
+      },
+      "url_after": "http://localhost:8102/calendar/edit/ev_6",
+      "screenshot_path": "screenshots\\harvest\\M22_async_calendar_cascade__1__9c24ecfe\\step_016.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.3,
+      "snapshot_after": {
+        "task_id": "M22/async_calendar_cascade",
+        "step": 15,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Delete the selected malformed start time value so it can be replaced with exactly 14:00.",
+      "action_error": null,
+      "action_latency_ms": 14,
+      "raw_model_output": "## Plan\n1. [done] For task \u201cRun my afternoon for me\u2026\u201d checked Mail and confirmed the schedule update: the 2 PM Team Sync is cancelled and the 3 PM 1:1 with Priya should move to 2 PM.\n2. [in progress] Order an Oat Milk Latte from Bean There Cafe in Food; the latte has been added to the cart but checkout is not complete yet.\n3. [in progress] Update Calendar: Team Sync has been deleted; the 1:1 time edit needs correction because the start field contains an invalid appended value. I\u2019m clearing it so it can be set to exactly 14:00, then I\u2019ll set end to 15:00 and save.\n4. [later] After confirming the 1:1 is at 2 PM, email only Priya at priya@example.com to tell her the 1:1 is now at 2 PM.\n5. [later] Finish only after the latte order, calendar update, and email to Priya are visibly confirmed.\n\n## What I see now\nThe Start time field at mark 11 contains `15:0014:00`, and the full value is selected. I need to delete the selected value before typing `14:00`.\n\n## Next action\nClear the selected malformed start time. \n",
+      "tokens_in": 37211,
+      "tokens_out": 353,
+      "facts_visible_or_created": {
+        "mail.change_delivered": true,
+        "mail.new_meeting_time": "14:00",
+        "calendar.stale_sync_present": false
+      },
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8102/calendar/edit/ev_6",
+          "title": "ShopGym Calendar \u2014 Edit event",
+          "active": true
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8102/mail/message/em_5",
+          "title": "ShopGym Mail \u2014 Automated notice: 2 PM Team Sync cancelled",
+          "active": false
+        },
+        {
+          "index": 2,
+          "url": "http://localhost:8102/food/restaurant/r_bean",
+          "title": "ShopGym Eats \u2014 Bean There Cafe",
+          "active": false
+        }
+      ]
+    },
+    {
+      "step_idx": 17,
+      "action_kind": "type_into_mark",
+      "action_args": {
+        "mark_id": 11,
+        "value": "14:00",
+        "role": "textbox",
+        "name": "Start time",
+        "coord": [
+          359,
+          472
+        ]
+      },
+      "url_after": "http://localhost:8102/calendar/edit/ev_6",
+      "screenshot_path": "screenshots\\harvest\\M22_async_calendar_cascade__1__9c24ecfe\\step_017.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.3,
+      "snapshot_after": {
+        "task_id": "M22/async_calendar_cascade",
+        "step": 16,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Set Priya\u2019s 1:1 start time to 14:00.",
+      "action_error": null,
+      "action_latency_ms": 500,
+      "raw_model_output": "## Plan\n1. [done] For task \u201cRun my afternoon for me\u2026\u201d checked Mail and confirmed the schedule update: the 2 PM Team Sync is cancelled and the 3 PM 1:1 with Priya should move to 2 PM.\n2. [in progress] Order an Oat Milk Latte from Bean There Cafe in Food; the latte has been added to the cart but checkout is not complete yet.\n3. [in progress] Update Calendar: Team Sync has been deleted; now set Priya\u2019s 1:1 to exactly 14:00\u201315:00 and save.\n4. [later] After confirming the 1:1 is at 2 PM, email only Priya at priya@example.com to tell her the 1:1 is now at 2 PM.\n5. [later] Finish only after the latte order, calendar update, and email to Priya are visibly confirmed.\n\n## What I see now\nThe Start time field at mark 11 is now empty and focused. The End time field at mark 12 still shows 16:00. I need to type 14:00 in the Start field.\n\n## Next action\nType the correct 2 PM start time. \n",
+      "tokens_in": 39274,
+      "tokens_out": 327,
+      "facts_visible_or_created": {
+        "mail.change_delivered": true,
+        "mail.new_meeting_time": "14:00",
+        "calendar.stale_sync_present": false
+      },
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8102/calendar/edit/ev_6",
+          "title": "ShopGym Calendar \u2014 Edit event",
+          "active": true
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8102/mail/message/em_5",
+          "title": "ShopGym Mail \u2014 Automated notice: 2 PM Team Sync cancelled",
+          "active": false
+        },
+        {
+          "index": 2,
+          "url": "http://localhost:8102/food/restaurant/r_bean",
+          "title": "ShopGym Eats \u2014 Bean There Cafe",
+          "active": false
+        }
+      ]
+    },
+    {
+      "step_idx": 18,
+      "action_kind": "click_mark",
+      "action_args": {
+        "mark_id": 12,
+        "role": "textbox",
+        "name": "End time",
+        "coord": [
+          632,
+          472
+        ]
+      },
+      "url_after": "http://localhost:8102/calendar/edit/ev_6",
+      "screenshot_path": "screenshots\\harvest\\M22_async_calendar_cascade__1__9c24ecfe\\step_018.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.3,
+      "snapshot_after": {
+        "task_id": "M22/async_calendar_cascade",
+        "step": 17,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Focus the end time field before replacing 16:00 with 15:00.",
+      "action_error": null,
+      "action_latency_ms": 531,
+      "raw_model_output": "## Plan\n1. [done] For task \u201cRun my afternoon for me\u2026\u201d checked Mail and confirmed the schedule update: the 2 PM Team Sync is cancelled and the 3 PM 1:1 with Priya should move to 2 PM.\n2. [in progress] Order an Oat Milk Latte from Bean There Cafe in Food; the latte has been added to the cart but checkout is not complete yet.\n3. [in progress] Update Calendar: Team Sync has been deleted; Priya\u2019s 1:1 start is now 14:00, and I still need to change the end time to 15:00 and save.\n4. [later] After confirming the 1:1 is at 2 PM, email only Priya at priya@example.com to tell her the 1:1 is now at 2 PM.\n5. [later] Finish only after the latte order, calendar update, and email to Priya are visibly confirmed.\n\n## What I see now\nThe \u201c1:1 with Priya\u201d edit form shows Start time mark 11 correctly set to 14:00. The End time field at mark 12 still shows 16:00, so it needs to be changed to 15:00. The Save changes button is mark 13.\n\n## Next action\nFocus the End time field so I can replace it with 15:00. \n",
+      "tokens_in": 41331,
+      "tokens_out": 351,
+      "facts_visible_or_created": {
+        "mail.change_delivered": true,
+        "mail.new_meeting_time": "14:00",
+        "calendar.stale_sync_present": false
+      },
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8102/calendar/edit/ev_6",
+          "title": "ShopGym Calendar \u2014 Edit event",
+          "active": true
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8102/mail/message/em_5",
+          "title": "ShopGym Mail \u2014 Automated notice: 2 PM Team Sync cancelled",
+          "active": false
+        },
+        {
+          "index": 2,
+          "url": "http://localhost:8102/food/restaurant/r_bean",
+          "title": "ShopGym Eats \u2014 Bean There Cafe",
+          "active": false
+        }
+      ]
+    },
+    {
+      "step_idx": 19,
+      "action_kind": "key_press",
+      "action_args": {
+        "key": "Control+a"
+      },
+      "url_after": "http://localhost:8102/calendar/edit/ev_6",
+      "screenshot_path": "screenshots\\harvest\\M22_async_calendar_cascade__1__9c24ecfe\\step_019.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.3,
+      "snapshot_after": {
+        "task_id": "M22/async_calendar_cascade",
+        "step": 18,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Select the existing 16:00 end time before replacing it with 15:00.",
+      "action_error": null,
+      "action_latency_ms": 14,
+      "raw_model_output": "## Plan\n1. [done] For task \u201cRun my afternoon for me\u2026\u201d checked Mail and confirmed the schedule update: the 2 PM Team Sync is cancelled and the 3 PM 1:1 with Priya should move to 2 PM.\n2. [in progress] Order an Oat Milk Latte from Bean There Cafe in Food; the latte has been added to the cart but checkout is not complete yet.\n3. [in progress] Update Calendar: Team Sync has been deleted; Priya\u2019s 1:1 start is now 14:00, and I\u2019m changing the end time from 16:00 to 15:00 before saving.\n4. [later] After confirming the 1:1 is at 2 PM, email only Priya at priya@example.com to tell her the 1:1 is now at 2 PM.\n5. [later] Finish only after the latte order, calendar update, and email to Priya are visibly confirmed.\n\n## What I see now\nThe edit form shows \u201c1:1 with Priya.\u201d Start time is correctly `14:00` at mark 11. End time at mark 12 is focused and still shows `16:00`. The Save changes button is mark 13.\n\n## Next action\nSelect the current End time value so it can be replaced with 15:00. \n",
+      "tokens_in": 43415,
+      "tokens_out": 360,
+      "facts_visible_or_created": {
+        "mail.change_delivered": true,
+        "mail.new_meeting_time": "14:00",
+        "calendar.stale_sync_present": false
+      },
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8102/calendar/edit/ev_6",
+          "title": "ShopGym Calendar \u2014 Edit event",
+          "active": true
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8102/mail/message/em_5",
+          "title": "ShopGym Mail \u2014 Automated notice: 2 PM Team Sync cancelled",
+          "active": false
+        },
+        {
+          "index": 2,
+          "url": "http://localhost:8102/food/restaurant/r_bean",
+          "title": "ShopGym Eats \u2014 Bean There Cafe",
+          "active": false
+        }
+      ]
+    },
+    {
+      "step_idx": 20,
+      "action_kind": "key_press",
+      "action_args": {
+        "key": "Backspace"
+      },
+      "url_after": "http://localhost:8102/calendar/edit/ev_6",
+      "screenshot_path": "screenshots\\harvest\\M22_async_calendar_cascade__1__9c24ecfe\\step_020.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.3,
+      "snapshot_after": {
+        "task_id": "M22/async_calendar_cascade",
+        "step": 19,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Delete the selected 16:00 end time so it can be replaced with exactly 15:00.",
+      "action_error": null,
+      "action_latency_ms": 15,
+      "raw_model_output": "## Plan\n1. [done] For task \u201cRun my afternoon for me\u2026\u201d checked Mail and confirmed the schedule update: the 2 PM Team Sync is cancelled and the 3 PM 1:1 with Priya should move to 2 PM.\n2. [in progress] Order an Oat Milk Latte from Bean There Cafe in Food; the latte has been added to the cart but checkout is not complete yet.\n3. [in progress] Update Calendar: Team Sync has been deleted; Priya\u2019s 1:1 start is now 14:00, and I\u2019m replacing the selected end time with 15:00 before saving.\n4. [later] After confirming the 1:1 is at 2 PM, email only Priya at priya@example.com to tell her the 1:1 is now at 2 PM.\n5. [later] Finish only after the latte order, calendar update, and email to Priya are visibly confirmed.\n\n## What I see now\nThe \u201c1:1 with Priya\u201d edit form is open. Start time is correctly `14:00`. The End time field (mark 12) has `16:00` selected, so I need to clear it and then type `15:00`.\n\n## Next action\nClear the selected end time value. \n",
+      "tokens_in": 45494,
+      "tokens_out": 412,
+      "facts_visible_or_created": {
+        "mail.change_delivered": true,
+        "mail.new_meeting_time": "14:00",
+        "calendar.stale_sync_present": false
+      },
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8102/calendar/edit/ev_6",
+          "title": "ShopGym Calendar \u2014 Edit event",
+          "active": true
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8102/mail/message/em_5",
+          "title": "ShopGym Mail \u2014 Automated notice: 2 PM Team Sync cancelled",
+          "active": false
+        },
+        {
+          "index": 2,
+          "url": "http://localhost:8102/food/restaurant/r_bean",
+          "title": "ShopGym Eats \u2014 Bean There Cafe",
+          "active": false
+        }
+      ]
+    },
+    {
+      "step_idx": 21,
+      "action_kind": "type_into_mark",
+      "action_args": {
+        "mark_id": 12,
+        "value": "15:00",
+        "role": "textbox",
+        "name": "End time",
+        "coord": [
+          632,
+          472
+        ]
+      },
+      "url_after": "http://localhost:8102/calendar/edit/ev_6",
+      "screenshot_path": "screenshots\\harvest\\M22_async_calendar_cascade__1__9c24ecfe\\step_021.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.3,
+      "snapshot_after": {
+        "task_id": "M22/async_calendar_cascade",
+        "step": 20,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Set Priya\u2019s 1:1 end time to 15:00 so it occupies the freed 2 PM hour.",
+      "action_error": null,
+      "action_latency_ms": 514,
+      "raw_model_output": "## Plan\n1. [done] For task \u201cRun my afternoon for me\u2026\u201d checked Mail and confirmed the schedule update: the 2 PM Team Sync is cancelled and the 3 PM 1:1 with Priya should move to 2 PM.\n2. [in progress] Order an Oat Milk Latte from Bean There Cafe in Food; the latte has been added to the cart but checkout is not complete yet.\n3. [in progress] Update Calendar: Team Sync has been deleted; Priya\u2019s 1:1 start is now 14:00, and the end time field is cleared so it can be set to 15:00.\n4. [later] After confirming the 1:1 is at 2 PM, email only Priya at priya@example.com to tell her the 1:1 is now at 2 PM.\n5. [later] Finish only after the latte order, calendar update, and email to Priya are visibly confirmed.\n\n## What I see now\nThe \u201c1:1 with Priya\u201d edit form is open. Start time is correctly `14:00` at mark 11. End time field mark 12 is empty and focused. Save changes is mark 13.\n\n## Next action\nType the correct end time, 15:00. \n",
+      "tokens_in": 47558,
+      "tokens_out": 350,
+      "facts_visible_or_created": {
+        "mail.change_delivered": true,
+        "mail.new_meeting_time": "14:00",
+        "calendar.stale_sync_present": false
+      },
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8102/calendar/edit/ev_6",
+          "title": "ShopGym Calendar \u2014 Edit event",
+          "active": true
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8102/mail/message/em_5",
+          "title": "ShopGym Mail \u2014 Automated notice: 2 PM Team Sync cancelled",
+          "active": false
+        },
+        {
+          "index": 2,
+          "url": "http://localhost:8102/food/restaurant/r_bean",
+          "title": "ShopGym Eats \u2014 Bean There Cafe",
+          "active": false
+        }
+      ]
+    },
+    {
+      "step_idx": 22,
+      "action_kind": "click_mark",
+      "action_args": {
+        "mark_id": 13,
+        "role": "button",
+        "name": "Save changes",
+        "coord": [
+          291,
+          538
+        ]
+      },
+      "url_after": "http://localhost:8102/calendar/edit/ev_6",
+      "screenshot_path": "screenshots\\harvest\\M22_async_calendar_cascade__1__9c24ecfe\\step_022.png",
+      "milestones_fired_this_step": [
+        "oneonone_moved_to_2pm"
+      ],
+      "running_score": 0.6,
+      "snapshot_after": {
+        "task_id": "M22/async_calendar_cascade",
+        "step": 21,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Save Priya\u2019s 1:1 at the new 14:00\u201315:00 time.",
+      "action_error": null,
+      "action_latency_ms": 547,
+      "raw_model_output": "## Plan\n1. [done] For task \u201cRun my afternoon for me\u2026\u201d checked Mail and confirmed the schedule update: the 2 PM Team Sync is cancelled and the 3 PM 1:1 with Priya should move to 2 PM.\n2. [in progress] Order an Oat Milk Latte from Bean There Cafe in Food; the latte has been added to the cart but checkout is not complete yet.\n3. [in progress] Update Calendar: Team Sync has been deleted; Priya\u2019s 1:1 is now set to 14:00\u201315:00 in the edit form and needs saving.\n4. [later] After confirming the 1:1 is at 2 PM, email only Priya at priya@example.com to tell her the 1:1 is now at 2 PM.\n5. [later] Finish only after the latte order, calendar update, and email to Priya are visibly confirmed.\n\n## What I see now\nThe \u201c1:1 with Priya\u201d edit form shows Start time `14:00` and End time `15:00`, which is the correct new 2 PM slot. The Save changes button is mark 13.\n\n## Next action\nSave the calendar changes. \n",
+      "tokens_in": 49641,
+      "tokens_out": 323,
+      "facts_visible_or_created": {
+        "mail.change_delivered": true,
+        "mail.new_meeting_time": "14:00",
+        "calendar.stale_sync_present": false
+      },
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8102/calendar",
+          "title": "ShopGym Calendar \u2014 Agenda",
+          "active": true
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8102/mail/message/em_5",
+          "title": "ShopGym Mail \u2014 Automated notice: 2 PM Team Sync cancelled",
+          "active": false
+        },
+        {
+          "index": 2,
+          "url": "http://localhost:8102/food/restaurant/r_bean",
+          "title": "ShopGym Eats \u2014 Bean There Cafe",
+          "active": false
+        }
+      ]
+    },
+    {
+      "step_idx": 23,
+      "action_kind": "switch_tab",
+      "action_args": {
+        "tab_index": 1
+      },
+      "url_after": "http://localhost:8102/mail/message/em_5",
+      "screenshot_path": "screenshots\\harvest\\M22_async_calendar_cascade__1__9c24ecfe\\step_023.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.6,
+      "snapshot_after": {
+        "task_id": "M22/async_calendar_cascade",
+        "step": 22,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Compose an email to only Priya now that her 1:1 is confirmed at 2 PM.",
+      "action_error": null,
+      "action_latency_ms": 16,
+      "raw_model_output": "## Plan\n1. [done] For task \u201cRun my afternoon for me\u2026\u201d checked Mail and confirmed the schedule update: the 2 PM Team Sync is cancelled and the 3 PM 1:1 with Priya should move to 2 PM.\n2. [in progress] Order an Oat Milk Latte from Bean There Cafe in Food; the latte has been added to the cart but checkout is not complete yet.\n3. [done] Update Calendar: Team Sync has been deleted, and Priya\u2019s 1:1 is now confirmed at 14:00\u201315:00 with no stale 3 PM event visible.\n4. [in progress] Email only Priya at priya@example.com to tell her the 1:1 is now at 2 PM.\n5. [later] Complete checkout for the Oat Milk Latte.\n6. [later] Finish only after the latte order, calendar update, and email to Priya are visibly confirmed.\n\n## What I see now\nThe Calendar shows a green success banner \u201cUpdated your calendar event.\u201d The only visible agenda item is \u201c1:1 with Priya\u201d at 14:00\u201315:00, with Team Sync removed. Now I need to email Priya directly and only Priya.\n\n## Next action\nSwitch to the Mail tab to compose the notification email to Priya. \n",
+      "tokens_in": 51606,
+      "tokens_out": 435,
+      "facts_visible_or_created": {
+        "mail.change_delivered": true,
+        "mail.new_meeting_time": "14:00",
+        "calendar.stale_sync_present": false
+      },
+      "active_tab": 1,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8102/calendar",
+          "title": "ShopGym Calendar \u2014 Agenda",
+          "active": false
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8102/mail/message/em_5",
+          "title": "ShopGym Mail \u2014 Automated notice: 2 PM Team Sync cancelled",
+          "active": true
+        },
+        {
+          "index": 2,
+          "url": "http://localhost:8102/food/restaurant/r_bean",
+          "title": "ShopGym Eats \u2014 Bean There Cafe",
+          "active": false
+        }
+      ]
+    },
+    {
+      "step_idx": 24,
+      "action_kind": "click_mark",
+      "action_args": {
+        "mark_id": 8,
+        "role": "button",
+        "name": "\u270f\ufe0f\nCompose",
+        "coord": [
+          939,
+          63
+        ]
+      },
+      "url_after": "http://localhost:8102/mail/message/em_5",
+      "screenshot_path": "screenshots\\harvest\\M22_async_calendar_cascade__1__9c24ecfe\\step_024.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.6,
+      "snapshot_after": {
+        "task_id": "M22/async_calendar_cascade",
+        "step": 23,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Compose a new email addressed only to Priya.",
+      "action_error": null,
+      "action_latency_ms": 562,
+      "raw_model_output": "## Plan\n1. [done] For task \u201cRun my afternoon for me\u2026\u201d checked Mail and confirmed the schedule update: the 2 PM Team Sync is cancelled and the 3 PM 1:1 with Priya should move to 2 PM.\n2. [in progress] Order an Oat Milk Latte from Bean There Cafe in Food; the latte has been added to the cart but checkout is not complete yet.\n3. [done] Update Calendar: Team Sync has been deleted, and Priya\u2019s 1:1 is confirmed at 14:00\u201315:00 with no stale 3 PM event visible.\n4. [in progress] Email only Priya at priya@example.com to tell her the 1:1 is now at 2 PM.\n5. [later] Complete checkout for the Oat Milk Latte.\n6. [later] Finish only after the latte order, calendar update, and email to Priya are visibly confirmed.\n\n## What I see now\nI\u2019m in Mail reading the automated cancellation notice. The Compose button is visible at mark 8. I should compose a new email to Priya directly, not reply to the automated scheduling notice.\n\n## Next action\nOpen the compose form. \n",
+      "tokens_in": 53628,
+      "tokens_out": 312,
+      "facts_visible_or_created": {
+        "mail.change_delivered": true,
+        "mail.new_meeting_time": "14:00",
+        "calendar.stale_sync_present": false
+      },
+      "active_tab": 1,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8102/calendar",
+          "title": "ShopGym Calendar \u2014 Agenda",
+          "active": false
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8102/mail/compose",
+          "title": "ShopGym Mail \u2014 Compose",
+          "active": true
+        },
+        {
+          "index": 2,
+          "url": "http://localhost:8102/food/restaurant/r_bean",
+          "title": "ShopGym Eats \u2014 Bean There Cafe",
+          "active": false
+        }
+      ]
+    },
+    {
+      "step_idx": 25,
+      "action_kind": "type_into_mark",
+      "action_args": {
+        "mark_id": 11,
+        "value": "priya@example.com",
+        "role": "textbox",
+        "name": "To",
+        "coord": [
+          480,
+          336
+        ]
+      },
+      "url_after": "http://localhost:8102/mail/compose",
+      "screenshot_path": "screenshots\\harvest\\M22_async_calendar_cascade__1__9c24ecfe\\step_025.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.6,
+      "snapshot_after": {
+        "task_id": "M22/async_calendar_cascade",
+        "step": 24,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Address the notification email only to Priya as required.",
+      "action_error": null,
+      "action_latency_ms": 562,
+      "raw_model_output": "## Plan\n1. [done] For task \u201cRun my afternoon for me\u2026\u201d checked Mail and confirmed the schedule update: the 2 PM Team Sync is cancelled and the 3 PM 1:1 with Priya should move to 2 PM.\n2. [in progress] Order an Oat Milk Latte from Bean There Cafe in Food; the latte has been added to the cart but checkout is not complete yet.\n3. [done] Update Calendar: Team Sync has been deleted, and Priya\u2019s 1:1 is confirmed at 14:00\u201315:00 with no stale 3 PM event visible.\n4. [in progress] Email only Priya at priya@example.com to tell her the 1:1 is now at 2 PM.\n5. [later] Complete checkout for the Oat Milk Latte.\n6. [later] Finish only after the latte order, calendar update, and email to Priya are visibly confirmed.\n\n## What I see now\nI\u2019m on the Mail compose page. The To field is mark 11, Subject is mark 12, Message is mark 13, and Send is mark 14. I need to address this only to Priya at priya@example.com.\n\n## Next action\nType Priya\u2019s email address into the To field. \n",
+      "tokens_in": 55608,
+      "tokens_out": 383,
+      "facts_visible_or_created": {
+        "mail.change_delivered": true,
+        "mail.new_meeting_time": "14:00",
+        "calendar.stale_sync_present": false
+      },
+      "active_tab": 1,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8102/calendar",
+          "title": "ShopGym Calendar \u2014 Agenda",
+          "active": false
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8102/mail/compose",
+          "title": "ShopGym Mail \u2014 Compose",
+          "active": true
+        },
+        {
+          "index": 2,
+          "url": "http://localhost:8102/food/restaurant/r_bean",
+          "title": "ShopGym Eats \u2014 Bean There Cafe",
+          "active": false
+        }
+      ]
+    },
+    {
+      "step_idx": 26,
+      "action_kind": "type_into_mark",
+      "action_args": {
+        "mark_id": 12,
+        "value": "1:1 moved to 2 PM",
+        "role": "textbox",
+        "name": "Subject",
+        "coord": [
+          480,
+          410
+        ]
+      },
+      "url_after": "http://localhost:8102/mail/compose",
+      "screenshot_path": "screenshots\\harvest\\M22_async_calendar_cascade__1__9c24ecfe\\step_026.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.6,
+      "snapshot_after": {
+        "task_id": "M22/async_calendar_cascade",
+        "step": 25,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Add a clear subject for Priya\u2019s schedule update email.",
+      "action_error": null,
+      "action_latency_ms": 562,
+      "raw_model_output": "## Plan\n1. [done] For task \u201cRun my afternoon for me\u2026\u201d checked Mail and confirmed the schedule update: the 2 PM Team Sync is cancelled and the 3 PM 1:1 with Priya should move to 2 PM.\n2. [in progress] Order an Oat Milk Latte from Bean There Cafe in Food; the latte has been added to the cart but checkout is not complete yet.\n3. [done] Update Calendar: Team Sync has been deleted, and Priya\u2019s 1:1 is confirmed at 14:00\u201315:00 with no stale 3 PM event visible.\n4. [in progress] Email only Priya at priya@example.com to tell her the 1:1 is now at 2 PM; the To field is correctly set to only Priya.\n5. [later] Complete checkout for the Oat Milk Latte.\n6. [later] Finish only after the latte order, calendar update, and email to Priya are visibly confirmed.\n\n## What I see now\nI\u2019m on the Mail compose form. The To field (mark 11) contains only `priya@example.com`. The Subject field is mark 12, Message is mark 13, and Send is mark 14. I need to fill in the subject and message before sending.\n\n## Next action\nType an appropriate subject. \n",
+      "tokens_in": 57621,
+      "tokens_out": 348,
+      "facts_visible_or_created": {
+        "mail.change_delivered": true,
+        "mail.new_meeting_time": "14:00",
+        "calendar.stale_sync_present": false
+      },
+      "active_tab": 1,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8102/calendar",
+          "title": "ShopGym Calendar \u2014 Agenda",
+          "active": false
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8102/mail/compose",
+          "title": "ShopGym Mail \u2014 Compose",
+          "active": true
+        },
+        {
+          "index": 2,
+          "url": "http://localhost:8102/food/restaurant/r_bean",
+          "title": "ShopGym Eats \u2014 Bean There Cafe",
+          "active": false
+        }
+      ]
+    },
+    {
+      "step_idx": 27,
+      "action_kind": "type_into_mark",
+      "action_args": {
+        "mark_id": 13,
+        "value": "Hi Priya,\n\nThe Team Sync was cancelled, so I moved our 1:1 up to 2 PM today.\n\nBest,\nAlice",
+        "role": "textbox",
+        "name": "Message",
+        "coord": [
+          480,
+          554
+        ]
+      },
+      "url_after": "http://localhost:8102/mail/compose",
+      "screenshot_path": "screenshots\\harvest\\M22_async_calendar_cascade__1__9c24ecfe\\step_027.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.6,
+      "snapshot_after": {
+        "task_id": "M22/async_calendar_cascade",
+        "step": 26,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Fill the email body to notify Priya that her 1:1 is now at 2 PM.",
+      "action_error": null,
+      "action_latency_ms": 797,
+      "raw_model_output": "## Plan\n1. [done] For task \u201cRun my afternoon for me\u2026\u201d checked Mail and confirmed the schedule update: the 2 PM Team Sync is cancelled and the 3 PM 1:1 with Priya should move to 2 PM.\n2. [in progress] Order an Oat Milk Latte from Bean There Cafe in Food; the latte has been added to the cart but checkout is not complete yet.\n3. [done] Update Calendar: Team Sync has been deleted, and Priya\u2019s 1:1 is confirmed at 14:00\u201315:00 with no stale 3 PM event visible.\n4. [in progress] Email only Priya at priya@example.com to tell her the 1:1 is now at 2 PM; To and Subject are filled.\n5. [later] Complete checkout for the Oat Milk Latte.\n6. [later] Finish only after the latte order, calendar update, and email to Priya are visibly confirmed.\n\n## What I see now\nThe compose form is ready. The To field contains only `priya@example.com`, and the Subject is `1:1 moved to 2 PM`. The Message field is mark 13, and Send is mark 14. I need to enter the message body.\n\n## Next action\nType the email message explaining the 1:1 is now at 2 PM. \n",
+      "tokens_in": 59663,
+      "tokens_out": 386,
+      "facts_visible_or_created": {
+        "mail.change_delivered": true,
+        "mail.new_meeting_time": "14:00",
+        "calendar.stale_sync_present": false
+      },
+      "active_tab": 1,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8102/calendar",
+          "title": "ShopGym Calendar \u2014 Agenda",
+          "active": false
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8102/mail/compose",
+          "title": "ShopGym Mail \u2014 Compose",
+          "active": true
+        },
+        {
+          "index": 2,
+          "url": "http://localhost:8102/food/restaurant/r_bean",
+          "title": "ShopGym Eats \u2014 Bean There Cafe",
+          "active": false
+        }
+      ]
+    },
+    {
+      "step_idx": 28,
+      "action_kind": "click_mark",
+      "action_args": {
+        "mark_id": 14,
+        "role": "button",
+        "name": "Send",
+        "coord": [
+          201,
+          696
+        ]
+      },
+      "url_after": "http://localhost:8102/mail/compose",
+      "screenshot_path": "screenshots\\harvest\\M22_async_calendar_cascade__1__9c24ecfe\\step_028.png",
+      "milestones_fired_this_step": [
+        "notified_priya_new_time"
+      ],
+      "running_score": 0.8,
+      "snapshot_after": {
+        "task_id": "M22/async_calendar_cascade",
+        "step": 27,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Send the completed notification email only to Priya.",
+      "action_error": null,
+      "action_latency_ms": 546,
+      "raw_model_output": "## Plan\n1. [done] For task \u201cRun my afternoon for me\u2026\u201d checked Mail and confirmed the schedule update: the 2 PM Team Sync is cancelled and the 3 PM 1:1 with Priya should move to 2 PM.\n2. [in progress] Order an Oat Milk Latte from Bean There Cafe in Food; the latte has been added to the cart but checkout is not complete yet.\n3. [done] Update Calendar: Team Sync has been deleted, and Priya\u2019s 1:1 is confirmed at 14:00\u201315:00 with no stale 3 PM event visible.\n4. [in progress] Email only Priya at priya@example.com to tell her the 1:1 is now at 2 PM; To, Subject, and Message are filled.\n5. [later] Complete checkout for the Oat Milk Latte.\n6. [later] Finish only after the latte order, calendar update, and email to Priya are visibly confirmed.\n\n## What I see now\nThe Mail compose form is complete: To is only `priya@example.com`, Subject is `1:1 moved to 2 PM`, and the body tells Priya the 1:1 was moved up to 2 PM today. The Send button is mark 14.\n\n## Next action\nSend the email to Priya. \n",
+      "tokens_in": 61757,
+      "tokens_out": 353,
+      "facts_visible_or_created": {
+        "mail.change_delivered": true,
+        "mail.new_meeting_time": "14:00",
+        "calendar.stale_sync_present": false
+      },
+      "active_tab": 1,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8102/calendar",
+          "title": "ShopGym Calendar \u2014 Agenda",
+          "active": false
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8102/mail?sent=1",
+          "title": "ShopGym Mail \u2014 Inbox",
+          "active": true
+        },
+        {
+          "index": 2,
+          "url": "http://localhost:8102/food/restaurant/r_bean",
+          "title": "ShopGym Eats \u2014 Bean There Cafe",
+          "active": false
+        }
+      ]
+    },
+    {
+      "step_idx": 29,
+      "action_kind": "switch_tab",
+      "action_args": {
+        "tab_index": 2
+      },
+      "url_after": "http://localhost:8102/food/restaurant/r_bean",
+      "screenshot_path": "screenshots\\harvest\\M22_async_calendar_cascade__1__9c24ecfe\\step_029.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.8,
+      "snapshot_after": {
+        "task_id": "M22/async_calendar_cascade",
+        "step": 28,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Return to the Food order to complete checkout for the Oat Milk Latte.",
+      "action_error": null,
+      "action_latency_ms": 0,
+      "raw_model_output": "## Plan\n1. [done] For task \u201cRun my afternoon for me\u2026\u201d checked Mail and confirmed the schedule update: the 2 PM Team Sync is cancelled and the 3 PM 1:1 with Priya should move to 2 PM.\n2. [in progress] Order an Oat Milk Latte from Bean There Cafe in Food; the latte has been added to the cart but checkout is not complete yet.\n3. [done] Update Calendar: Team Sync has been deleted, and Priya\u2019s 1:1 is confirmed at 14:00\u201315:00 with no stale 3 PM event visible.\n4. [done] Email only Priya at priya@example.com to tell her the 1:1 is now at 2 PM; visible confirmation says the email was sent to priya@example.com.\n5. [in progress] Complete checkout for the Oat Milk Latte.\n6. [later] Finish only after the latte order, calendar update, and email to Priya are visibly confirmed.\n\n## What I see now\nMail shows a green success banner: \u201cEmail sent to priya@example.com.\u201d The inbox still has unread noncritical messages, but the schedule update has been handled. I still need to complete the Oat Milk Latte order in the Food tab.\n\n## Next action\nSwitch back to the Food tab to checkout the Oat Milk Latte order. \n",
+      "tokens_in": 63852,
+      "tokens_out": 358,
+      "facts_visible_or_created": {
+        "mail.change_delivered": true,
+        "mail.new_meeting_time": "14:00",
+        "calendar.stale_sync_present": false
+      },
+      "active_tab": 2,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8102/calendar",
+          "title": "ShopGym Calendar \u2014 Agenda",
+          "active": false
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8102/mail?sent=1",
+          "title": "ShopGym Mail \u2014 Inbox",
+          "active": false
+        },
+        {
+          "index": 2,
+          "url": "http://localhost:8102/food/restaurant/r_bean",
+          "title": "ShopGym Eats \u2014 Bean There Cafe",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 30,
+      "action_kind": "click_mark",
+      "action_args": {
+        "mark_id": 6,
+        "role": "button",
+        "name": "\ud83d\udecd\ufe0f\nFood cart\n1",
+        "coord": [
+          1059,
+          68
+        ]
+      },
+      "url_after": "http://localhost:8102/food/restaurant/r_bean",
+      "screenshot_path": "screenshots\\harvest\\M22_async_calendar_cascade__1__9c24ecfe\\step_030.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.8,
+      "snapshot_after": {
+        "task_id": "M22/async_calendar_cascade",
+        "step": 29,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Open the cart to checkout the Oat Milk Latte order.",
+      "action_error": null,
+      "action_latency_ms": 547,
+      "raw_model_output": "## Plan\n1. [done] For task \u201cRun my afternoon for me\u2026\u201d checked Mail and confirmed the schedule update: the 2 PM Team Sync is cancelled and the 3 PM 1:1 with Priya should move to 2 PM.\n2. [in progress] Order an Oat Milk Latte from Bean There Cafe; the latte is in the Food cart and I need to checkout.\n3. [done] Update Calendar: Team Sync has been deleted, and Priya\u2019s 1:1 is confirmed at 14:00\u201315:00 with no stale 3 PM event visible.\n4. [done] Email only Priya at priya@example.com to tell her the 1:1 is now at 2 PM; Mail confirmed it was sent to priya@example.com.\n5. [later] Do one final verification if needed, then finish only after the latte order is confirmed too.\n\n## What I see now\nI\u2019m back on Bean There Cafe in Food. A green banner says \u201cAdded to your food order,\u201d and the Food cart button at mark 6 shows 1 item. The requested Oat Milk Latte is visible on the menu. I need to open the cart to complete checkout.\n\n## Next action\nOpen the Food cart. \n",
+      "tokens_in": 65875,
+      "tokens_out": 405,
+      "facts_visible_or_created": {
+        "mail.change_delivered": true,
+        "mail.new_meeting_time": "14:00",
+        "calendar.stale_sync_present": false
+      },
+      "active_tab": 2,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8102/calendar",
+          "title": "ShopGym Calendar \u2014 Agenda",
+          "active": false
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8102/mail?sent=1",
+          "title": "ShopGym Mail \u2014 Inbox",
+          "active": false
+        },
+        {
+          "index": 2,
+          "url": "http://localhost:8102/food/cart",
+          "title": "ShopGym Eats \u2014 Food cart",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 31,
+      "action_kind": "click_mark",
+      "action_args": {
+        "mark_id": 10,
+        "role": "button",
+        "name": "Place order",
+        "coord": [
+          221,
+          483
+        ]
+      },
+      "url_after": "http://localhost:8102/food/cart",
+      "screenshot_path": "screenshots\\harvest\\M22_async_calendar_cascade__1__9c24ecfe\\step_031.png",
+      "milestones_fired_this_step": [
+        "coffee_ordered"
+      ],
+      "running_score": 1.0,
+      "snapshot_after": {
+        "task_id": "M22/async_calendar_cascade",
+        "step": 30,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Place the order for the Oat Milk Latte from Bean There Cafe.",
+      "action_error": null,
+      "action_latency_ms": 547,
+      "raw_model_output": "## Plan\n1. [done] For task \u201cRun my afternoon for me\u2026\u201d checked Mail and confirmed the schedule update: the 2 PM Team Sync is cancelled and the 3 PM 1:1 with Priya should move to 2 PM.\n2. [in progress] Order an Oat Milk Latte from Bean There Cafe; the cart contains exactly 1 Oat Milk Latte and I\u2019m ready to place the order.\n3. [done] Update Calendar: Team Sync has been deleted, and Priya\u2019s 1:1 is confirmed at 14:00\u201315:00 with no stale 3 PM event visible.\n4. [done] Email only Priya at priya@example.com to tell her the 1:1 is now at 2 PM; Mail confirmed it was sent to priya@example.com.\n5. [later] Finish only after the latte order confirmation is visible too.\n\n## What I see now\nI\u2019m on the Food cart page. The order is from Bean There Cafe and contains \u201c1 \u00d7 Oat Milk Latte,\u201d with subtotal $5.25 and delivery $1.99. The \u201cPlace order\u201d button is mark 10, and \u201cClear cart\u201d is mark 11. I need to place the order.\n\n## Next action\nPlace the food order. \n",
+      "tokens_in": 67851,
+      "tokens_out": 330,
+      "facts_visible_or_created": {
+        "mail.change_delivered": true,
+        "mail.new_meeting_time": "14:00",
+        "calendar.stale_sync_present": false
+      },
+      "active_tab": 2,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8102/calendar",
+          "title": "ShopGym Calendar \u2014 Agenda",
+          "active": false
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8102/mail?sent=1",
+          "title": "ShopGym Mail \u2014 Inbox",
+          "active": false
+        },
+        {
+          "index": 2,
+          "url": "http://localhost:8102/food/order/FOOD-1041",
+          "title": "ShopGym Eats \u2014 Order FOOD-1041",
+          "active": true
+        }
+      ]
+    }
+  ],
+  "final_url": "http://localhost:8102/calendar",
+  "final_snapshot": {
+    "task_id": "M22/async_calendar_cascade",
+    "step": 31,
+    "finished": false,
+    "current_user_id": "u_alice",
+    "cart_item_count": 0,
+    "orders_count": 0,
+    "returns_count": 0,
+    "subscriptions_count": 0,
+    "applied_promo": null
+  },
+  "verifier_result": {
+    "score": 1.0,
+    "success": true,
+    "newly_fired": [],
+    "missed_milestones": [],
+    "all_milestones": [
+      {
+        "name": "change_alert_delivered",
+        "weight": 0.0,
+        "fired_at_step": 4,
+        "required": false
+      },
+      {
+        "name": "coffee_ordered",
+        "weight": 0.2,
+        "fired_at_step": 31,
+        "required": true
+      },
+      {
+        "name": "oneonone_moved_to_2pm",
+        "weight": 0.3,
+        "fired_at_step": 22,
+        "required": true
+      },
+      {
+        "name": "cancelled_sync_deleted",
+        "weight": 0.3,
+        "fired_at_step": 10,
+        "required": true
+      },
+      {
+        "name": "notified_priya_new_time",
+        "weight": 0.2,
+        "fired_at_step": 28,
+        "required": true
+      }
+    ]
+  },
+  "agent_failure_class": null,
+  "ui_variant": "normal",
+  "video_path": "",
+  "error": null
+}

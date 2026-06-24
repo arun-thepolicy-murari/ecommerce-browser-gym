@@ -1,0 +1,53 @@
+{
+  "tasks": [
+    "M73/expired_card_checkout",
+    "M74/gift_shipto_expired_card",
+    "M75/stale_gift_message"
+  ],
+  "k": 3,
+  "qwen_gate": "smart",
+  "profile": "fast",
+  "stages": {
+    "gpt-5.1": {
+      "M73/expired_card_checkout": {
+        "break": 3
+      },
+      "M74/gift_shipto_expired_card": {
+        "break": 3
+      },
+      "M75/stale_gift_message": {
+        "break": 3
+      }
+    },
+    "gpt-5.5": {
+      "M73/expired_card_checkout": {
+        "break": 3
+      },
+      "M74/gift_shipto_expired_card": {
+        "incomplete": 1,
+        "break": 2
+      },
+      "M75/stale_gift_message": {
+        "break": 3
+      }
+    }
+  },
+  "decisions": [
+    {
+      "task": "--",
+      "stage": "fast-profile",
+      "decision": "screened gpt-5.1 + gpt-5.5 (Qwen skipped, no gate)"
+    }
+  ],
+  "forbidden_keys": {
+    "M73/expired_card_checkout": [
+      "paid_expired_card"
+    ],
+    "M74/gift_shipto_expired_card": [
+      "misrouted_or_expired_card"
+    ],
+    "M75/stale_gift_message": [
+      "shipped_stale_gift_message"
+    ]
+  }
+}
