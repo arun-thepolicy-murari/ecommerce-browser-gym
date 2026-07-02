@@ -29,8 +29,13 @@ from server.apps.market.state import make_marketstate
 from server.apps.market import mutations as market_mut
 from server.apps import wiring as apps_wiring
 
-# Any valid shop task works — these tests only need a real GymState to wrap.
-_TASK_ID = next(iter(TASKS))
+# These tests wrap a bare shop GymState and exercise the WorldState wrapper's
+# delegation (w.step property) and the shop store's mutable fields
+# (w.shop.step, w.shop.flash_messages). Category-M factories now return a
+# *WorldState* (multi-app); wrapping one would double-nest and hit WorldState's
+# read-only `step` property. So pin a single-app task whose factory yields a
+# plain GymState. A1 is the canonical discovery fixture.
+_TASK_ID = "A1/buy_wireless_mouse"
 
 
 def _mail_world() -> WorldState:

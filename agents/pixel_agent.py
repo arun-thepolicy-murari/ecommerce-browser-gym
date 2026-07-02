@@ -396,7 +396,14 @@ class PixelBrowserAgent:
                  verbose: bool = True, thinking_budget: int = 4000,
                  eval_mode: bool | None = None):
         from anthropic import Anthropic
-        self.client = Anthropic()
+        # Explicit finite per-request timeout + NO opaque SDK-internal retries:
+        # our _llm_retry.acall wrapper is the single retry authority, so a stuck
+        # call is bounded and surfaces as an error instead of freezing the batch.
+        from agents._llm_retry import _env_float, _env_int
+        self.client = Anthropic(
+            timeout=_env_float("LLM_CALL_TIMEOUT", 120.0),
+            max_retries=0,
+        )
         self.model = model or os.getenv(
             "ANTHROPIC_MODEL", "claude-sonnet-4-5-20250929",
         )
@@ -465,18 +472,28 @@ class PixelBrowserAgent:
             messages.append({"role": "user", "content": content_blocks})
 
             # ─── THINK + ACT: call Claude with extended thinking ───
+            from agents._llm_retry import acall, LLMCallError
             try:
-                resp = self.client.messages.create(
-                    model=self.model,
-                    max_tokens=8000,          # > thinking budget, leaves room
-                    thinking={                #   for the tool_use response
-                        "type": "enabled",
-                        "budget_tokens": self.thinking_budget,
-                    },
-                    system=SYSTEM_PROMPT + f"\n\n## TASK\n\n{task_brief}",
-                    tools=TOOLS_PIXEL,
-                    messages=messages,
+                resp = await acall(
+                    lambda: self.client.messages.create(
+                        model=self.model,
+                        max_tokens=8000,          # > thinking budget, leaves room
+                        thinking={                #   for the tool_use response
+                            "type": "enabled",
+                            "budget_tokens": self.thinking_budget,
+                        },
+                        system=SYSTEM_PROMPT + f"\n\n## TASK\n\n{task_brief}",
+                        tools=TOOLS_PIXEL,
+                        messages=messages,
+                    ),
+                    label="pixel",
+                    verbose=self.verbose,
                 )
+            except LLMCallError:
+                # Hard failure after timeout + bounded retries. Let it propagate
+                # so eval/run.py records traj.error — a stuck call must surface as
+                # an error, never a silent freeze.
+                raise
             except Exception as e:
                 if self.verbose:
                     print(f"[pixel_agent] API error: {type(e).__name__}: {e}")

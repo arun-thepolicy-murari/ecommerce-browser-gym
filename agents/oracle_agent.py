@@ -906,6 +906,15 @@ async def solve_m20_errand_run(ctx: BrowserCtx) -> None:
     await ctx.click("button[data-test-id='btn-place-food-order']")
     await ctx.goto("/calendar/new", reasoning="Add a reminder for the delivery.")
     await ctx.fill("input[data-test-id='input-event-title']", "Sushi delivery")
+    # Pin the reminder to TODAY. The form defaults to TOMORROW, and its default
+    # 19:00-20:00 window overlaps the seed-1-only 'Book club' event (19:00-21:30);
+    # create_event rejects the overlap, silently dropping the REQUIRED
+    # calendar_reminder_created milestone on seed 1 (oracle scored 0.8 there).
+    # TODAY's 19:00-20:00 slot is free on every seed (only Gym 18:00-19:00, and
+    # half-open back-to-back is allowed), so the gold solution lands 1.00 on all.
+    from server.apps.calendar.state import TODAY
+    await ctx.select("select[data-test-id='select-event-day']", TODAY,
+                     reasoning="The reminder is for tonight's delivery.")
     await ctx.click("button[data-test-id='btn-save-event']")
     # 3) Reply to Alex with the EXACT gear total.
     world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()
@@ -964,6 +973,13 @@ async def solve_m21_async_errand_run(ctx: BrowserCtx) -> None:
     await ctx.goto("/calendar/new",
                    reasoning="Add a reminder for the delivery.")
     await ctx.fill("input[data-test-id='input-event-title']", "Sushi delivery")
+    # Pin to TODAY — same seed-1 overlap trap as M20: the default TOMORROW
+    # 19:00-20:00 window collides with the seed-1-only 'Book club' (19:00-21:30),
+    # so create_event rejects it and the REQUIRED calendar_reminder_created
+    # milestone silently drops (oracle scored 0.8 on seed 1). TODAY is free.
+    from server.apps.calendar.state import TODAY
+    await ctx.select("select[data-test-id='select-event-day']", TODAY,
+                     reasoning="The reminder is for tonight's delivery.")
     await ctx.click("button[data-test-id='btn-save-event']")
     # 4) Reply to Alex with the EXACT post-flip total.
     world = ctx.http.get(f"{ctx.server_url}/_harness/world").json()

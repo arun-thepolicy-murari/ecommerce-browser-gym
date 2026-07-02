@@ -135,7 +135,15 @@ class OpenAIPixelAgent:
         # provider key). Defaults to OpenAI proper.
         base = base_url or os.getenv("OPENAI_BASE_URL") or None
         key = api_key or os.getenv("OPENAI_API_KEY")
-        self.client = OpenAI(base_url=base, api_key=key)
+        # Explicit finite timeout + NO opaque SDK-internal retries — our
+        # _llm_retry.acall wrapper is the single retry authority, so a stuck
+        # gpt-5.x/proxy call is bounded and surfaces as an error, not a freeze.
+        from agents._llm_retry import _env_float
+        self.client = OpenAI(
+            base_url=base, api_key=key,
+            timeout=_env_float("LLM_CALL_TIMEOUT", 120.0),
+            max_retries=0,
+        )
         self.model = model or os.getenv("OPENAI_MODEL", "gpt-5.4")
         self.max_steps = (max_steps if max_steps is not None
                           else int(os.getenv("AGENT_MAX_STEPS", "50")))
@@ -184,10 +192,15 @@ class OpenAIPixelAgent:
             # tool_choice="required" forces an ACTION every turn. Without it,
             # small models (gpt-4o-mini) tend to narrate the plan as prose and
             # never emit a tool call, stalling the episode at step 0.
-            resp = self.client.chat.completions.create(
-                model=self.model, max_completion_tokens=4096,
-                tools=TOOLS_OPENAI_PIXEL, tool_choice="required",
-                messages=messages,
+            from agents._llm_retry import acall
+            resp = await acall(
+                lambda: self.client.chat.completions.create(
+                    model=self.model, max_completion_tokens=4096,
+                    tools=TOOLS_OPENAI_PIXEL, tool_choice="required",
+                    messages=messages,
+                ),
+                label="openai_pixel",
+                verbose=self.verbose,
             )
             msg = resp.choices[0].message
             usage = resp.usage

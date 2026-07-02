@@ -18,7 +18,11 @@ from server.apps.scheduler import (
     advance_and_flush, schedule_absolute, schedule_relative,
 )
 
-_TASK_ID = next(iter(TASKS))
+# _mark_subscriber writes to world.shop.flash_messages, and _world() wraps the
+# factory result as a WorldState. Category-M factories now return a WorldState
+# (multi-app) which has no flash_messages and a read-only `step`; wrapping one
+# would double-nest. Pin a single-app task whose factory yields a plain GymState.
+_TASK_ID = "A1/buy_wireless_mouse"
 
 
 def _world() -> WorldState:
