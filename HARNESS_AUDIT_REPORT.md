@@ -109,10 +109,19 @@ new-event form's **defaults** — day = TOMORROW (2026-05-22), window 19:00–20
 `create_event` rejects the overlapping booking, so no user event is created and the
 required milestone silently drops. Seeds 0/2 have no Book club → no collision → 1.00.
 
-**Fix (oracle solver, not the task/verifier).** Both solvers now pin the reminder to
-**TODAY** via `ctx.select(...)`, whose 19:00–20:00 dinner slot is free on every seed (only
-Gym 18:00–19:00, and half-open back-to-back is allowed). `agents/oracle_agent.py`,
+**Fix (oracle solver, not the task/verifier).** Both solvers now **read the food order's
+quoted ETA** (`eta_label`, e.g. Sakura's `"7:20 PM"`) from `/_harness/world`, parse it to
+24h (19:20), and set the reminder to **TODAY 19:20–19:50** — the actual arrival window the
+brief points at ("a reminder for when it's set to arrive"), verified in the trajectory
+(`select-event-day=2026-05-21`, `input-event-start=19:20`, `input-event-end=19:50` on all
+3 seeds). This is strictly more faithful than the original, which used the form default
+(TOMORROW 19:00–20:00 — wrong day, and the seed-1 collision above). TODAY at the quoted ETA
+is free on every seed (only Gym 18:00–19:00). `agents/oracle_agent.py`,
 `solve_m20_errand_run` and `solve_m21_async_errand_run`.
+
+Note the milestone (`_calendar_reminder = any(e.source == "user")`) does **not** assert the
+time — the ETA-driven solver is a faithfulness improvement, not something the loose check
+requires. The verifier looseness is logged as a Phase-1 item (§"Flagged for Phase 1").
 
 **Re-verified:** M20 and M21 now score **1.00 on all 3 seeds**. Full-set re-check:
 
@@ -224,6 +233,47 @@ skip. (The `.bak` files under `tests/` are not collected: `python_files = "test_
 matches names ending in `.py`, which `.prediv.bak` / `.precset2.bak` do not.)
 
 **GATE: PASS.**
+
+---
+
+## Flagged for Phase 1 (verifier looseness — not actioned in Phase 0)
+
+While fixing M20/M21 (0.4) a **verifier under-specification** surfaced and was swept across
+`server/verifiers.py` to gauge whether it is a one-off or systemic. This is **not** a
+Phase-0 oracle-gate failure (all oracles score 1.00) — it is a task-semantics decision, so
+per the ground rule "make the harness sound, don't change what a task requires" it is
+logged here rather than changed now.
+
+**The pattern.** A milestone checks that an artifact *exists* but not the *specific value
+the brief names*. Concretely, the three "order dinner + add a reminder for when it arrives"
+tasks all grade the reminder with a **time-blind existence check**:
+
+| Task | Brief says | Milestone check | Solver faithfulness |
+|------|-----------|-----------------|---------------------|
+| M9/calendar_gated_dinner | "add a calendar event for when it's due to arrive" | `_calendar_action_matches_branch` → `any(e.source=="user")` | reads ETA → into event **title** (`"Dinner delivery ~7:20 PM"`), not the time field |
+| M20/errand_run | "put a reminder … for when it's set to arrive" | `_calendar_reminder` → `any(e.source=="user")` | **now** reads ETA → sets time 19:20–19:50 (this audit) |
+| M21/async_errand_run | same | same | **now** reads ETA → sets time (this audit) |
+
+A model could satisfy all three with a reminder at *any* time and still score.
+
+**Scope of the sweep (bounds it to these three).** The looseness is localized, not
+house-wide:
+- Other calendar milestones **do** assert the time when they mean to:
+  `start == "16:00"` (M22-area), `start == "17:00"` (`_meeting_at_5pm`),
+  `_calendar_reflects_new_eta_only` (exactly one event at the NEW ETA),
+  `_booked_before_3pm` (day + time window). So precise calendar checks are the norm.
+- Mail milestones generally verify **content/amount**, not just the recipient — e.g.
+  `_replied_gear_total_to_alex` checks the *exact* order total is in the body;
+  `_emailed_alex_correct_branch` checks branch keywords. No parallel "recipient-only" gap
+  was found in the reply checks sampled.
+
+**Recommendation (Phase 1 decides, against the fairness-bucket framework).** Tighten the
+calendar-reminder milestone for M9/M20/M21 to assert the event time matches the order ETA
+(e.g. `any(e.source=="user" and e.start == eta_24h)`), and give M9's oracle the same
+time-field treatment M20/M21 now have. This makes the task **harder**, so it is a
+deliberate design call — is "a reminder for when it's set to arrive" meant to require
+time precision, or is "a reminder exists" the intended bar? That belongs in Phase 1, not a
+unilateral Phase-0 edit.
 
 ---
 
