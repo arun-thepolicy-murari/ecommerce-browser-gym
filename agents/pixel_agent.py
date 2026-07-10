@@ -416,10 +416,15 @@ class PixelBrowserAgent:
         # trajectory still records them for grading.
         self.eval_mode = (eval_mode if eval_mode is not None
                           else os.getenv("AGENT_EVAL_MODE", "0") == "1")
+        # DYNAMIC context guard (see openai_pixel_agent) — end the episode before the
+        # accumulated screenshots overflow the model window, using measured
+        # input_tokens. Default 190000 (Sonnet 4.6 = 200K); per-tier via env.
+        self.context_budget = int(os.getenv("LLM_CONTEXT_BUDGET", "190000"))
 
     async def run(self, ctx: BrowserCtx, task_brief: str) -> None:
         messages: list[dict[str, Any]] = []
         last_action_result: str = ""
+        last_prompt_tokens = 0        # measured context size of the previous turn
         # The tool_result for the PREVIOUS action, carried forward and merged
         # into the NEXT turn's user message so the assistant tool_use is
         # immediately followed by a single user message that STARTS with its
@@ -427,6 +432,13 @@ class PixelBrowserAgent:
         pending_tool_result: dict[str, Any] | None = None
 
         for turn in range(self.max_steps):
+            # DYNAMIC context guard — stop before the next turn overflows the window.
+            if last_prompt_tokens >= self.context_budget:
+                if self.verbose:
+                    print(f"[pixel_agent] context budget reached "
+                          f"({last_prompt_tokens} >= {self.context_budget}); "
+                          f"ending episode at turn {turn} to avoid overflow.")
+                break
             # ─── TICK the async clock BEFORE observing, so any event scheduled
             # for this step (a new email / price change / coupon flip) has
             # arrived and shows up in the screenshot the agent is about to act
@@ -473,19 +485,30 @@ class PixelBrowserAgent:
 
             # ─── THINK + ACT: call Claude with extended thinking ───
             from agents._llm_retry import acall, LLMCallError
+            # Build kwargs so the SONNET path stays byte-identical while Opus 4.8+
+            # uses its NEW thinking API. Opus 4.8 REPLACED thinking.type="enabled"
+            # +budget_tokens with ADAPTIVE thinking controlled by output_config.effort;
+            # sending the old shape 400s ("thinking.type.enabled not supported for this
+            # model"). Gated on "opus" so the concurrent 4-cut's Sonnet-4.6 episodes
+            # get the IDENTICAL create() call they got before this edit.
+            _create_kw = dict(
+                model=self.model,
+                max_tokens=8000,          # > thinking budget, leaves room
+                system=SYSTEM_PROMPT + f"\n\n## TASK\n\n{task_brief}",
+                tools=TOOLS_PIXEL,
+                messages=messages,
+            )
+            if "opus" in (self.model or "").lower():
+                _create_kw["thinking"] = {"type": "adaptive"}
+                # "medium" = fair moderate effort; mirrors Sonnet's budget_tokens=4000
+                # and gpt-5.6-sol's default reasoning (not cranked to bias the flagship)
+                _create_kw["output_config"] = {"effort": "medium"}
+            else:
+                _create_kw["thinking"] = {"type": "enabled",
+                                          "budget_tokens": self.thinking_budget}
             try:
                 resp = await acall(
-                    lambda: self.client.messages.create(
-                        model=self.model,
-                        max_tokens=8000,          # > thinking budget, leaves room
-                        thinking={                #   for the tool_use response
-                            "type": "enabled",
-                            "budget_tokens": self.thinking_budget,
-                        },
-                        system=SYSTEM_PROMPT + f"\n\n## TASK\n\n{task_brief}",
-                        tools=TOOLS_PIXEL,
-                        messages=messages,
-                    ),
+                    lambda: self.client.messages.create(**_create_kw),
                     label="pixel",
                     verbose=self.verbose,
                 )
@@ -507,6 +530,10 @@ class PixelBrowserAgent:
                             if isinstance(mm["content"], list) else [""]
                         print(f"   msg[{i}] {mm['role']}: {list(zip(types, ids))}")
                 break
+
+            # measured context size of THIS turn — feeds the context guard next turn
+            last_prompt_tokens = int(getattr(getattr(resp, "usage", None),
+                                             "input_tokens", 0) or 0)
 
             # ─── PARSE the response ───
             tool_call = None
