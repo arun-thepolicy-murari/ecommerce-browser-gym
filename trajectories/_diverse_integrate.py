@@ -1,8 +1,14 @@
 import json, re, shutil, subprocess, sys, os
-ROOT = r"C:\Users\dhire\Downloads\ecommerce-browser-gym"
-specs = json.load(open(os.path.join(ROOT,"trajectories","_diverse_specs.json"), encoding="utf-8"))
-specs = [s for s in specs if s.get("buildable")]
+# ROOT derived from this file's location (trajectories/ -> repo root); was a hardcoded Windows path.
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# specs file + whitelist overridable via argv so this integrates ONLY the intended ids
+# (the wave1 file also contains already-built M230/M244/M246/M248 — re-integrating them would collide).
+SPECS_FILE = os.environ.get("SPECS_FILE", "_diverse_specs_wave1.json")
+ONLY = set(filter(None, os.environ.get("INTEGRATE_IDS", "M269,M286").split(",")))
+specs = json.load(open(os.path.join(ROOT,"trajectories",SPECS_FILE), encoding="utf-8"))
+specs = [s for s in specs if s.get("buildable") and (not ONLY or s["id"] in ONLY)]
 specs.sort(key=lambda s: s["id"])
+print(f"[integrate] ROOT={ROOT}\n[integrate] specs={SPECS_FILE} | integrating ids={sorted(s['id'] for s in specs)}")
 
 def extract_func(code, name_re):
     lines = (code or "").splitlines(); start=None
