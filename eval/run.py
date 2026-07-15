@@ -234,6 +234,11 @@ async def _run_one(*, agent_kind: str, task_id: str, seed: int,
                 traj.agent_failure_class = cls.get("agent_failure_class")
             except Exception as e:
                 print(f"[runner] failure classification skipped: {e}")
+    # Two-field sellable label (Phase 4): vein (canonical tagger) +
+    # specific_failure (fired forbidden milestone). Runs for success AND
+    # failure — vein is a task property; specific_failure is None unless a
+    # forbidden trap fired. Centralized on the Trajectory object.
+    traj.finalize_labels()
     traj.finished_at = time.time()
 
     # Close browser BEFORE asking for video path — Playwright finalizes

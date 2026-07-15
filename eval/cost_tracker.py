@@ -26,6 +26,8 @@ chat.completions/messages in real time, NOT the 50%-off Batch API):
               trackers; cached-in $0.50/M, long-context $10/$45 — not used, we call
               sync short-context). Same headline rate as gpt-5.5 but billed as its
               OWN tier so per-model attribution stays clean.
+  * hy3 — OpenRouter paid tencent/hy3: $0.14 / $0.58
+  * hy3-free — OpenRouter tencent/hy3:free: $0.00 / $0.00
   * sonnet  — Anthropic Sonnet-4.6 tier: $3.00 / $15.00
 Override any via env (e.g. RATE_GPT51_IN=0.625 if you switch to the Batch API).
 """
@@ -40,6 +42,8 @@ _DEFAULT_RATES_PER_M = {
     "gpt-5.1":     {"in": 1.25, "out": 10.00},
     "gpt-5.5":     {"in": 5.00, "out": 30.00},
     "gpt-5.6-sol": {"in": 5.00, "out": 30.00},
+    "hy3":          {"in": 0.14, "out": 0.58},
+    "hy3-free":     {"in": 0.00, "out": 0.00},
     "sonnet":      {"in": 3.00, "out": 15.00},
     # Opus 4.8 STANDARD short-context (verified 2026-07-09 against Anthropic's
     # pricing page + launch post): $5.00 / $25.00. NOT $15/$75 (an old wrong
@@ -49,7 +53,8 @@ _DEFAULT_RATES_PER_M = {
     "opus":        {"in": 5.00, "out": 25.00},
 }
 _ENV = {"qwen": "QWEN", "gpt-5.1": "GPT51", "gpt-5.5": "GPT55",
-        "gpt-5.6-sol": "GPT56SOL", "sonnet": "SONNET", "opus": "OPUS"}
+        "gpt-5.6-sol": "GPT56SOL", "hy3": "HY3", "hy3-free": "HY3FREE",
+        "sonnet": "SONNET", "opus": "OPUS"}
 
 
 def rates_per_token():
@@ -91,6 +96,10 @@ def _tier_from_agent(agent_name):
     a = (agent_name or "").lower()
     if "qwen" in a:
         return "qwen"
+    if "tencent/hy3:free" in a:
+        return "hy3-free"
+    if "tencent/hy3" in a:
+        return "hy3"
     # opus BEFORE sonnet/claude — an Opus agent_name is "pixel[claude-opus-4-8]",
     # which contains BOTH "opus" AND "claude". Matching "claude"->sonnet first would
     # bill Opus at the sonnet rate ($3/$15 instead of $5/$25) — a silent ~1.7x

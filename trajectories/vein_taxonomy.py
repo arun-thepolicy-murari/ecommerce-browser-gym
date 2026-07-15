@@ -5,13 +5,14 @@
 session) WITH the swallow-bug fix applied: the raw rules required a vein's literal
 NAME in the docstring ("STRUCTURAL", "TOOL-AFFORDANCE"), so tasks described by a
 synonym ("CONDITIONAL", "QUANTIFIER", "NO PAUSE/SKIP AFFORDANCE", "NON-RETROACTIVITY")
-fell through to the checkout fallback. That under-counted structural and tool-affordance
+fell through to the old default-family fallback. That under-counted structural and tool-affordance
 (and, on the backlog, silently dropped whole veins). The synonym patterns below close
 that gap. This is the ONLY vein method that should feed any report distribution — do
 not hand-roll a second one off the CSV's human `pattern` column.
 
-Priority order matters (first match wins): the 4 gap veins, then sycophancy, then
-tool-affordance, structural, injection, infeasibility, then the checkout fallback.
+Priority order matters (first match wins): the audited default-family assignments,
+then the 4 gap veins, sycophancy, tool-affordance, structural, injection, and
+infeasibility.
 
 HYBRID tasks carry two mechanisms; we assign a single PRIMARY tag (what the forbidden
 milestone actually traps) and footnote the SECONDARY in SECONDARY_MECHANISM. The five
@@ -24,6 +25,21 @@ from __future__ import annotations
 import re
 
 from server.tasks import TASKS
+
+CORE_VEINS = frozenset({
+    "instrument-default",
+    "content-default",
+    "stacked-default",
+    "sycophancy",
+    "infeasibility",
+    "self-contradiction",
+    "ask-dont-guess",
+    "tool-affordance",
+    "implicit-constraint",
+    "structural",
+})
+FOOTNOTE_VEINS = frozenset({"injection", "source-anchoring"})
+ALLOWED_CANONICAL_VEINS = CORE_VEINS | FOOTNOTE_VEINS
 
 # (tag, pattern) — first match wins. Patterns matched case-insensitively on the docstring.
 # Synonyms added to the structural and tool-affordance rules ARE the swallow-bug fix.
@@ -57,10 +73,36 @@ VEIN_RULES = [
     ("infeasibility",       r"INFEASIBIL|IMPOSSIBIL"),
 ]
 
-CHECKOUT_RE = re.compile(
+DEFAULT_FAMILY_RE = re.compile(
     r"ADD[- ]?ON|PROTECTION PLAN|PRESELECT|SNEAK|COUPON|EXPIRED|CORPORATE CARD|"
     r"GIFT|QUANTITY|QTY|SHIP[- ]?TO|CHECKOUT|CART|REORDER|SUBSCRIPTION|CADENCE",
     re.I)
+
+# Audited exclusive split of the 42 tasks formerly grouped under the retired
+# top-level `checkout` label. This is the canonical data source; the audit CSV,
+# report, and eval CLI verify/consume it rather than maintaining another classifier.
+_DEFAULT_TASKS = {
+    "instrument-default": """
+        M61 M66 M73 M81 M84 M88 M96 M111 M115
+    """.split(),
+    "content-default": """
+        M46 M56 M57 M70 M72 M75 M79 M83 M85 M89 M94 M95 M97 M207 M210
+    """.split(),
+    "stacked-default": """
+        M68 M74 M77 M78 M82 M86 M87 M90 M91 M92 M93 M98 M99 M100 M101
+        M102 M103 M104
+    """.split(),
+}
+DEFAULT_VEIN_BY_SHORT_ID = {
+    short: label
+    for label, short_ids in _DEFAULT_TASKS.items()
+    for short in short_ids
+}
+
+
+def default_vein(tid: str) -> str | None:
+    """Return the audited default-family vein, or None for non-members."""
+    return DEFAULT_VEIN_BY_SHORT_ID.get(tid.split("/", 1)[0])
 
 # Documented PRIMARY overrides: tasks whose docstring describes a vein using vocabulary the
 # regex can't generically catch (the same swallow bug, on the sycophancy / tool-affordance
@@ -107,6 +149,9 @@ def _full_id(tid):
 def canonical_vein(tid: str) -> str:
     """The one true vein tag for a task id (short 'M211' or full 'M211/slug')."""
     k = _full_id(tid)
+    audited_default = default_vein(tid)
+    if audited_default:
+        return audited_default
     if k in PRIMARY_OVERRIDE:
         return PRIMARY_OVERRIDE[k]
     doc = (TASKS[k].__doc__ or "") if k else ""
@@ -114,9 +159,12 @@ def canonical_vein(tid: str) -> str:
     for tag, pat in VEIN_RULES:
         if re.search(pat, up):
             return tag
-    if CHECKOUT_RE.search(doc):
-        return "checkout"
-    return "checkout"
+    # The retired fallback represented default-selection harms. Unmapped tasks
+    # remain in the content-only family unless an audited assignment says the
+    # payment-instrument axis is also present.
+    if DEFAULT_FAMILY_RE.search(doc):
+        return "content-default"
+    return "content-default"
 
 
 def secondary_of(tid: str):

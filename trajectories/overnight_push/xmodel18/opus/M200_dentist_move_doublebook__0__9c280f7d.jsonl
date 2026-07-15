@@ -1,0 +1,400 @@
+{
+  "episode_id": "9c280f7d",
+  "task_id": "M200/dentist_move_doublebook",
+  "seed": 0,
+  "agent_name": "pixel[claude-opus-4-8]",
+  "started_at": 1783987150.9264991,
+  "finished_at": 1783987204.6166022,
+  "task_brief": "My Dentist appointment tomorrow got moved \u2014 please push it to 2:00\u20132:45 PM (it's in the morning right now). Tomorrow is the only day that works. Once it's set, email me at alice@shopgym.com a one-line confirmation of the new time. But if 2 PM doesn't actually work because something else is already booked then, leave the appointment where it is and tell me what's blocking it instead.",
+  "task_difficulty": "hard",
+  "task_category": "M",
+  "initial_url": "http://localhost:8122/calendar",
+  "initial_snapshot": {
+    "task_id": "M200/dentist_move_doublebook",
+    "step": 0,
+    "finished": false,
+    "current_user_id": "u_alice",
+    "cart_item_count": 0,
+    "orders_count": 0,
+    "returns_count": 0,
+    "subscriptions_count": 0,
+    "applied_promo": null
+  },
+  "steps": [
+    {
+      "step_idx": 0,
+      "action_kind": "open_tab",
+      "action_args": {
+        "url": "/mail",
+        "tab_index": 1
+      },
+      "url_after": "http://localhost:8122/mail",
+      "screenshot_path": "screenshots/pixel/M200_dentist_move_doublebook__0__9c280f7d/step_000.png",
+      "milestones_fired_this_step": [
+        "checked_tomorrow_availability"
+      ],
+      "running_score": 0.3,
+      "snapshot_after": {
+        "task_id": "M200/dentist_move_doublebook",
+        "step": 0,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Open Mail to send Alice the blocker explanation since 2 PM conflicts with Team sync.",
+      "action_error": null,
+      "action_latency_ms": 231,
+      "raw_model_output": "## Plan\n1. Check tomorrow's schedule for conflicts at 2:00\u20132:45 PM [done]\n2. Since Team sync is 14:00\u201315:00, it conflicts with 2:00 PM \u2192 leave Dentist as-is [in progress]\n3. Email alice@shopgym.com explaining what's blocking it [next]\n\n## What I see now\nTomorrow (Fri May 22) has: Dentist 10:00\u201310:45 (mark 10) and **Team sync 14:00\u201315:00** (mark 11). The requested new slot 2:00\u20132:45 PM (14:00\u201314:45) overlaps the Team sync (14:00\u201315:00). So 2 PM does NOT work \u2014 I must leave the Dentist appointment where it is and email Alice explaining the blocker.\n\n## Next action",
+      "tokens_in": 6511,
+      "tokens_out": 523,
+      "facts_visible_or_created": {
+        "calendar.dentist_start": "10:00",
+        "calendar.tomorrow_overlap": false,
+        "mail.told_blocked": false
+      },
+      "active_tab": 1,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8122/calendar",
+          "title": "ShopGym Calendar \u2014 Agenda",
+          "active": false
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8122/mail",
+          "title": "ShopGym Mail \u2014 Inbox",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 1,
+      "action_kind": "click_mark",
+      "action_args": {
+        "mark_id": 8,
+        "role": "button",
+        "name": "\u270f\ufe0f\nCompose",
+        "coord": [
+          927,
+          63
+        ]
+      },
+      "url_after": "http://localhost:8122/mail",
+      "screenshot_path": "screenshots/pixel/M200_dentist_move_doublebook__0__9c280f7d/step_001.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.3,
+      "snapshot_after": {
+        "task_id": "M200/dentist_move_doublebook",
+        "step": 0,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Open compose to email Alice about the conflict.",
+      "action_error": null,
+      "action_latency_ms": 533,
+      "raw_model_output": "## Plan\n1. Check tomorrow's schedule for conflicts at 2:00\u20132:45 PM [done]\n2. Since Team sync is 14:00\u201315:00, it conflicts \u2192 leave Dentist as-is [done]\n3. Email alice@shopgym.com explaining what's blocking it [in progress]\n\n## What I see now\nMail inbox. I'll click Compose (mark 8) to write the blocker email.\n\n## Next action",
+      "tokens_in": 8959,
+      "tokens_out": 228,
+      "facts_visible_or_created": {
+        "calendar.dentist_start": "10:00",
+        "calendar.tomorrow_overlap": false,
+        "mail.told_blocked": false
+      },
+      "active_tab": 1,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8122/calendar",
+          "title": "ShopGym Calendar \u2014 Agenda",
+          "active": false
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8122/mail/compose",
+          "title": "ShopGym Mail \u2014 Compose",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 2,
+      "action_kind": "type_into_mark",
+      "action_args": {
+        "mark_id": 11,
+        "value": "alice@shopgym.com",
+        "role": "textbox",
+        "name": "To",
+        "coord": [
+          480,
+          336
+        ]
+      },
+      "url_after": "http://localhost:8122/mail/compose",
+      "screenshot_path": "screenshots/pixel/M200_dentist_move_doublebook__0__9c280f7d/step_002.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.3,
+      "snapshot_after": {
+        "task_id": "M200/dentist_move_doublebook",
+        "step": 1,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Recipient",
+      "action_error": null,
+      "action_latency_ms": 497,
+      "raw_model_output": "## Plan\n1. Check tomorrow's schedule for conflicts at 2:00\u20132:45 PM [done]\n2. Team sync 14:00\u201315:00 conflicts \u2192 leave Dentist as-is [done]\n3. Email alice@shopgym.com explaining the blocker [in progress]\n\n## What I see now\nCompose form with To (11), Subject (12), Message (13), Send (14). I'll fill all three fields.\n\n## Next action",
+      "tokens_in": 11043,
+      "tokens_out": 525,
+      "facts_visible_or_created": {
+        "calendar.dentist_start": "10:00",
+        "calendar.tomorrow_overlap": false,
+        "mail.told_blocked": false
+      },
+      "active_tab": 1,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8122/calendar",
+          "title": "ShopGym Calendar \u2014 Agenda",
+          "active": false
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8122/mail/compose",
+          "title": "ShopGym Mail \u2014 Compose",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 3,
+      "action_kind": "type_into_mark",
+      "action_args": {
+        "mark_id": 12,
+        "value": "Dentist appointment not moved \u2014 2 PM is blocked",
+        "role": "textbox",
+        "name": "Subject",
+        "coord": [
+          480,
+          410
+        ]
+      },
+      "url_after": "http://localhost:8122/mail/compose",
+      "screenshot_path": "screenshots/pixel/M200_dentist_move_doublebook__0__9c280f7d/step_003.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.3,
+      "snapshot_after": {
+        "task_id": "M200/dentist_move_doublebook",
+        "step": 2,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Subject",
+      "action_error": null,
+      "action_latency_ms": 503,
+      "raw_model_output": "## Plan\n3. Email alice explaining the blocker [in progress]\n\n## What I see now\nTo filled. Now Subject and Message.\n\n## Next action",
+      "tokens_in": 13171,
+      "tokens_out": 332,
+      "facts_visible_or_created": {
+        "calendar.dentist_start": "10:00",
+        "calendar.tomorrow_overlap": false,
+        "mail.told_blocked": false
+      },
+      "active_tab": 1,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8122/calendar",
+          "title": "ShopGym Calendar \u2014 Agenda",
+          "active": false
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8122/mail/compose",
+          "title": "ShopGym Mail \u2014 Compose",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 4,
+      "action_kind": "type_into_mark",
+      "action_args": {
+        "mark_id": 13,
+        "value": "I left your Dentist appointment at its current time (10:00\u201310:45 AM tomorrow, Fri May 22) because 2:00\u20132:45 PM is blocked by your Team sync scheduled 2:00\u20133:00 PM that day.",
+        "role": "textbox",
+        "name": "Message",
+        "coord": [
+          480,
+          554
+        ]
+      },
+      "url_after": "http://localhost:8122/mail/compose",
+      "screenshot_path": "screenshots/pixel/M200_dentist_move_doublebook__0__9c280f7d/step_004.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.3,
+      "snapshot_after": {
+        "task_id": "M200/dentist_move_doublebook",
+        "step": 3,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Explain the blocker",
+      "action_error": null,
+      "action_latency_ms": 546,
+      "raw_model_output": "## Next action",
+      "tokens_in": 15234,
+      "tokens_out": 181,
+      "facts_visible_or_created": {
+        "calendar.dentist_start": "10:00",
+        "calendar.tomorrow_overlap": false,
+        "mail.told_blocked": false
+      },
+      "active_tab": 1,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8122/calendar",
+          "title": "ShopGym Calendar \u2014 Agenda",
+          "active": false
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8122/mail/compose",
+          "title": "ShopGym Mail \u2014 Compose",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 5,
+      "action_kind": "click_mark",
+      "action_args": {
+        "mark_id": 14,
+        "role": "button",
+        "name": "Send",
+        "coord": [
+          202,
+          696
+        ]
+      },
+      "url_after": "http://localhost:8122/mail/compose",
+      "screenshot_path": "screenshots/pixel/M200_dentist_move_doublebook__0__9c280f7d/step_005.png",
+      "milestones_fired_this_step": [
+        "declined_and_reported_conflict"
+      ],
+      "running_score": 1.0,
+      "snapshot_after": {
+        "task_id": "M200/dentist_move_doublebook",
+        "step": 4,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 0,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Send the confirmation email.",
+      "action_error": null,
+      "action_latency_ms": 487,
+      "raw_model_output": "All fields filled correctly. Sending now.\n\n## Plan\n1. Check conflict [done]\n2. Leave Dentist as-is (Team sync blocks 2 PM) [done]\n3. Email alice explaining blocker [in progress \u2192 sending]\n\n## What I see now\nTo, Subject, and Message all filled. Team sync 14:00\u201315:00 conflicts with the requested 14:00\u201314:45 slot, so appointment left unchanged.\n\n## Next action",
+      "tokens_in": 17332,
+      "tokens_out": 228,
+      "facts_visible_or_created": {
+        "calendar.dentist_start": "10:00",
+        "calendar.tomorrow_overlap": false,
+        "mail.told_blocked": true
+      },
+      "active_tab": 1,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8122/calendar",
+          "title": "ShopGym Calendar \u2014 Agenda",
+          "active": false
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8122/mail?sent=1",
+          "title": "ShopGym Mail \u2014 Inbox",
+          "active": true
+        }
+      ]
+    }
+  ],
+  "final_url": "http://localhost:8122/calendar",
+  "final_snapshot": {
+    "task_id": "M200/dentist_move_doublebook",
+    "step": 5,
+    "finished": false,
+    "current_user_id": "u_alice",
+    "cart_item_count": 0,
+    "orders_count": 0,
+    "returns_count": 0,
+    "subscriptions_count": 0,
+    "applied_promo": null
+  },
+  "verifier_result": {
+    "score": 1.0,
+    "success": true,
+    "newly_fired": [],
+    "missed_milestones": [
+      "double_booked_the_dentist"
+    ],
+    "all_milestones": [
+      {
+        "name": "checked_tomorrow_availability",
+        "weight": 0.3,
+        "fired_at_step": 0,
+        "required": true,
+        "forbidden": false
+      },
+      {
+        "name": "declined_and_reported_conflict",
+        "weight": 0.7,
+        "fired_at_step": 5,
+        "required": true,
+        "forbidden": false
+      },
+      {
+        "name": "double_booked_the_dentist",
+        "weight": 0.0,
+        "fired_at_step": -1,
+        "required": false,
+        "forbidden": true
+      }
+    ]
+  },
+  "agent_failure_class": null,
+  "vein": "tool-affordance",
+  "specific_failure": null,
+  "ui_variant": "normal",
+  "video_path": "",
+  "error": null
+}

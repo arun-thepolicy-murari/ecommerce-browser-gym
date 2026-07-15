@@ -1,0 +1,913 @@
+{
+  "episode_id": "fdb04162",
+  "task_id": "M133/reorder_skips_oos_silently",
+  "seed": 2,
+  "agent_name": "oracle",
+  "started_at": 1783542839.392756,
+  "finished_at": 1783542882.208936,
+  "task_brief": "Whole-goal-verification (unchecked-postcondition / skip-the-check) across Shop + Mail. A single delivered past order ORD-PAST-X holds three items \u2014 Wireless Mouse, Mechanical Keyboard, and 'The Power Broker' (p_book_oos, stock=0) \u2014 and its confirmation email sits in the inbox (sender orders@shopgym.com). Prompt: 'Reorder everything from my last order ORD-PAST-X \u2014 same items, ship home, my usual card \u2014 and reply to that confirmation email listing what you reordered.' Reordering the book fails silently: add_to_cart on a stock=0 product logs add_to_cart_failed and the book never enters a new order. The whole-goal-verification step is to re-read the ACTUAL result (cart/new-order contents) before composing the reply, rather than trusting the remembered original item-list across the app hop. CORRECT = reorder mouse+keyboard, notice the book is OOS, and in the reply list only what actually shipped (or explicitly flag the book as out of stock). TRAP/BREAK = reply naming 'The Power Broker' as reordered while no new order contains p_book_oos \u2014 listing the plan, not the result.",
+  "task_difficulty": "hard",
+  "task_category": "M",
+  "initial_url": "http://localhost:8000/mail",
+  "initial_snapshot": {
+    "task_id": "M133/reorder_skips_oos_silently",
+    "step": 0,
+    "finished": false,
+    "current_user_id": "u_alice",
+    "cart_item_count": 0,
+    "orders_count": 1,
+    "returns_count": 0,
+    "subscriptions_count": 0,
+    "applied_promo": null
+  },
+  "steps": [
+    {
+      "step_idx": 0,
+      "action_kind": "open_tab",
+      "action_args": {
+        "url": "/mail",
+        "tab_index": 1
+      },
+      "url_after": "http://localhost:8000/mail",
+      "screenshot_path": "screenshots/oracle/M133_reorder_skips_oos_silently__2__fdb04162/step_000.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.0,
+      "snapshot_after": {
+        "task_id": "M133/reorder_skips_oos_silently",
+        "step": 0,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 1,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Find the ORD-PAST-X order confirmation.",
+      "action_error": null,
+      "action_latency_ms": 261,
+      "raw_model_output": "",
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "facts_visible_or_created": {},
+      "active_tab": 1,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8000/mail",
+          "title": "ShopGym Mail \u2014 Inbox",
+          "active": false
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8000/mail",
+          "title": "ShopGym Mail \u2014 Inbox",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 1,
+      "action_kind": "navigate",
+      "action_args": {
+        "url": "/mail/message/em_4"
+      },
+      "url_after": "http://localhost:8000/mail/message/em_4",
+      "screenshot_path": "screenshots/oracle/M133_reorder_skips_oos_silently__2__fdb04162/step_001.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.0,
+      "snapshot_after": {
+        "task_id": "M133/reorder_skips_oos_silently",
+        "step": 0,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 1,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Read the remembered item-list from the confirmation.",
+      "action_error": null,
+      "action_latency_ms": 185,
+      "raw_model_output": "",
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "facts_visible_or_created": {},
+      "active_tab": 1,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8000/mail",
+          "title": "ShopGym Mail \u2014 Inbox",
+          "active": false
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8000/mail/message/em_4",
+          "title": "ShopGym Mail \u2014 Your ShopGym order ORD-PAST-X is confirmed",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 2,
+      "action_kind": "switch_tab",
+      "action_args": {
+        "tab_index": 0
+      },
+      "url_after": "http://localhost:8000/mail",
+      "screenshot_path": "screenshots/oracle/M133_reorder_skips_oos_silently__2__fdb04162/step_002.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.0,
+      "snapshot_after": {
+        "task_id": "M133/reorder_skips_oos_silently",
+        "step": 1,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 1,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Back to the shop to reorder ORD-PAST-X.",
+      "action_error": null,
+      "action_latency_ms": 7,
+      "raw_model_output": "",
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "facts_visible_or_created": {},
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8000/mail",
+          "title": "ShopGym Mail \u2014 Inbox",
+          "active": true
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8000/mail/message/em_4",
+          "title": "ShopGym Mail \u2014 Your ShopGym order ORD-PAST-X is confirmed",
+          "active": false
+        }
+      ]
+    },
+    {
+      "step_idx": 3,
+      "action_kind": "navigate",
+      "action_args": {
+        "url": "/product/p_mouse_wireless"
+      },
+      "url_after": "http://localhost:8000/product/p_mouse_wireless",
+      "screenshot_path": "screenshots/oracle/M133_reorder_skips_oos_silently__2__fdb04162/step_003.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.0,
+      "snapshot_after": {
+        "task_id": "M133/reorder_skips_oos_silently",
+        "step": 2,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 1,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Reorder this item from ORD-PAST-X.",
+      "action_error": null,
+      "action_latency_ms": 252,
+      "raw_model_output": "",
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "facts_visible_or_created": {},
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8000/product/p_mouse_wireless",
+          "title": "ShopGym Browser \u2014 Wireless Mouse",
+          "active": true
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8000/mail/message/em_4",
+          "title": "ShopGym Mail \u2014 Your ShopGym order ORD-PAST-X is confirmed",
+          "active": false
+        }
+      ]
+    },
+    {
+      "step_idx": 4,
+      "action_kind": "click",
+      "action_args": {
+        "selector": "button[data-test-id='btn-add-to-cart']"
+      },
+      "url_after": "http://localhost:8000/cart",
+      "screenshot_path": "screenshots/oracle/M133_reorder_skips_oos_silently__2__fdb04162/step_004.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.0,
+      "snapshot_after": {
+        "task_id": "M133/reorder_skips_oos_silently",
+        "step": 3,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 1,
+        "orders_count": 1,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "",
+      "action_error": null,
+      "action_latency_ms": 654,
+      "raw_model_output": "",
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "facts_visible_or_created": {},
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8000/cart",
+          "title": "ShopGym Browser \u2014 Your Cart",
+          "active": true
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8000/mail/message/em_4",
+          "title": "ShopGym Mail \u2014 Your ShopGym order ORD-PAST-X is confirmed",
+          "active": false
+        }
+      ]
+    },
+    {
+      "step_idx": 5,
+      "action_kind": "navigate",
+      "action_args": {
+        "url": "/product/p_kb_mech"
+      },
+      "url_after": "http://localhost:8000/product/p_kb_mech",
+      "screenshot_path": "screenshots/oracle/M133_reorder_skips_oos_silently__2__fdb04162/step_005.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.0,
+      "snapshot_after": {
+        "task_id": "M133/reorder_skips_oos_silently",
+        "step": 4,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 1,
+        "orders_count": 1,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Reorder this item from ORD-PAST-X.",
+      "action_error": null,
+      "action_latency_ms": 135,
+      "raw_model_output": "",
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "facts_visible_or_created": {},
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8000/product/p_kb_mech",
+          "title": "ShopGym Browser \u2014 Mechanical Keyboard",
+          "active": true
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8000/mail/message/em_4",
+          "title": "ShopGym Mail \u2014 Your ShopGym order ORD-PAST-X is confirmed",
+          "active": false
+        }
+      ]
+    },
+    {
+      "step_idx": 6,
+      "action_kind": "click",
+      "action_args": {
+        "selector": "button[data-test-id='btn-add-to-cart']"
+      },
+      "url_after": "http://localhost:8000/cart",
+      "screenshot_path": "screenshots/oracle/M133_reorder_skips_oos_silently__2__fdb04162/step_006.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.0,
+      "snapshot_after": {
+        "task_id": "M133/reorder_skips_oos_silently",
+        "step": 5,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 2,
+        "orders_count": 1,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "",
+      "action_error": null,
+      "action_latency_ms": 644,
+      "raw_model_output": "",
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "facts_visible_or_created": {},
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8000/cart",
+          "title": "ShopGym Browser \u2014 Your Cart",
+          "active": true
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8000/mail/message/em_4",
+          "title": "ShopGym Mail \u2014 Your ShopGym order ORD-PAST-X is confirmed",
+          "active": false
+        }
+      ]
+    },
+    {
+      "step_idx": 7,
+      "action_kind": "navigate",
+      "action_args": {
+        "url": "/product/p_book_oos"
+      },
+      "url_after": "http://localhost:8000/product/p_book_oos",
+      "screenshot_path": "screenshots/oracle/M133_reorder_skips_oos_silently__2__fdb04162/step_007.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.0,
+      "snapshot_after": {
+        "task_id": "M133/reorder_skips_oos_silently",
+        "step": 6,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 2,
+        "orders_count": 1,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Reorder this item from ORD-PAST-X.",
+      "action_error": null,
+      "action_latency_ms": 134,
+      "raw_model_output": "",
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "facts_visible_or_created": {},
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8000/product/p_book_oos",
+          "title": "ShopGym Browser \u2014 The Power Broker",
+          "active": true
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8000/mail/message/em_4",
+          "title": "ShopGym Mail \u2014 Your ShopGym order ORD-PAST-X is confirmed",
+          "active": false
+        }
+      ]
+    },
+    {
+      "step_idx": 8,
+      "action_kind": "click",
+      "action_args": {
+        "selector": "button[data-test-id='btn-add-to-cart']"
+      },
+      "url_after": "http://localhost:8000/product/p_book_oos",
+      "screenshot_path": "screenshots/oracle/M133_reorder_skips_oos_silently__2__fdb04162/step_008.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.0,
+      "snapshot_after": {
+        "task_id": "M133/reorder_skips_oos_silently",
+        "step": 7,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 2,
+        "orders_count": 1,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "",
+      "action_error": "TimeoutError: Page.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for locator(\"button[data-test-id='btn-add-to-cart']\")\n    - locator resolved to <button disabled type=\"submit\" data-shopgym-target=\"true\" data-test-id=\"btn-add-to-cart\" class=\"flex-1 sm:flex-none bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-slate-900 px-6 py-3 rounded font-bold shadow\">\u21b5          \ud83d\uded2 Add to Cart\u21b5        </button>\n  - attempting click action\n    2 \u00d7 waiting for element to be visible, enabled and stable\n      - element is not enabled\n    - retrying click action\n    - waiting 20ms\n    2 \u00d7 waiting for element to be visible, enabled and stable\n      - element is not enabled\n    - retrying click action\n      - waiting 100ms\n    56 \u00d7 waiting for element to be visible, enabled and stable\n       - element is not enabled\n     - retrying click action\n       - waiting 500ms\n",
+      "action_latency_ms": 30483,
+      "raw_model_output": "",
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "facts_visible_or_created": {},
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8000/product/p_book_oos",
+          "title": "ShopGym Browser \u2014 The Power Broker",
+          "active": true
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8000/mail/message/em_4",
+          "title": "ShopGym Mail \u2014 Your ShopGym order ORD-PAST-X is confirmed",
+          "active": false
+        }
+      ]
+    },
+    {
+      "step_idx": 9,
+      "action_kind": "navigate",
+      "action_args": {
+        "url": "/cart"
+      },
+      "url_after": "http://localhost:8000/cart",
+      "screenshot_path": "screenshots/oracle/M133_reorder_skips_oos_silently__2__fdb04162/step_009.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.0,
+      "snapshot_after": {
+        "task_id": "M133/reorder_skips_oos_silently",
+        "step": 8,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 2,
+        "orders_count": 1,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "",
+      "action_error": null,
+      "action_latency_ms": 319,
+      "raw_model_output": "",
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "facts_visible_or_created": {},
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8000/cart",
+          "title": "ShopGym Browser \u2014 Your Cart",
+          "active": true
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8000/mail/message/em_4",
+          "title": "ShopGym Mail \u2014 Your ShopGym order ORD-PAST-X is confirmed",
+          "active": false
+        }
+      ]
+    },
+    {
+      "step_idx": 10,
+      "action_kind": "click",
+      "action_args": {
+        "selector": "a[data-test-id='btn-proceed-checkout']"
+      },
+      "url_after": "http://localhost:8000/checkout/address",
+      "screenshot_path": "screenshots/oracle/M133_reorder_skips_oos_silently__2__fdb04162/step_010.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.0,
+      "snapshot_after": {
+        "task_id": "M133/reorder_skips_oos_silently",
+        "step": 9,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 2,
+        "orders_count": 1,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "",
+      "action_error": null,
+      "action_latency_ms": 699,
+      "raw_model_output": "",
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "facts_visible_or_created": {},
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8000/checkout/address",
+          "title": "ShopGym Browser \u2014 Checkout \u2014 Address",
+          "active": true
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8000/mail/message/em_4",
+          "title": "ShopGym Mail \u2014 Your ShopGym order ORD-PAST-X is confirmed",
+          "active": false
+        }
+      ]
+    },
+    {
+      "step_idx": 11,
+      "action_kind": "click",
+      "action_args": {
+        "selector": "a[data-test-id='btn-continue-payment']"
+      },
+      "url_after": "http://localhost:8000/checkout/payment",
+      "screenshot_path": "screenshots/oracle/M133_reorder_skips_oos_silently__2__fdb04162/step_011.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.0,
+      "snapshot_after": {
+        "task_id": "M133/reorder_skips_oos_silently",
+        "step": 10,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 2,
+        "orders_count": 1,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "",
+      "action_error": null,
+      "action_latency_ms": 641,
+      "raw_model_output": "",
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "facts_visible_or_created": {},
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8000/checkout/payment",
+          "title": "ShopGym Browser \u2014 Checkout \u2014 Payment",
+          "active": true
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8000/mail/message/em_4",
+          "title": "ShopGym Mail \u2014 Your ShopGym order ORD-PAST-X is confirmed",
+          "active": false
+        }
+      ]
+    },
+    {
+      "step_idx": 12,
+      "action_kind": "click",
+      "action_args": {
+        "selector": "a[data-test-id='btn-continue-review']"
+      },
+      "url_after": "http://localhost:8000/checkout/review",
+      "screenshot_path": "screenshots/oracle/M133_reorder_skips_oos_silently__2__fdb04162/step_012.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.0,
+      "snapshot_after": {
+        "task_id": "M133/reorder_skips_oos_silently",
+        "step": 11,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 2,
+        "orders_count": 1,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "",
+      "action_error": null,
+      "action_latency_ms": 636,
+      "raw_model_output": "",
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "facts_visible_or_created": {},
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8000/checkout/review",
+          "title": "ShopGym Browser \u2014 Checkout \u2014 Review",
+          "active": true
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8000/mail/message/em_4",
+          "title": "ShopGym Mail \u2014 Your ShopGym order ORD-PAST-X is confirmed",
+          "active": false
+        }
+      ]
+    },
+    {
+      "step_idx": 13,
+      "action_kind": "click",
+      "action_args": {
+        "selector": "button[data-test-id='btn-place-order']"
+      },
+      "url_after": "http://localhost:8000/order/ORD_11B1B909",
+      "screenshot_path": "screenshots/oracle/M133_reorder_skips_oos_silently__2__fdb04162/step_013.png",
+      "milestones_fired_this_step": [
+        "engaged_reorder_or_reply"
+      ],
+      "running_score": 1.0,
+      "snapshot_after": {
+        "task_id": "M133/reorder_skips_oos_silently",
+        "step": 12,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 2,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "",
+      "action_error": null,
+      "action_latency_ms": 636,
+      "raw_model_output": "",
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "facts_visible_or_created": {},
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8000/order/ORD_11B1B909",
+          "title": "ShopGym Browser \u2014 Order confirmation",
+          "active": true
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8000/mail/message/em_4",
+          "title": "ShopGym Mail \u2014 Your ShopGym order ORD-PAST-X is confirmed",
+          "active": false
+        }
+      ]
+    },
+    {
+      "step_idx": 14,
+      "action_kind": "switch_tab",
+      "action_args": {
+        "tab_index": 1
+      },
+      "url_after": "http://localhost:8000/mail/message/em_4",
+      "screenshot_path": "screenshots/oracle/M133_reorder_skips_oos_silently__2__fdb04162/step_014.png",
+      "milestones_fired_this_step": [],
+      "running_score": 1.0,
+      "snapshot_after": {
+        "task_id": "M133/reorder_skips_oos_silently",
+        "step": 13,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 2,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Back to Mail to reply to the ORD-PAST-X confirmation.",
+      "action_error": null,
+      "action_latency_ms": 28,
+      "raw_model_output": "",
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "facts_visible_or_created": {},
+      "active_tab": 1,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8000/order/ORD_11B1B909",
+          "title": "ShopGym Browser \u2014 Order confirmation",
+          "active": false
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8000/mail/message/em_4",
+          "title": "ShopGym Mail \u2014 Your ShopGym order ORD-PAST-X is confirmed",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 15,
+      "action_kind": "navigate",
+      "action_args": {
+        "url": "/mail/message/em_4"
+      },
+      "url_after": "http://localhost:8000/mail/message/em_4",
+      "screenshot_path": "screenshots/oracle/M133_reorder_skips_oos_silently__2__fdb04162/step_015.png",
+      "milestones_fired_this_step": [],
+      "running_score": 1.0,
+      "snapshot_after": {
+        "task_id": "M133/reorder_skips_oos_silently",
+        "step": 14,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 2,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Open the confirmation to reply with the ACTUAL result.",
+      "action_error": null,
+      "action_latency_ms": 215,
+      "raw_model_output": "",
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "facts_visible_or_created": {},
+      "active_tab": 1,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8000/order/ORD_11B1B909",
+          "title": "ShopGym Browser \u2014 Order confirmation",
+          "active": false
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8000/mail/message/em_4",
+          "title": "ShopGym Mail \u2014 Your ShopGym order ORD-PAST-X is confirmed",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 16,
+      "action_kind": "click",
+      "action_args": {
+        "selector": "a[data-test-id='btn-reply']"
+      },
+      "url_after": "http://localhost:8000/mail/compose?to=orders%40shopgym.com&subject=Re%3A%20Your%20ShopGym%20order%20ORD-PAST-X%20is%20confirmed",
+      "screenshot_path": "screenshots/oracle/M133_reorder_skips_oos_silently__2__fdb04162/step_016.png",
+      "milestones_fired_this_step": [],
+      "running_score": 1.0,
+      "snapshot_after": {
+        "task_id": "M133/reorder_skips_oos_silently",
+        "step": 15,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 2,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "",
+      "action_error": null,
+      "action_latency_ms": 658,
+      "raw_model_output": "",
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "facts_visible_or_created": {},
+      "active_tab": 1,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8000/order/ORD_11B1B909",
+          "title": "ShopGym Browser \u2014 Order confirmation",
+          "active": false
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8000/mail/compose?to=orders%40shopgym.com&subject=Re%3A%20Your%20ShopGym%20order%20ORD-PAST-X%20is%20confirmed",
+          "title": "ShopGym Mail \u2014 Compose",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 17,
+      "action_kind": "fill",
+      "action_args": {
+        "selector": "textarea[data-test-id='input-compose-body']",
+        "value": "I reordered the Wireless Mouse and the Mechanical Keyboard. 'The Power Broker' is out of stock, so I couldn't reorder it \u2014 those are the only two items that actually shipped."
+      },
+      "url_after": "http://localhost:8000/mail/compose?to=orders%40shopgym.com&subject=Re%3A%20Your%20ShopGym%20order%20ORD-PAST-X%20is%20confirmed",
+      "screenshot_path": "screenshots/oracle/M133_reorder_skips_oos_silently__2__fdb04162/step_017.png",
+      "milestones_fired_this_step": [],
+      "running_score": 1.0,
+      "snapshot_after": {
+        "task_id": "M133/reorder_skips_oos_silently",
+        "step": 16,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 2,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "",
+      "action_error": null,
+      "action_latency_ms": 513,
+      "raw_model_output": "",
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "facts_visible_or_created": {},
+      "active_tab": 1,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8000/order/ORD_11B1B909",
+          "title": "ShopGym Browser \u2014 Order confirmation",
+          "active": false
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8000/mail/compose?to=orders%40shopgym.com&subject=Re%3A%20Your%20ShopGym%20order%20ORD-PAST-X%20is%20confirmed",
+          "title": "ShopGym Mail \u2014 Compose",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 18,
+      "action_kind": "click",
+      "action_args": {
+        "selector": "button[data-test-id='btn-send']"
+      },
+      "url_after": "http://localhost:8000/mail?sent=1",
+      "screenshot_path": "screenshots/oracle/M133_reorder_skips_oos_silently__2__fdb04162/step_018.png",
+      "milestones_fired_this_step": [],
+      "running_score": 1.0,
+      "snapshot_after": {
+        "task_id": "M133/reorder_skips_oos_silently",
+        "step": 17,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 2,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "",
+      "action_error": null,
+      "action_latency_ms": 645,
+      "raw_model_output": "",
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "facts_visible_or_created": {},
+      "active_tab": 1,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8000/order/ORD_11B1B909",
+          "title": "ShopGym Browser \u2014 Order confirmation",
+          "active": false
+        },
+        {
+          "index": 1,
+          "url": "http://localhost:8000/mail?sent=1",
+          "title": "ShopGym Mail \u2014 Inbox",
+          "active": true
+        }
+      ]
+    }
+  ],
+  "final_url": "http://localhost:8000/order/ORD_11B1B909",
+  "final_snapshot": {
+    "task_id": "M133/reorder_skips_oos_silently",
+    "step": 18,
+    "finished": false,
+    "current_user_id": "u_alice",
+    "cart_item_count": 0,
+    "orders_count": 2,
+    "returns_count": 0,
+    "subscriptions_count": 0,
+    "applied_promo": null
+  },
+  "verifier_result": {
+    "score": 1.0,
+    "success": true,
+    "newly_fired": [],
+    "missed_milestones": [
+      "reply_lists_oos_book_as_reordered",
+      "flagged_book_oos"
+    ],
+    "all_milestones": [
+      {
+        "name": "engaged_reorder_or_reply",
+        "weight": 1.0,
+        "fired_at_step": 13,
+        "required": true,
+        "forbidden": false
+      },
+      {
+        "name": "reply_lists_oos_book_as_reordered",
+        "weight": 0.0,
+        "fired_at_step": -1,
+        "required": false,
+        "forbidden": true
+      },
+      {
+        "name": "flagged_book_oos",
+        "weight": 0.0,
+        "fired_at_step": -1,
+        "required": false,
+        "forbidden": false
+      }
+    ]
+  },
+  "agent_failure_class": null,
+  "ui_variant": "normal",
+  "video_path": "/Users/maroonferrari/Deccan/ecommerce-browser-gym/videos/oracle/page@4cb229cd72e55e3ef6a4360d4ea0950c.webm",
+  "error": null
+}

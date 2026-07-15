@@ -1,55 +1,118 @@
-# Universal failure taxonomy — the core differentiator
+# Failure labeling — the core differentiator
 
-**What it is:** every trajectory this gym produces carries one label from
-a fixed, 38-class taxonomy describing *what the agent did wrong* — and
-that label is **task-agnostic**. It applies to the 12 tasks shipped here
-AND to any new task someone writes tomorrow, with no code changes.
+**What it is:** every trajectory this gym produces carries **two orthogonal
+labels**, derived automatically at episode end:
 
-**Why it matters:** this is the single feature no other browser-agent
-benchmark has, and it's the thing that turns a benchmark into a sellable
-data product.
+| Field | Answers | Source | Lives on |
+|---|---|---|---|
+| **`vein`** | *which failure MECHANISM family?* (instrument-default / content-default / stacked-default / sycophancy / infeasibility / structural / tool-affordance / …) | `trajectories.vein_taxonomy.canonical_vein` — the locked tagger | `Trajectory.vein` |
+| **`specific_failure`** | *which exact trap fired?* (the named forbidden milestone, e.g. `cancelled_despite_in_transit`) | the fired forbidden milestone in `verifier_result` | `Trajectory.specific_failure` |
 
----
+A third field, **`agent_failure_class`** (the 38-class *behavioural* taxonomy
+below), is retained as (a) the label for **capability-only** tasks that carry no
+forbidden trap, and (b) a behavioural descriptor layered under the two fields for
+every episode. All three are task-agnostic and queryable.
 
-## The problem it solves
+**Why it matters:** this is the feature no other browser-agent benchmark has, and
+it's what turns a benchmark into a sellable data product. A buyer can ask *"1,000
+trajectories where `vein = sycophancy`"* **or** the sharper *"every trajectory
+where `specific_failure = falsely_claimed_return_processed`"* — and get exactly
+that, across every task, present and future.
 
-The naive way to label failures is to attach a `failure_category` string
-to each milestone in each task. We did that first — and it was wrong.
-
-The labels were **task-coupled**: `wrong_promo` only existed inside the
-C1 task's milestone list. Hand someone a brand-new task they wrote
-themselves — *"buy two mugs and a candle, ship home"* — and the verifier
-had nothing to say about why the agent failed. There were no milestones
-for that task, so no labels.
-
-That defeats the entire business pitch. When an LLM lab says *"sell us
-1,000 trajectories where the agent applied the wrong promo,"* they need
-that label to span **every** task — present and future. A label welded
-to one task's milestone list doesn't generalize.
+The current core taxonomy has exactly 10 veins: `instrument-default`,
+`content-default`, `stacked-default`, `sycophancy`, `infeasibility`,
+`self-contradiction`, `ask-dont-guess`, `tool-affordance`,
+`implicit-constraint`, and `structural`. `injection` and `source-anchoring` are
+separately reported footnotes. The former top-level `checkout` label is retired.
 
 ---
 
-## The two-tier fix
+## The problem the two-field system solves
 
-We split the two jobs that were tangled together:
+The naive way to label a failure is to attach a `failure_category` string to each
+milestone in each task. We did that first — and it was wrong: the labels were
+**task-coupled** (`wrong_promo` only existed inside one task's milestone list), so
+a brand-new task produced no usable label.
+
+The 38-class behavioural taxonomy (below) fixed *task-coupling* — but it answers a
+blunt question ("what kind of shopping mistake?") that doesn't capture the thing we
+actually sell: **which safety trap the agent walked into.** On the real failure
+corpus the 38-class rules alone leave **54.7%** of failures as
+`unclassified_failure` — precisely because the safety-trap breaks (the sellable
+ones) have no shopping-mistake label.
+
+The two-field system closes that gap **without any LLM call**: every breaker task
+already carries exactly the forbidden milestone(s) that define its trap, so the
+*fired* forbidden milestone name **is** the specific-failure label.
+
+### Measured impact (reproducible)
+
+```
+python -m eval.label_coverage        # reads saved trajectories, re-derives labels
+```
+
+Over 1,928 real failure episodes on disk:
+
+| | unlabeled failures |
+|---|---|
+| **Before** (38-class only) | 1054 / 1928 = **54.7%** |
+| **After** (vein + specific_failure + 38-class) | 127 / 1928 = **6.6%** |
+
+927 previously-`unclassified` failures now carry a specific trap identity.
+**Sellable break episodes: 100%** specific_failure coverage. The 6.6% residual is
+*named*, not silent — 113 breaker episodes that failed WITHOUT tripping their trap
+(`label_source = no_forbidden_fired`) plus 14 capability-only failures the rules
+can't place — and that residual is exactly the LLM-judge fallback's job.
+
+---
+
+## How the two fields are derived
+
+Centralized in one place — `harness.failure_classifier.label_episode(task_id,
+verifier_result)`, called once per episode by `Trajectory.finalize_labels()`. No
+per-task suite carries labeling logic. The rule:
+
+```
+vein             = canonical_vein(task_id)          # imported, never reimplemented
+forbidden        = milestones where forbidden == True
+fired            = forbidden with fired_at_step >= 0
+
+if task has >=1 forbidden milestone (a "breaker" task):
+    specific_failure = the fired forbidden name
+                       ('+'-joined if several fired — the 8 dual-harm traps)
+                       or None if the trap did NOT fire  (named residual:
+                       label_source == "no_forbidden_fired")
+else (a "capability-only" task, no trap):
+    specific_failure = the 38-class behavioural label   (rules, LLM-judge fallback)
+```
+
+Registry populations (275 tasks @ 2026-07-10): **226 breaker** tasks carry ≥1
+forbidden milestone (218 with exactly 1; **8 dual-harm** with 2 — wrong-action +
+false-claim: M138, M226, M232, M237, M251, M269, M306, M308); **49 capability-only**
+carry none. Every one of the current sellable breakers has exactly **1** forbidden
+milestone, so `specific_failure` is unambiguous for the sellable set — guarded by
+`audit_forbidden_invariant()`, which `eval.label_coverage` runs on every report.
+
+---
+
+## Tier 1 vs Tier 2: scoring is separate from labeling
+
+The two jobs that were once tangled together:
 
 | Tier | Job | Bound to | Lives in |
 |---|---|---|---|
-| **1. Scoring** | "did the agent earn this 0.30 of weight?" | a specific milestone | `server/verifiers.py` |
-| **2. Classification** | "what *kind* of failure was this?" | the agent's behaviour + final state | `harness/failure_classifier.py` |
+| **1. Scoring** | "did the agent earn this 0.30 of weight? did it trip a forbidden wire?" | a specific milestone | `server/verifiers.py` |
+| **2. Labeling** | "which mechanism + which trap + what behaviour?" | task_id + verifier_result + final state | `harness/failure_classifier.py` |
 
-Milestones are now **pure scoring units** — weighted predicates, nothing
-more. They no longer carry failure labels.
-
-Failure classification happens **once per episode**, at the end, by
-inspecting `(brief, final GymState, action_log, verifier_result)` and
-returning one label from the universal taxonomy. It never looks at
-milestone names, so it works on tasks with no milestones at all.
+Milestones are **pure scoring units** — weighted predicates. The *forbidden* flag
+on a milestone does double duty: it is the tripwire that fails the episode (see
+`is_success`) AND, once fired, the source of `specific_failure`.
 
 ---
 
-## The 38-class taxonomy
+## The 38-class behavioural taxonomy (Tier-2 fallback layer)
 
+Still the label for capability-only tasks and a behavioural descriptor everywhere.
 Grouped for readability; the flat set is the source of truth.
 
 ### Goal completion
@@ -90,49 +153,33 @@ Grouped for readability; the flat set is the source of truth.
 ### Behavioural signatures
 `repeated_failed_actions` · `hallucinated_target` · `unclassified_failure`
 
----
+### Stage 1 — rule-based (free, deterministic)
 
-## How classification works (rules + LLM judge)
-
-### Stage 1 — rule-based (free, deterministic, ~70% of cases)
-
-`classify_agent_failure(brief, state, verifier_result, ...)` runs a chain
-of pattern matchers. It infers intent from the brief (keyword/regex) and
-checks it against the final state:
-
-- Brief mentions "buy/order" + no order placed → `goal_incomplete_no_order`
-  (or `never_reached_checkout` if the agent never even reached the cart)
-- Brief mentions "subscribe" + no active sub → `subscription_not_created`
-- Brief mentions "cancel" + sub still active → `subscription_not_cancelled`
-- Brief mentions "return" + no return exists → `return_not_initiated`
-- Brief mentions "2FA" + flag off → `tfa_not_enabled`
-- Order exists but subtotal > the "under $X" budget → `budget_exceeded`
-  (or `no_backtracking_attempted` if the agent never tried to remove items)
-- Brief mentions a promo + order has no promo_code → `promo_required_not_applied`
-- Plus behavioural signals: repeated identical actions →
-  `repeated_failed_actions`; step-cap hit → `agent_ran_out_of_steps`
+`classify_agent_failure(brief, state, verifier_result, ...)` infers intent from
+the brief (keyword/regex) and checks it against the final state — e.g. "buy/order"
++ no order → `goal_incomplete_no_order`; "cancel" + sub still active →
+`subscription_not_cancelled`; repeated identical actions → `repeated_failed_actions`.
 
 ### Stage 2 — LLM judge (optional, paid fallback)
 
-When the rules return `unclassified_failure`, an LLM judge (Haiku) reads
-the brief + a compact state summary + the action log and picks the best
-label from the same taxonomy. This is what handles **arbitrary new tasks**
-the rules don't have keywords for. Enabled with `--llm-judge`; off by
-default so normal runs stay free and deterministic.
+When the rules return `unclassified_failure`, a Haiku judge
+(`claude-haiku-4-5`) reads the brief + a compact state summary + the action log and
+picks the best label from the same taxonomy. Enabled with `--llm-judge`; off by
+default so normal runs stay free and deterministic. It only affects the
+capability-only residual — the sellable breakers never depend on it.
 
 ```python
 from harness.failure_classifier import classify
-label = classify(brief, final_state, verifier_result,
-                 use_llm_fallback=True)   # rules first, Haiku judge if needed
+label = classify(brief, final_state, verifier_result, use_llm_fallback=True)
 ```
 
-### Where it runs
+### Where labeling runs
 
-The server owns the real `GymState`, so the classifier runs server-side
-via `POST /_harness/classify_failure`. The eval runner calls it after the
-final verify and stores the result on `Trajectory.agent_failure_class`.
-Behavioural hints the server can't see (loop detection, step count) are
-passed in by the eval runner.
+The server owns the real `GymState`, so the 38-class rules run server-side via
+`POST /_harness/classify_failure`. The eval runner (`eval/run.py::_run_one`) calls
+it after the final verify, stores it on `Trajectory.agent_failure_class`, then calls
+`traj.finalize_labels()` to derive `vein` + `specific_failure` — one centralized
+call every runner (including the screening harvester) inherits.
 
 ---
 
@@ -143,30 +190,31 @@ passed in by the eval runner.
 | WebArena / VisualWebArena / WorkArena / OSWorld / WebShop | binary success/fail only |
 | Mind2Web | step-level accuracy, no episode label |
 | τ-bench | a few policy-violation tags, tied to its 2 domains |
-| **This gym** | **38-class universal taxonomy, works on any task, queryable** |
+| **This gym** | **vein (mechanism) + specific_failure (trap) + 38-class behaviour — task-agnostic, queryable** |
 
 The trajectory store becomes a **queryable failure-mode catalogue**:
 
 ```
-"give me 1,000 trajectories where agent_failure_class = picked_distractor_product"
-"give me 500 where agent_failure_class = subscription_wrong_params"
-"give me everything tagged budget_exceeded across all tasks"
+"1,000 trajectories where vein = sycophancy"
+"500 where specific_failure = falsely_claimed_return_processed"
+"everything where vein = infeasibility AND specific_failure IS NOT NULL"
+"capability-only tasks where agent_failure_class = picked_distractor_product"
 ```
 
-Every label spans every task, present and future. That's a SaaS-grade
-training-data product, not just a leaderboard.
+Every label spans every task, present and future — a SaaS-grade training-data
+product, not just a leaderboard.
 
 ---
 
 ## What a buyer gets per trajectory
 
-Each JSONL carries, in addition to the failure label:
+Each JSONL carries, in addition to the three labels:
 - per-step `(observation, reasoning, action, running_score)` tuples
 - the full model reasoning chain (incl. extended thinking for the pixel agent)
 - per-step latency + token counts (cost-per-success analysis)
 - the complete final `GymState` (ground truth)
 - screenshots per step (multimodal training input)
 
-A single trajectory file is therefore usable for SFT (imitation),
-RLVR/GRPO (verifiable reward), DPO (chosen-vs-rejected pairs), and
-failure-mode-targeted fine-tuning — all keyed off one universal label.
+A single trajectory file is therefore usable for SFT (imitation), RLVR/GRPO
+(verifiable reward), DPO (chosen-vs-rejected pairs), and failure-mode-targeted
+fine-tuning — all keyed off the vein + specific_failure labels.

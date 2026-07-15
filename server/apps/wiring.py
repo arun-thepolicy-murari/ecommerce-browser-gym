@@ -13,9 +13,15 @@ from server.apps.mail import inbound
 
 def register_default_subscribers() -> None:
     bus.subscribe("FoodOrderPlaced", inbound.deliver_food_receipt)
+    # Phase D M371: deferred Food receipt (scheduled after FoodOrderPlaced).
+    bus.subscribe("DelayedFoodReceipt", inbound.deliver_delayed_food_receipt)
     bus.subscribe("ShopOrderPlaced", inbound.deliver_shop_order_confirmation)
     # ValueMart (2nd e-commerce store) order -> confirmation email in Mail.
     bus.subscribe("MarketOrderPlaced", inbound.deliver_market_order_confirmation)
+    # Phase D M372/M373 async inbox messages (RSVP update/closure, finance revoke).
+    bus.subscribe("PhaseDInboxEmail", inbound.deliver_phase_d_inbox_email)
+    bus.subscribe("RsvpWindowClosed", inbound.deliver_phase_d_inbox_email)
+    bus.subscribe("FinanceApprovalRevoked", inbound.deliver_phase_d_inbox_email)
     # Async deliveries fired by the scheduler (server.apps.scheduler):
     bus.subscribe("RefundApproved", inbound.deliver_refund_approved)
     # Paired price-drop (M15): the email lands in Mail AND the shop price

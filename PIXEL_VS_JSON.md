@@ -1,7 +1,7 @@
 # Pixel-based vs DOM-based browser agents — a head-to-head comparison
 
 A controlled experiment inside the ecommerce-browser-gym to answer:
-**at a fixed VLM (Claude Sonnet 4.5, no GUI fine-tuning), does a
+**at a fixed VLM (Claude Sonnet 4.6, no GUI fine-tuning), does a
 screenshot-based agent perform as well as a DOM-based agent on real
 e-commerce tasks?**
 
@@ -36,7 +36,7 @@ difference is what they perceive and how they act:
 - **2 agents**: `llm` (DOM/JSON) + `pixel` (SoM)
 - **12 tasks** spanning Discovery / Account / Checkout × {easy, medium, hard, very-hard}
 - **3 seeds**: 0, 1, 2 (deterministic task perturbations)
-- **1 model**: Claude Sonnet 4.5 (`claude-sonnet-4-5-20250929`)
+- **1 model**: Claude Sonnet 4.6 (`claude-sonnet-4-6`)
 
 Total: **72 episodes** (plus oracle on the same matrix as a verifier sanity gate, +36 episodes).
 
@@ -217,8 +217,7 @@ e-commerce sites, pixel is the only viable approach.
 ## Reproducibility
 
 ```bash
-# On a fresh clone:
-git checkout feat/pixel-agent-fork
+# On a fresh clone (pixel agent is on the main branch — no fork checkout needed):
 pip install -e ".[dev,agent]"
 playwright install chromium
 
@@ -230,7 +229,7 @@ uvicorn server.main:app --port 8000
 
 # Run the full comparison in another terminal
 python -m eval.compare --agents llm,pixel --seeds 0,1,2 --tasks all \
-                       --model claude-sonnet-4-5-20250929
+                       --model claude-sonnet-4-6
 
 # Output:
 #   trajectories/comparison/<agent>__<task>__<seed>__<id>.jsonl  (108 files)
@@ -239,4 +238,4 @@ python -m eval.compare --agents llm,pixel --seeds 0,1,2 --tasks all \
 ```
 
 Wall-clock estimate: 2-4 hours for full matrix.
-API cost estimate: $30-50 (Sonnet 4.5, May 2026 pricing).
+API cost estimate: $30-50 (Sonnet 4.6 pricing).

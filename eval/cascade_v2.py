@@ -52,7 +52,7 @@ SEEDS = (0, 1, 2)
 # per model here: an episode ends gracefully once measured context nears the model's
 # window. Qwen3-VL = 131072 -> guard at 118000; Sonnet 4.6 = 200K and gpt-5.x larger
 # -> 190000. This is task-adaptive (dense pages stop sooner) and never a fixed step
-# proxy. See PHASE1_FINDINGS for the dynamic-vs-fixed rationale.
+# proxy. See docs/history/PHASE1_FINDINGS.md (F3) for the dynamic-vs-fixed rationale.
 MAX_STEPS_DEFAULT = 120
 # Guard budgets (cost optimization — cut fumbling episodes early). The hard
 # correctness net for overflow is the agents' context-length-400 catch. Qwen at

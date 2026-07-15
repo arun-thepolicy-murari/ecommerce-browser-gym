@@ -19,7 +19,7 @@ Screened on **gpt-5.1 · gpt-5.5 · claude-sonnet-4-6** at k=3 seeds each (also 
 | Break **gpt-5.5 + Sonnet** (the diligent pair) | **45** |
 | Coverage matrix | [`trajectories/coverage_matrix.csv`](./trajectories/coverage_matrix.csv) (74 tasks × 3 models) |
 
-📊 **Dashboards:** [`trajectories/breaker_atlas.html`](./trajectories/breaker_atlas.html) (per-task cards: prompt + correct-behavior + what-the-agent-did + filters), and [`trajectories/CROSS_MODEL_COMPARISON.md`](./trajectories/CROSS_MODEL_COMPARISON.md) (the written study).
+📊 **Dashboards:** [`trajectories/breaker_atlas.html`](./trajectories/breaker_atlas.html) (per-task cards: prompt + correct-behavior + what-the-agent-did + filters), and [`docs/history/cross_model/CROSS_MODEL_COMPARISON.md`](./docs/history/cross_model/CROSS_MODEL_COMPARISON.md) (the written study).
 
 ---
 
@@ -59,15 +59,21 @@ Each task is wired across **5 files / 11 registry points** (factory + brief + st
 
 ## The breaker taxonomy (failure veins)
 
-1. **Hidden-harm at checkout** (biggest, breaks all models): expired/corporate card, stale gift-message, sneaked add-on, quantity-creep, per-line ship-to misroute — solo and stacked.
+1. **Default-family harms:** `instrument-default` (wrong payment instrument), `content-default` (wrong destination/message/schedule/basket content), and `stacked-default` (both axes).
 2. **Sycophancy / false-premise**: the user asserts a confident *false* fact (price/rating/"you charged me twice") and the agent defers instead of verifying.
 3. **Tool-affordance × false-confirmation** (breaks **Sonnet** specifically — inversions where the stronger model breaks): the agent performs an action that silently no-ops, then over-confirms ("done, it's cancelled/paused/refunded").
+
+The remaining canonical core veins are `infeasibility`, `self-contradiction`,
+`ask-dont-guess`, `implicit-constraint`, and `structural`. The core taxonomy is
+exactly these 10 veins; `injection` and `source-anchoring` are report footnotes.
 4. **Infeasibility**: no item satisfies the conjunction (budget+rating+stock / dietary+ETA) → agent should abstain+flag but buys a violator.
 5. **🆕 Implicit-constraint-from-context**: context implies an unstated constraint ("it's for my 3-year-old"; "I'm allergic to nuts") the agent ignores.
 6. **🆕 Self-contradiction**: the request contradicts itself — the agent should surface the conflict, not silently pick.
-7. **Structural / conditional / source-anchoring / ask-don't-guess / injection** (see `PROJECT_CONTEXT.md` §7 + [`FAILURE_TAXONOMY.md`](./FAILURE_TAXONOMY.md)).
+7. **Structural / conditional / source-anchoring / ask-don't-guess / injection** (vein definitions in `PROJECT_CONTEXT.md` §7).
 
 **What strong models resist** (don't mine here): reading numbers/arithmetic, named corrections, injection recognition, cross-object *logical* conditionals (Sonnet), live-state checks. The lever is **concealment + deference**, not complexity.
+
+> **How veins become labels:** every trajectory is auto-tagged with `vein` (the mechanism family, via `canonical_vein`) + `specific_failure` (the exact forbidden trap that fired) + a 38-class behavioural label — see [`FAILURE_TAXONOMY.md`](./FAILURE_TAXONOMY.md). Reproduce coverage with `python -m eval.label_coverage`.
 
 ---
 

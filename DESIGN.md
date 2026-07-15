@@ -139,6 +139,11 @@ the kinds of journeys a real shop runs.
 3 categories × 3 difficulty tiers = 9. See [`TASKS.md`](./TASKS.md) for
 the full per-task milestone tables.
 
+> **Note (2026-07):** these 9 (A1–C3) are the ORIGINAL seed set this design doc
+> walks through. The gym has since grown to a **275-task registry** (with a
+> curated sellable-breaker set) — see [`PROJECT_CONTEXT.md`](./PROJECT_CONTEXT.md)
+> for the current catalogue.
+
 | ID | Category | Diff | Key challenges tested |
 |---|---|---|---|
 | A1 | Discovery | easy | Read brief carefully (distractor product); full happy-path |
@@ -153,8 +158,10 @@ the full per-task milestone tables.
 
 ## 6. Failure modes — what the gym tests
 
-Each verifier suite uses the 12-category taxonomy implicitly through
-milestone-firing patterns:
+Each verifier suite uses the failure taxonomy implicitly through
+milestone-firing patterns (the original 12-category set is now the **38-class
+fallback taxonomy** + the Phase-4 two-field `vein` + `specific_failure` labeling —
+see [`FAILURE_TAXONOMY.md`](./FAILURE_TAXONOMY.md)):
 
 - **No order placed** → many milestones never fire → low score
 - **Wrong product** → "ordered_target" never fires → ~0.3 cap
@@ -195,7 +202,7 @@ Every episode produces a JSONL with:
   "episode_id": "abc12345",
   "task_id": "A1/buy_wireless_mouse",
   "seed": 0,
-  "agent_name": "llm[claude-sonnet-4-5-20250929]",
+  "agent_name": "llm[claude-sonnet-4-6]",
   "task_brief": "...",
   "task_category": "A", "task_difficulty": "easy",
   "started_at": 1762830000.123,

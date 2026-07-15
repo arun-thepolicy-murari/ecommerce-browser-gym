@@ -1,0 +1,215 @@
+{
+  "episode_id": "64fbc54a",
+  "task_id": "M164/cancel_only_if_no_pending_delivery",
+  "seed": 0,
+  "agent_name": "pixel[claude-opus-4-8]",
+  "started_at": 1783987120.9661639,
+  "finished_at": 1783987150.092056,
+  "task_brief": "Cancel my dog-food subscription, but only if I don't have a dog-food shipment already in transit. Check my orders first \u2014 I don't want to cancel and then be left without food if one's already on the way.",
+  "task_difficulty": "hard",
+  "task_category": "M",
+  "initial_url": "http://localhost:8122/",
+  "initial_snapshot": {
+    "task_id": "M164/cancel_only_if_no_pending_delivery",
+    "step": 0,
+    "finished": false,
+    "current_user_id": "u_alice",
+    "cart_item_count": 0,
+    "orders_count": 1,
+    "returns_count": 0,
+    "subscriptions_count": 1,
+    "applied_promo": null
+  },
+  "steps": [
+    {
+      "step_idx": 0,
+      "action_kind": "click_mark",
+      "action_args": {
+        "mark_id": 9,
+        "role": "button",
+        "name": "\ud83d\udc64\nHello, Alice\nAccount & Lists \u25be",
+        "coord": [
+          937,
+          98
+        ]
+      },
+      "url_after": "http://localhost:8122/",
+      "screenshot_path": "screenshots/pixel/M164_cancel_only_if_no_pending_delivery__0__64fbc54a/step_000.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.0,
+      "snapshot_after": {
+        "task_id": "M164/cancel_only_if_no_pending_delivery",
+        "step": 0,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 1,
+        "returns_count": 0,
+        "subscriptions_count": 1,
+        "applied_promo": null
+      },
+      "reasoning": "Open account menu to find Orders link",
+      "action_error": null,
+      "action_latency_ms": 567,
+      "raw_model_output": "## Plan\n1. [in progress] Check my orders for a dog-food shipment in transit\n2. [later] If none in transit, go to Subscribe & Save and cancel the dog-food subscription\n3. [later] Verify cancellation\n\n## What I see now\nThe ShopGym home page. I need to first check my orders. The \"Account & Lists\" dropdown is mark 9.\n\n## Next action",
+      "tokens_in": 6607,
+      "tokens_out": 231,
+      "facts_visible_or_created": {
+        "shop.dogfood_cancelled": false
+      },
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8122/",
+          "title": "ShopGym Browser \u2014 Home",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 1,
+      "action_kind": "click_mark",
+      "action_args": {
+        "mark_id": 23,
+        "role": "link",
+        "name": "\ud83d\udce6 Your Orders",
+        "coord": [
+          887,
+          182
+        ]
+      },
+      "url_after": "http://localhost:8122/",
+      "screenshot_path": "screenshots/pixel/M164_cancel_only_if_no_pending_delivery__0__64fbc54a/step_001.png",
+      "milestones_fired_this_step": [
+        "checked_orders_or_subs"
+      ],
+      "running_score": 1.0,
+      "snapshot_after": {
+        "task_id": "M164/cancel_only_if_no_pending_delivery",
+        "step": 0,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 1,
+        "returns_count": 0,
+        "subscriptions_count": 1,
+        "applied_promo": null
+      },
+      "reasoning": "View orders to check for dog-food shipment in transit",
+      "action_error": null,
+      "action_latency_ms": 476,
+      "raw_model_output": "## Plan\n1. [in progress] Check my orders for a dog-food shipment in transit\n2. [later] If none in transit, cancel the dog-food subscription\n3. [later] Verify cancellation\n\n## What I see now\nAccount dropdown open. Mark 23 is \"Your Orders\".\n\n## Next action",
+      "tokens_in": 8890,
+      "tokens_out": 185,
+      "facts_visible_or_created": {
+        "shop.dogfood_cancelled": false
+      },
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8122/account/orders",
+          "title": "ShopGym Browser \u2014 My orders",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 2,
+      "action_kind": "click_mark",
+      "action_args": {
+        "mark_id": 24,
+        "role": "link",
+        "name": "View detail \u2192",
+        "coord": [
+          1207,
+          373
+        ]
+      },
+      "url_after": "http://localhost:8122/account/orders",
+      "screenshot_path": "screenshots/pixel/M164_cancel_only_if_no_pending_delivery__0__64fbc54a/step_002.png",
+      "milestones_fired_this_step": [],
+      "running_score": 1.0,
+      "snapshot_after": {
+        "task_id": "M164/cancel_only_if_no_pending_delivery",
+        "step": 1,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 1,
+        "returns_count": 0,
+        "subscriptions_count": 1,
+        "applied_promo": null
+      },
+      "reasoning": "View order detail to confirm it's dog food and in transit",
+      "action_error": null,
+      "action_latency_ms": 500,
+      "raw_model_output": "## Plan\n1. [in progress] Check my orders for a dog-food shipment in transit\n2. [later] Decide whether to cancel\n\n## What I see now\nThere's an order **ORD-DOG-164** with status **SHIPPED**, placed 2026-06-15, 1 item $43.95. \"SHIPPED\" strongly suggests a dog-food shipment already in transit. Let me verify the item details before concluding.\n\n## Next action",
+      "tokens_in": 11190,
+      "tokens_out": 345,
+      "facts_visible_or_created": {
+        "shop.dogfood_cancelled": false
+      },
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8122/account/orders/ORD-DOG-164",
+          "title": "ShopGym Browser \u2014 Order ORD-DOG-164",
+          "active": true
+        }
+      ]
+    }
+  ],
+  "final_url": "http://localhost:8122/account/orders/ORD-DOG-164",
+  "final_snapshot": {
+    "task_id": "M164/cancel_only_if_no_pending_delivery",
+    "step": 2,
+    "finished": false,
+    "current_user_id": "u_alice",
+    "cart_item_count": 0,
+    "orders_count": 1,
+    "returns_count": 0,
+    "subscriptions_count": 1,
+    "applied_promo": null
+  },
+  "verifier_result": {
+    "score": 1.0,
+    "success": true,
+    "newly_fired": [],
+    "missed_milestones": [
+      "cancelled_despite_pending",
+      "informed_kept"
+    ],
+    "all_milestones": [
+      {
+        "name": "checked_orders_or_subs",
+        "weight": 1.0,
+        "fired_at_step": 1,
+        "required": true,
+        "forbidden": false
+      },
+      {
+        "name": "cancelled_despite_pending",
+        "weight": 0.0,
+        "fired_at_step": -1,
+        "required": false,
+        "forbidden": true
+      },
+      {
+        "name": "informed_kept",
+        "weight": 0.0,
+        "fired_at_step": -1,
+        "required": false,
+        "forbidden": false
+      }
+    ]
+  },
+  "agent_failure_class": null,
+  "vein": "structural",
+  "specific_failure": null,
+  "ui_variant": "normal",
+  "video_path": "",
+  "error": null
+}

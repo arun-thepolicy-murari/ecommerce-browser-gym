@@ -1,0 +1,764 @@
+{
+  "episode_id": "a155a3a9",
+  "task_id": "M43/stale_delivery_date",
+  "seed": 2,
+  "agent_name": "pixel[claude-opus-4-8]",
+  "started_at": 1783657158.617525,
+  "finished_at": 1783657287.215482,
+  "task_brief": "I've got a package on the way and I want to be home when it's delivered. Can you put a reminder on my calendar for the day it arrives?",
+  "task_difficulty": "hard",
+  "task_category": "M",
+  "initial_url": "http://127.0.0.1:8500/",
+  "initial_snapshot": {
+    "task_id": "M43/stale_delivery_date",
+    "step": 0,
+    "finished": false,
+    "current_user_id": "u_alice",
+    "cart_item_count": 0,
+    "orders_count": 1,
+    "returns_count": 0,
+    "subscriptions_count": 0,
+    "applied_promo": null
+  },
+  "steps": [
+    {
+      "step_idx": 0,
+      "action_kind": "click_mark",
+      "action_args": {
+        "mark_id": 6,
+        "role": "link",
+        "name": "Track Order",
+        "coord": [
+          175,
+          46
+        ]
+      },
+      "url_after": "http://127.0.0.1:8500/",
+      "screenshot_path": "screenshots/harvest/M43_stale_delivery_date__2__a155a3a9/step_000.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.0,
+      "snapshot_after": {
+        "task_id": "M43/stale_delivery_date",
+        "step": 0,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 1,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Find the incoming package and its delivery date.",
+      "action_error": null,
+      "action_latency_ms": 531,
+      "raw_model_output": "## Plan\n1. Find the incoming package's delivery/arrival date \u2014 check Track Order [next]\n2. Open Calendar and create a reminder on that date [later]\n3. Verify the reminder was saved [later]\n\n## What I see now\nThe ShopGym home page. There's a \"Track Order\" link (mark 6) which should show my package and its expected delivery date.\n\n## Next action",
+      "tokens_in": 6677,
+      "tokens_out": 229,
+      "facts_visible_or_created": {
+        "shop.shipment_out_for_delivery_today": true
+      },
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://127.0.0.1:8500/account/orders",
+          "title": "ShopGym Browser \u2014 My orders",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 1,
+      "action_kind": "click_mark",
+      "action_args": {
+        "mark_id": 24,
+        "role": "link",
+        "name": "View detail \u2192",
+        "coord": [
+          1207,
+          350
+        ]
+      },
+      "url_after": "http://127.0.0.1:8500/account/orders",
+      "screenshot_path": "screenshots/harvest/M43_stale_delivery_date__2__a155a3a9/step_001.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.0,
+      "snapshot_after": {
+        "task_id": "M43/stale_delivery_date",
+        "step": 0,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 1,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "View order detail to find the delivery date.",
+      "action_error": null,
+      "action_latency_ms": 477,
+      "raw_model_output": "## Plan\n1. Find the incoming package's delivery/arrival date \u2014 [in progress] order ORD-5501 is OUT_FOR_DELIVERY, need exact arrival date\n2. Open Calendar and create a reminder on that date [later]\n3. Verify the reminder was saved [later]\n\n## What I see now\nMy orders page. Order ORD-5501 is OUT_FOR_DELIVERY, placed 2026-05-19, $92.78. I need the delivery ETA \u2014 let me open the detail.\n\n## Next action",
+      "tokens_in": 9054,
+      "tokens_out": 286,
+      "facts_visible_or_created": {
+        "shop.shipment_out_for_delivery_today": true
+      },
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://127.0.0.1:8500/account/orders/ORD-5501",
+          "title": "ShopGym Browser \u2014 Order ORD-5501",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 2,
+      "action_kind": "open_tab",
+      "action_args": {
+        "url": "/calendar",
+        "tab_index": 1
+      },
+      "url_after": "http://127.0.0.1:8500/calendar",
+      "screenshot_path": "screenshots/harvest/M43_stale_delivery_date__2__a155a3a9/step_002.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.0,
+      "snapshot_after": {
+        "task_id": "M43/stale_delivery_date",
+        "step": 1,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 1,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Create a reminder for the delivery date 2026-05-21.",
+      "action_error": null,
+      "action_latency_ms": 189,
+      "raw_model_output": "## Plan\n1. Find the incoming package's delivery/arrival date \u2014 [done] ETA Thursday, May 21 (2026-05-21)\n2. Open Calendar and create a reminder on 2026-05-21 [in progress]\n3. Verify the reminder was saved [later]\n\n## What I see now\nOrder ORD-5501 detail. Shipment via UPS, ETA: Thursday, May 21 \u2014 status out_for_delivery. Order placed 2026-05-19, so the arrival is 2026-05-21. Now I'll open the Calendar.\n\n## Next action",
+      "tokens_in": 11378,
+      "tokens_out": 385,
+      "facts_visible_or_created": {
+        "shop.shipment_out_for_delivery_today": true
+      },
+      "active_tab": 1,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://127.0.0.1:8500/account/orders/ORD-5501",
+          "title": "ShopGym Browser \u2014 Order ORD-5501",
+          "active": false
+        },
+        {
+          "index": 1,
+          "url": "http://127.0.0.1:8500/calendar",
+          "title": "ShopGym Calendar \u2014 Agenda",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 3,
+      "action_kind": "click_mark",
+      "action_args": {
+        "mark_id": 6,
+        "role": "button",
+        "name": "\uff0b\nNew event",
+        "coord": [
+          1012,
+          62
+        ]
+      },
+      "url_after": "http://127.0.0.1:8500/calendar",
+      "screenshot_path": "screenshots/harvest/M43_stale_delivery_date__2__a155a3a9/step_003.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.0,
+      "snapshot_after": {
+        "task_id": "M43/stale_delivery_date",
+        "step": 2,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 1,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Create a new event/reminder for the delivery.",
+      "action_error": null,
+      "action_latency_ms": 546,
+      "raw_model_output": "## Plan\n1. Find the delivery date \u2014 [done] Thursday, May 21 (today per calendar)\n2. Create a reminder event on 2026-05-21 [in progress]\n3. Verify saved [later]\n\n## What I see now\nCalendar agenda. Today is THU MAY 21 \u2014 which matches the delivery ETA. I'll create a new event.\n\n## Next action",
+      "tokens_in": 13570,
+      "tokens_out": 255,
+      "facts_visible_or_created": {
+        "shop.shipment_out_for_delivery_today": true
+      },
+      "active_tab": 1,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://127.0.0.1:8500/account/orders/ORD-5501",
+          "title": "ShopGym Browser \u2014 Order ORD-5501",
+          "active": false
+        },
+        {
+          "index": 1,
+          "url": "http://127.0.0.1:8500/calendar/new",
+          "title": "ShopGym Calendar \u2014 New event",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 4,
+      "action_kind": "type_into_mark",
+      "action_args": {
+        "mark_id": 10,
+        "value": "Package delivery - be home (ORD-5501)",
+        "role": "textbox",
+        "name": "Event title",
+        "coord": [
+          496,
+          325
+        ]
+      },
+      "url_after": "http://127.0.0.1:8500/calendar/new",
+      "screenshot_path": "screenshots/harvest/M43_stale_delivery_date__2__a155a3a9/step_004.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.0,
+      "snapshot_after": {
+        "task_id": "M43/stale_delivery_date",
+        "step": 3,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 1,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Set the reminder title.",
+      "action_error": null,
+      "action_latency_ms": 500,
+      "raw_model_output": "## Plan\n1. Delivery date \u2014 [done] Thu May 21\n2. Create reminder \u2014 [in progress]: set title, change day to Today (Thu May 21)\n3. Verify saved [later]\n\n## What I see now\nNew event form. Day currently set to \"Tomorrow (Fri May 22)\" \u2014 I need Today (Thu May 21). I'll type the title first.\n\n## Next action",
+      "tokens_in": 15707,
+      "tokens_out": 322,
+      "facts_visible_or_created": {
+        "shop.shipment_out_for_delivery_today": true
+      },
+      "active_tab": 1,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://127.0.0.1:8500/account/orders/ORD-5501",
+          "title": "ShopGym Browser \u2014 Order ORD-5501",
+          "active": false
+        },
+        {
+          "index": 1,
+          "url": "http://127.0.0.1:8500/calendar/new",
+          "title": "ShopGym Calendar \u2014 New event",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 5,
+      "action_kind": "click_mark",
+      "action_args": {
+        "mark_id": 11,
+        "role": "combobox",
+        "name": "Day",
+        "coord": [
+          496,
+          398
+        ]
+      },
+      "url_after": "http://127.0.0.1:8500/calendar/new",
+      "screenshot_path": "screenshots/harvest/M43_stale_delivery_date__2__a155a3a9/step_005.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.0,
+      "snapshot_after": {
+        "task_id": "M43/stale_delivery_date",
+        "step": 4,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 1,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Focus the Day dropdown to change it.",
+      "action_error": null,
+      "action_latency_ms": 470,
+      "raw_model_output": "## Plan\n1. Delivery date \u2014 [done] Thu May 21\n2. Set title [done], change day to Today (Thu May 21) [in progress], then Add event\n3. Verify saved [later]\n\n## What I see now\nTitle filled. Day combobox = \"Tomorrow (Fri May 22)\" / value 2026-05-22. I need Today (Thu May 21) \u2014 one earlier. Native combobox, so click then ArrowUp.\n\n## Next action",
+      "tokens_in": 17939,
+      "tokens_out": 282,
+      "facts_visible_or_created": {
+        "shop.shipment_out_for_delivery_today": true
+      },
+      "active_tab": 1,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://127.0.0.1:8500/account/orders/ORD-5501",
+          "title": "ShopGym Browser \u2014 Order ORD-5501",
+          "active": false
+        },
+        {
+          "index": 1,
+          "url": "http://127.0.0.1:8500/calendar/new",
+          "title": "ShopGym Calendar \u2014 New event",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 6,
+      "action_kind": "key_press",
+      "action_args": {
+        "key": "ArrowUp"
+      },
+      "url_after": "http://127.0.0.1:8500/calendar/new",
+      "screenshot_path": "screenshots/harvest/M43_stale_delivery_date__2__a155a3a9/step_006.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.0,
+      "snapshot_after": {
+        "task_id": "M43/stale_delivery_date",
+        "step": 5,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 1,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Move from Tomorrow (May 22) to Today (May 21).",
+      "action_error": null,
+      "action_latency_ms": 19,
+      "raw_model_output": "## Plan\n1. Delivery date \u2014 [done] Thu May 21\n2. Change day to Today (Thu May 21) [in progress], then Add event\n3. Verify saved [later]\n\n## What I see now\nDay combobox focused at 2026-05-22 (Tomorrow). I need to go up one to Today (Thu May 21).\n\n## Next action",
+      "tokens_in": 20127,
+      "tokens_out": 206,
+      "facts_visible_or_created": {
+        "shop.shipment_out_for_delivery_today": true
+      },
+      "active_tab": 1,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://127.0.0.1:8500/account/orders/ORD-5501",
+          "title": "ShopGym Browser \u2014 Order ORD-5501",
+          "active": false
+        },
+        {
+          "index": 1,
+          "url": "http://127.0.0.1:8500/calendar/new",
+          "title": "ShopGym Calendar \u2014 New event",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 7,
+      "action_kind": "click_mark",
+      "action_args": {
+        "mark_id": 11,
+        "role": "combobox",
+        "name": "Day",
+        "coord": [
+          496,
+          398
+        ]
+      },
+      "url_after": "http://127.0.0.1:8500/calendar/new",
+      "screenshot_path": "screenshots/harvest/M43_stale_delivery_date__2__a155a3a9/step_007.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.0,
+      "snapshot_after": {
+        "task_id": "M43/stale_delivery_date",
+        "step": 6,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 1,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Re-focus the Day combobox.",
+      "action_error": null,
+      "action_latency_ms": 475,
+      "raw_model_output": "## What I see now\nValue still 2026-05-22. The ArrowUp didn't register. Let me re-click and try again.\n\n## Next action",
+      "tokens_in": 22239,
+      "tokens_out": 411,
+      "facts_visible_or_created": {
+        "shop.shipment_out_for_delivery_today": true
+      },
+      "active_tab": 1,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://127.0.0.1:8500/account/orders/ORD-5501",
+          "title": "ShopGym Browser \u2014 Order ORD-5501",
+          "active": false
+        },
+        {
+          "index": 1,
+          "url": "http://127.0.0.1:8500/calendar/new",
+          "title": "ShopGym Calendar \u2014 New event",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 8,
+      "action_kind": "key_press",
+      "action_args": {
+        "key": "ArrowUp"
+      },
+      "url_after": "http://127.0.0.1:8500/calendar/new",
+      "screenshot_path": "screenshots/harvest/M43_stale_delivery_date__2__a155a3a9/step_008.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.0,
+      "snapshot_after": {
+        "task_id": "M43/stale_delivery_date",
+        "step": 7,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 1,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Change to Today (Thu May 21).",
+      "action_error": null,
+      "action_latency_ms": 8,
+      "raw_model_output": "## Next action",
+      "tokens_in": 24556,
+      "tokens_out": 112,
+      "facts_visible_or_created": {
+        "shop.shipment_out_for_delivery_today": true
+      },
+      "active_tab": 1,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://127.0.0.1:8500/account/orders/ORD-5501",
+          "title": "ShopGym Browser \u2014 Order ORD-5501",
+          "active": false
+        },
+        {
+          "index": 1,
+          "url": "http://127.0.0.1:8500/calendar/new",
+          "title": "ShopGym Calendar \u2014 New event",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 9,
+      "action_kind": "key_press",
+      "action_args": {
+        "key": "ArrowDown"
+      },
+      "url_after": "http://127.0.0.1:8500/calendar/new",
+      "screenshot_path": "screenshots/harvest/M43_stale_delivery_date__2__a155a3a9/step_009.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.0,
+      "snapshot_after": {
+        "task_id": "M43/stale_delivery_date",
+        "step": 8,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 1,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Test whether the combobox responds to arrow keys.",
+      "action_error": null,
+      "action_latency_ms": 3,
+      "raw_model_output": "## What I see now\nValue unchanged at 2026-05-22. ArrowUp isn't cycling. Let me test with ArrowDown to confirm the control responds.\n\n## Next action",
+      "tokens_in": 26574,
+      "tokens_out": 466,
+      "facts_visible_or_created": {
+        "shop.shipment_out_for_delivery_today": true
+      },
+      "active_tab": 1,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://127.0.0.1:8500/account/orders/ORD-5501",
+          "title": "ShopGym Browser \u2014 Order ORD-5501",
+          "active": false
+        },
+        {
+          "index": 1,
+          "url": "http://127.0.0.1:8500/calendar/new",
+          "title": "ShopGym Calendar \u2014 New event",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 10,
+      "action_kind": "click_mark",
+      "action_args": {
+        "mark_id": 11,
+        "role": "combobox",
+        "name": "Day",
+        "coord": [
+          496,
+          398
+        ]
+      },
+      "url_after": "http://127.0.0.1:8500/calendar/new",
+      "screenshot_path": "screenshots/harvest/M43_stale_delivery_date__2__a155a3a9/step_010.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.0,
+      "snapshot_after": {
+        "task_id": "M43/stale_delivery_date",
+        "step": 9,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 1,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Re-focus the Day select before pressing Home.",
+      "action_error": null,
+      "action_latency_ms": 484,
+      "raw_model_output": "## What I see now\nValue stuck at 2026-05-22; arrow keys aren't changing it. Let me try pressing Home to jump to the first option (Today), after re-focusing.\n\n## Next action",
+      "tokens_in": 28946,
+      "tokens_out": 1162,
+      "facts_visible_or_created": {
+        "shop.shipment_out_for_delivery_today": true
+      },
+      "active_tab": 1,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://127.0.0.1:8500/account/orders/ORD-5501",
+          "title": "ShopGym Browser \u2014 Order ORD-5501",
+          "active": false
+        },
+        {
+          "index": 1,
+          "url": "http://127.0.0.1:8500/calendar/new",
+          "title": "ShopGym Calendar \u2014 New event",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 11,
+      "action_kind": "key_press",
+      "action_args": {
+        "key": "Home"
+      },
+      "url_after": "http://127.0.0.1:8500/calendar/new",
+      "screenshot_path": "screenshots/harvest/M43_stale_delivery_date__2__a155a3a9/step_011.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.0,
+      "snapshot_after": {
+        "task_id": "M43/stale_delivery_date",
+        "step": 10,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 1,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Jump to first option (Today) in the Day select.",
+      "action_error": null,
+      "action_latency_ms": 2,
+      "raw_model_output": "",
+      "tokens_in": 32014,
+      "tokens_out": 83,
+      "facts_visible_or_created": {
+        "shop.shipment_out_for_delivery_today": true
+      },
+      "active_tab": 1,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://127.0.0.1:8500/account/orders/ORD-5501",
+          "title": "ShopGym Browser \u2014 Order ORD-5501",
+          "active": false
+        },
+        {
+          "index": 1,
+          "url": "http://127.0.0.1:8500/calendar/new",
+          "title": "ShopGym Calendar \u2014 New event",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 12,
+      "action_kind": "type_into_mark",
+      "action_args": {
+        "mark_id": 11,
+        "value": "Today",
+        "role": "combobox",
+        "name": "Day",
+        "coord": [
+          496,
+          398
+        ]
+      },
+      "url_after": "http://127.0.0.1:8500/calendar/new",
+      "screenshot_path": "screenshots/harvest/M43_stale_delivery_date__2__a155a3a9/step_012.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.0,
+      "snapshot_after": {
+        "task_id": "M43/stale_delivery_date",
+        "step": 11,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 1,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Attempt typeahead selection of the Today option.",
+      "action_error": null,
+      "action_latency_ms": 471,
+      "raw_model_output": "## What I see now\nKeyboard navigation isn't affecting the native select. Let me try typeahead \u2014 typing the option label into the focused combobox.\n\n## Next action",
+      "tokens_in": 34003,
+      "tokens_out": 1139,
+      "facts_visible_or_created": {
+        "shop.shipment_out_for_delivery_today": true
+      },
+      "active_tab": 1,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://127.0.0.1:8500/account/orders/ORD-5501",
+          "title": "ShopGym Browser \u2014 Order ORD-5501",
+          "active": false
+        },
+        {
+          "index": 1,
+          "url": "http://127.0.0.1:8500/calendar/new",
+          "title": "ShopGym Calendar \u2014 New event",
+          "active": true
+        }
+      ]
+    },
+    {
+      "step_idx": 13,
+      "action_kind": "click_mark",
+      "action_args": {
+        "mark_id": 14,
+        "role": "button",
+        "name": "Add event",
+        "coord": [
+          283,
+          538
+        ]
+      },
+      "url_after": "http://127.0.0.1:8500/calendar/new",
+      "screenshot_path": "screenshots/harvest/M43_stale_delivery_date__2__a155a3a9/step_013.png",
+      "milestones_fired_this_step": [
+        "reminder_on_live_day"
+      ],
+      "running_score": 1.0,
+      "snapshot_after": {
+        "task_id": "M43/stale_delivery_date",
+        "step": 12,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 1,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Save the reminder event.",
+      "action_error": null,
+      "action_latency_ms": 514,
+      "raw_model_output": "## Plan\n1. Delivery date \u2014 [done] Thu May 21\n2. Reminder set: title done, Day = Today (Thu May 21) [done]; now Add event [in progress]\n3. Verify saved [later]\n\n## What I see now\nDay now shows \"Today (Thu May 21)\" / value 2026-05-21 \u2014 correct. Title is set. Times 19:00\u201320:00 are fine for a reminder. Now click Add event.\n\n## Next action",
+      "tokens_in": 37052,
+      "tokens_out": 224,
+      "facts_visible_or_created": {
+        "shop.shipment_out_for_delivery_today": true
+      },
+      "active_tab": 1,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://127.0.0.1:8500/account/orders/ORD-5501",
+          "title": "ShopGym Browser \u2014 Order ORD-5501",
+          "active": false
+        },
+        {
+          "index": 1,
+          "url": "http://127.0.0.1:8500/calendar",
+          "title": "ShopGym Calendar \u2014 Agenda",
+          "active": true
+        }
+      ]
+    }
+  ],
+  "final_url": "http://127.0.0.1:8500/account/orders/ORD-5501",
+  "final_snapshot": {
+    "task_id": "M43/stale_delivery_date",
+    "step": 13,
+    "finished": false,
+    "current_user_id": "u_alice",
+    "cart_item_count": 0,
+    "orders_count": 1,
+    "returns_count": 0,
+    "subscriptions_count": 0,
+    "applied_promo": null
+  },
+  "verifier_result": {
+    "score": 1.0,
+    "success": true,
+    "newly_fired": [],
+    "missed_milestones": [
+      "reminder_on_stale_day",
+      "checked_tracking"
+    ],
+    "all_milestones": [
+      {
+        "name": "reminder_on_live_day",
+        "weight": 1.0,
+        "fired_at_step": 13,
+        "required": true,
+        "forbidden": false
+      },
+      {
+        "name": "reminder_on_stale_day",
+        "weight": 0.0,
+        "fired_at_step": -1,
+        "required": false,
+        "forbidden": true
+      },
+      {
+        "name": "checked_tracking",
+        "weight": 0.0,
+        "fired_at_step": -1,
+        "required": false,
+        "forbidden": false
+      }
+    ]
+  },
+  "agent_failure_class": null,
+  "ui_variant": "normal",
+  "video_path": "",
+  "error": null
+}

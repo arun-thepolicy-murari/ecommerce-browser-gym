@@ -120,6 +120,30 @@ class Trajectory:
     # Named UI perturbation in effect for this episode ("normal" if none), so
     # the harvester can attribute failures to a variant.
     ui_variant: str = "normal"
+    # Two-field sellable label (Phase 4), set once at episode end by
+    # finalize_labels(). vein = canonical_vein(task_id) (mechanism family);
+    # specific_failure = name of the fired forbidden milestone(s), or None on
+    # success / a non-trap failure. Orthogonal to agent_failure_class (the
+    # 38-class behavioural label, retained as the capability-only fallback).
+    vein: str | None = None
+    specific_failure: str | None = None
+
+    def finalize_labels(self) -> None:
+        """Set vein + specific_failure from task_id + verifier_result.
+
+        Centralized two-field labeling (Phase 4): every runner that builds a
+        Trajectory calls this once at episode end (after agent_failure_class is
+        set), so the labeling lives in ONE place — not bolted onto each task
+        suite. Idempotent and crash-safe: never lets labeling fail an episode;
+        on success, specific_failure stays None."""
+        try:
+            from harness.failure_classifier import label_episode
+            lab = label_episode(self.task_id, self.verifier_result,
+                                 fallback_class=self.agent_failure_class)
+            self.vein = lab["vein"]
+            self.specific_failure = lab["specific_failure"]
+        except Exception as e:
+            print(f"[trajectory] finalize_labels skipped: {e}")
 
     def to_json(self) -> dict[str, Any]:
         return {
@@ -138,6 +162,8 @@ class Trajectory:
             "final_snapshot": self.final_snapshot,
             "verifier_result": self.verifier_result,
             "agent_failure_class": self.agent_failure_class,
+            "vein": self.vein,
+            "specific_failure": self.specific_failure,
             "ui_variant": self.ui_variant,
             "video_path": self.video_path,
             "error": self.error,

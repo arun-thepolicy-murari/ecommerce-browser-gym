@@ -273,6 +273,8 @@ def build_signature(traj: dict) -> dict[str, Any]:
 
     return {
         "failure_class": traj.get("agent_failure_class"),       # broad layer
+        "vein": traj.get("vein"),                               # mechanism family
+        "specific_failure": traj.get("specific_failure"),       # fired trap (sellable)
         "failure_mode_signature": chain,                        # crystallized layer
         "signature_key": signature_key,
         "missed_required": missed,

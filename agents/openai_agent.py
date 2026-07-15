@@ -40,6 +40,26 @@ def _to_openai_tools(anthropic_tools: list[dict]) -> list[dict]:
 TOOLS_OPENAI = _to_openai_tools(TOOLS_ANTHROPIC)
 
 
+def _chat_request(model: str, messages: list[dict[str, Any]]) -> dict[str, Any]:
+    """Build a provider-aware chat request without changing OpenAI defaults."""
+    is_openrouter = "openrouter.ai" in os.getenv("OPENAI_BASE_URL", "")
+    request: dict[str, Any] = {
+        "model": model,
+        "tools": TOOLS_OPENAI,
+        "tool_choice": "auto",
+        "messages": messages,
+    }
+    if is_openrouter and model in {"tencent/hy3", "tencent/hy3:free"}:
+        request["max_tokens"] = 2048
+    else:
+        request["max_completion_tokens"] = 2048
+    if is_openrouter:
+        request["extra_body"] = {
+            "provider": {"require_parameters": True},
+        }
+    return request
+
+
 async def _observation(ctx: BrowserCtx) -> str:
     """Reuse LLMBrowserAgent's observation builder (it doesn't touch self),
     so DOM-agent and GPT-agent see byte-identical observations — a fair
@@ -58,24 +78,38 @@ class OpenAIBrowserAgent:
         self.model = model or os.getenv("OPENAI_MODEL", "gpt-5.4")
         self.max_steps = max_steps
         self.verbose = verbose
+        self.cost_cap = float(os.getenv("AGENT_COST_CAP_USD", "0") or 0)
+        self.cost_trip_fraction = float(
+            os.getenv("AGENT_COST_TRIP_FRAC", "0.8") or 0.8
+        )
+        self.input_cost_per_m = float(
+            os.getenv("AGENT_INPUT_COST_PER_M", "0") or 0
+        )
+        self.output_cost_per_m = float(
+            os.getenv("AGENT_OUTPUT_COST_PER_M", "0") or 0
+        )
 
     async def run(self, ctx: BrowserCtx, task_brief: str) -> None:
         messages: list[dict[str, Any]] = [
             {"role": "system",
              "content": SYSTEM_PROMPT + f"\n\nTASK: {task_brief}"},
         ]
+        cumulative_cost = 0.0
 
         for turn in range(self.max_steps):
             messages.append({"role": "user", "content": await _observation(ctx)})
 
             resp = self.client.chat.completions.create(
-                model=self.model, max_completion_tokens=2048,
-                tools=TOOLS_OPENAI, tool_choice="auto", messages=messages,
+                **_chat_request(self.model, messages)
             )
             msg = resp.choices[0].message
             usage = resp.usage
             tin = int(getattr(usage, "prompt_tokens", 0) or 0)
             tout = int(getattr(usage, "completion_tokens", 0) or 0)
+            cumulative_cost += (
+                tin * self.input_cost_per_m
+                + tout * self.output_cost_per_m
+            ) / 1_000_000
             text = msg.content or ""
             tool_calls = msg.tool_calls or []
 
@@ -154,3 +188,11 @@ class OpenAIBrowserAgent:
                 "content": json.dumps(
                     {"result": tool_result, "current_url": ctx.page.url}),
             })
+            if (self.cost_cap and
+                    cumulative_cost >= self.cost_cap * self.cost_trip_fraction):
+                if self.verbose:
+                    print(
+                        f"[openai_agent] cost watchdog trip at "
+                        f"${cumulative_cost:.4f}"
+                    )
+                break

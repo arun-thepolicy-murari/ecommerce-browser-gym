@@ -1,6 +1,8 @@
 # TASKS — per-task briefs and milestone tables
 
-All **12 tasks** across 3 categories and 4 difficulty tiers
+All **12 task templates** — the original A/B/C seed set, distinct from the
+current **275-entry registry** (see [`PROJECT_CONTEXT.md`](./PROJECT_CONTEXT.md)) —
+across 3 categories and 4 difficulty tiers
 (easy / medium / hard / **very hard**). Each milestone shows its
 weight, whether it's required for `success=True`, and the
 `failure_category` label the verifier emits when missed (added in the

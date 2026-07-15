@@ -54,15 +54,26 @@ def add_dish(food: FoodState, *, restaurant_id: str, dish_id: str,
 def clear_cart(food: FoodState) -> dict[str, Any]:
     food.cart.items.clear()
     food.cart.restaurant_id = None
+    food.cart.delivery_note = ""
     return {"ok": True}
 
 
-def place_food_order(world: "WorldState") -> dict[str, Any]:
+def set_delivery_note(food: FoodState, note: str) -> dict[str, Any]:
+    """Persist a courier/restaurant delivery instruction on the cart (M362)."""
+    food.cart.delivery_note = (note or "").strip()
+    return {"ok": True, "delivery_note": food.cart.delivery_note}
+
+
+def place_food_order(world: "WorldState",
+                     delivery_note: str | None = None) -> dict[str, Any]:
     """Place the current food cart as an order, then emit FoodOrderPlaced.
 
     Takes the WHOLE world (not just FoodState) because emitting a cross-app
     event needs the shared event log. It still only WRITES FoodState; the
     Mail write happens in the subscriber.
+
+    ``delivery_note`` (optional) overrides any cart.delivery_note at commit
+    time — used by the checkout form when delivery notes are enabled (M362).
     """
     food = world.food
     if not food.cart.items:
@@ -71,6 +82,9 @@ def place_food_order(world: "WorldState") -> dict[str, Any]:
     if r is None:
         return {"ok": False, "error": "restaurant unavailable"}
 
+    note = (delivery_note if delivery_note is not None
+            else food.cart.delivery_note) or ""
+    note = note.strip()
     subtotal = food.cart.subtotal()
     total = round(subtotal + r.delivery_fee, 2)
     oid = food.new_order_id()
@@ -80,6 +94,7 @@ def place_food_order(world: "WorldState") -> dict[str, Any]:
         subtotal=subtotal, delivery_fee=r.delivery_fee, total=total,
         placed_at=f"{SEED_DATE}T18:30:00", eta_label=r.eta_label,
         status="preparing",
+        delivery_note=note,
     )
     food.orders[oid] = order
     clear_cart(food)
@@ -95,6 +110,7 @@ def place_food_order(world: "WorldState") -> dict[str, Any]:
             "total": total,
             "eta": r.eta_label,
             "items": [{"name": i.name, "qty": i.quantity} for i in order.items],
+            "delivery_note": note,
         },
     )
     return {"ok": True, "order_id": oid, "total": total, "eta": r.eta_label}

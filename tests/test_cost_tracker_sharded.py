@@ -75,7 +75,7 @@ def test_cost_of_tree_bills_sharded_layout(tmp_path):
     total, rows = cost_of_tree(root, verbose=False)
     assert abs(total - _expected_total()) < 1e-9, (total, _expected_total())
     # every tier registered exactly one episode
-    by_tier = {t: n for (t, n, *_rest) in rows}
+    by_tier = {t: n for (t, n, *_rest) in rows if n}
     assert by_tier == {"qwen": 1, "gpt-5.1": 1, "gpt-5.5": 1, "sonnet": 1}
 
 
@@ -99,6 +99,28 @@ def test_billing_follows_agent_name_not_directory(tmp_path):
     assert abs(total - (1.0 * r["in"] + 0.1 * r["out"])) < 1e-9
     assert {t: n for (t, n, *_rest) in rows}["sonnet"] == 1
     assert {t: n for (t, n, *_rest) in rows}["qwen"] == 0
+
+
+def test_paid_openrouter_hy3_rate(tmp_path):
+    root = str(tmp_path / "external_comparison")
+    _write(os.path.join(root, "hy3/ep__0__x.jsonl"),
+           _episode("openai[tencent/hy3]", [(1_000_000, 100_000)]))
+    total, rows = cost_of_tree(root, verbose=False)
+    rate = _DEFAULT_RATES_PER_M["hy3"]
+    assert rate == {"in": 0.14, "out": 0.58}
+    assert abs(total - (rate["in"] + 0.1 * rate["out"])) < 1e-9
+    assert {t: n for (t, n, *_rest) in rows}["hy3"] == 1
+
+
+def test_free_openrouter_hy3_has_zero_cost(tmp_path):
+    root = str(tmp_path / "free_smoke")
+    _write(os.path.join(root, "hy3/ep__0__x.jsonl"),
+           _episode("openai[tencent/hy3:free]", [(1_000_000, 100_000)]))
+    total, rows = cost_of_tree(root, verbose=False)
+    assert total == 0.0
+    by_tier = {t: n for (t, n, *_rest) in rows}
+    assert by_tier["hy3-free"] == 1
+    assert by_tier["hy3"] == 0
 
 
 def test_cap_would_halt_globally_across_shards(tmp_path):

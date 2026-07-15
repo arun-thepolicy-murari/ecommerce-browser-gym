@@ -97,9 +97,12 @@ async def cart_clear(request: Request):
 
 
 @router.post("/checkout")
-async def checkout(request: Request):
+async def checkout(request: Request, delivery_note: str = Form("")):
     world = _deps["get_world"]()
-    r = F.place_food_order(world)
+    # Only persist a note when the task opts into the delivery-instruction UI
+    # (M362). Other tasks ignore the field even if somehow posted.
+    note = delivery_note if getattr(world.food, "enable_delivery_notes", False) else None
+    r = F.place_food_order(world, delivery_note=note)
     if r.get("ok"):
         _deps["flash"](world.shop, "success",
                        f"Order placed! Arriving around {r['eta']}.")

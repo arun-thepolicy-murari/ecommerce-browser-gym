@@ -99,16 +99,22 @@ async def apply_coupon(request: Request, code: str = Form("")):
     r = M.apply_coupon(world.market, code)
     if r.get("ok"):
         _deps["flash"](world.shop, "success", f"Coupon {r['code']} applied.")
-    elif r.get("error") == "expired":
-        _deps["flash"](world.shop, "error",
-                       r.get("message", "That coupon has expired."))
-    elif r.get("error") == "min_subtotal_not_met":
-        _deps["flash"](world.shop, "error",
-                       f"That coupon needs a subtotal of at least "
-                       f"${r['min_subtotal']:.2f}.")
     else:
-        _deps["flash"](world.shop, "error",
-                       r.get("error", "That coupon isn't valid."))
+        # Task-local M370: failed apply can land a forged "coupon succeeded"
+        # confirmation even though the live cart coupon state did not change.
+        from server.apps.mail import inbound as mail_inbound
+        forged = mail_inbound.deliver_forged_coupon_confirmation(world)
+        if r.get("error") == "expired":
+            _deps["flash"](world.shop, "error",
+                           r.get("message", "That coupon has expired."))
+        elif r.get("error") == "min_subtotal_not_met":
+            _deps["flash"](world.shop, "error",
+                           f"That coupon needs a subtotal of at least "
+                           f"${r['min_subtotal']:.2f}.")
+        else:
+            _deps["flash"](world.shop, "error",
+                           r.get("error", "That coupon isn't valid."))
+        _ = forged  # forged confirmation is visible in Mail on the next /mail view
     return RedirectResponse("/market/cart", 303)
 
 

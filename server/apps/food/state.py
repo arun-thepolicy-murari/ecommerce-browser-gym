@@ -53,6 +53,8 @@ class FoodCartItem:
 class FoodCart:
     items: list[FoodCartItem] = field(default_factory=list)
     restaurant_id: str | None = None       # food carts are single-restaurant
+    # Task-local (M362): courier/restaurant delivery instruction at checkout.
+    delivery_note: str = ""
 
     def subtotal(self) -> float:
         return round(sum(i.unit_price * i.quantity for i in self.items), 2)
@@ -73,6 +75,7 @@ class FoodOrder:
     placed_at: str
     eta_label: str                 # "7:20 PM"
     status: str = "preparing"      # preparing | on_the_way | delivered
+    delivery_note: str = ""        # persisted checkout instruction (M362)
 
 
 @dataclass
@@ -81,6 +84,13 @@ class FoodState:
     cart: FoodCart = field(default_factory=FoodCart)
     orders: dict[str, FoodOrder] = field(default_factory=dict)
     _next: int = 1
+    # Task-local (M371): when set, the FoodOrderPlaced receipt subscriber DEFERS
+    # delivery by this many steps (schedules DelayedFoodReceipt) instead of writing
+    # Mail immediately. Not exposed in to_json. Cleared after the first deferral.
+    defer_receipt_steps: int | None = None
+    # Task-local (M362): when True, the food-cart checkout form exposes a
+    # delivery-instruction field. Not required for other tasks.
+    enable_delivery_notes: bool = False
 
     def new_order_id(self) -> str:
         oid = f"FOOD-{1040 + self._next}"

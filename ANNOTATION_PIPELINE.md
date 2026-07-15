@@ -56,9 +56,12 @@ human exactly where their judgment is load-bearing and nowhere else.
 - **Per-step reward** — the milestone verifier scores every action
   deterministically. Zero human labeling.
 - **Failure classification (stage 9)** — `harness/failure_classifier.py`
-  labels every failed trajectory from the 38-class universal taxonomy:
-  rule-based for ~70% (free, deterministic), LLM judge for the tail
-  (`--llm-judge`). A human only audits the LLM-judged subset.
+  labels every failed trajectory with the Phase-4 two-field label (`vein` via
+  `canonical_vein` + `specific_failure` = the fired forbidden milestone); the
+  **38-class universal taxonomy is now the fallback layer** for capability-only
+  tasks. Rule-based for ~70% (free, deterministic), LLM judge for the tail
+  (`--llm-judge`). A human only audits the LLM-judged subset. (The two-field
+  system cut unlabeled failures 54.7% → 6.6%; see [`FAILURE_TAXONOMY.md`](./FAILURE_TAXONOMY.md).)
 - **Verifier self-validation** — the oracle scoring 1.0 on every task is
   an automated check that the verifier is correct. If an oracle drops
   below 1.0, the verifier (or task) has a bug — caught without a human

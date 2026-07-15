@@ -17,6 +17,8 @@ and exits non-zero.
 from __future__ import annotations
 
 import argparse
+import os
+import signal
 import subprocess
 import sys
 import time
@@ -24,8 +26,14 @@ import time
 from eval.cost_tracker import cost_of_tree
 
 
-def _kill_cascades():
-    for pat in ("eval.cascade_parallel", "eval.cascade_v2"):
+def _kill_cascades(pid=None):
+    if pid is not None:
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+        return
+    for pat in ("eval.cascade_parallel", "eval.cascade_v2", "eval.cross_model_screen", "eval.run"):
         subprocess.run(["pkill", "-f", pat], check=False)
 
 
@@ -45,6 +53,8 @@ def main():
     # when spent >= cap * trip-frac. Default 0.90.
     ap.add_argument("--trip-frac", type=float, default=0.90,
                     help="fire at cap*trip_frac (headroom margin for concurrency overshoot)")
+    ap.add_argument("--pid", type=int, default=None,
+                    help="on breach, stop only this dedicated worker PID")
     # NOTE: intentionally NO Math.random/time-jitter — deterministic polling.
     args = ap.parse_args()
 
@@ -58,7 +68,7 @@ def main():
         if args.cap and spent >= trip:
             print(f"[watchdog] *** CAP TRIP (${spent:.2f} >= ${trip:.0f} = cap x {args.trip_frac:.2f}) — "
                   f"killing ALL cascade processes (hard cap ${args.cap:.0f}) ***", flush=True)
-            _kill_cascades()
+            _kill_cascades(args.pid)
             sys.exit(2)
         time.sleep(args.interval)
 
