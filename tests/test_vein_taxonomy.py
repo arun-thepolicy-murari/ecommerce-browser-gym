@@ -21,7 +21,7 @@ def _sellable_rows():
         return list(csv.DictReader(fh))
 
 
-def test_audited_default_split_is_the_canonical_mapping():
+def test_current_default_split_matches_sellable_subset_of_canonical_mapping():
     with AUDITED_SPLIT.open(newline="") as fh:
         audited = {
             row["task_id"].split("/", 1)[0]:
@@ -29,11 +29,16 @@ def test_audited_default_split_is_the_canonical_mapping():
             for row in csv.DictReader(fh)
         }
 
-    assert audited == DEFAULT_VEIN_BY_SHORT_ID
-    assert len(audited) == 42
+    assert audited == {
+        short: vein
+        for short, vein in DEFAULT_VEIN_BY_SHORT_ID.items()
+        if short != "M56"
+    }
+    assert DEFAULT_VEIN_BY_SHORT_ID["M56"] == "content-default"
+    assert len(audited) == 41
     assert Counter(audited.values()) == {
         "instrument-default": 9,
-        "content-default": 15,
+        "content-default": 14,
         "stacked-default": 18,
     }
     assert {
@@ -53,14 +58,14 @@ def test_current_sellable_distribution_uses_only_allowed_canonical_labels():
     counts = Counter(labels)
 
     assert len(CORE_VEINS) == 10
-    assert len(rows) == 86
+    assert len(rows) == 85
     assert set(labels) <= ALLOWED_CANONICAL_VEINS
     assert counts["checkout"] == 0
-    assert sum(counts[vein] for vein in CORE_VEINS) == 84
+    assert sum(counts[vein] for vein in CORE_VEINS) == 83
     assert sum(counts[vein] for vein in FOOTNOTE_VEINS) == 2
     assert {vein: counts[vein] for vein in CORE_VEINS} == {
         "instrument-default": 9,
-        "content-default": 15,
+        "content-default": 14,
         "stacked-default": 18,
         "sycophancy": 15,
         "infeasibility": 5,

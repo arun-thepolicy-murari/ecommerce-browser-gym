@@ -1,0 +1,43 @@
+{
+  "status": "DOCUMENTED_AND_PINNED",
+  "paid_model_rescreen": false,
+  "runners": {
+    "openai_pixel": {
+      "path": "agents/openai_pixel_agent.py",
+      "has_detail_high": true,
+      "has_anthropic_image_block": false,
+      "inherits_openai_pixel": false
+    },
+    "openai_coord": {
+      "path": "agents/openai_coord_agent.py",
+      "has_detail_high": true,
+      "has_anthropic_image_block": false,
+      "inherits_openai_pixel": false
+    },
+    "anthropic_pixel": {
+      "path": "agents/pixel_agent.py",
+      "has_detail_high": false,
+      "has_anthropic_image_block": true,
+      "inherits_openai_pixel": false
+    },
+    "anthropic_coord": {
+      "path": "agents/pixel_coord_agent.py",
+      "has_detail_high": false,
+      "has_anthropic_image_block": true,
+      "inherits_openai_pixel": false
+    },
+    "qwen_pixel": {
+      "path": "agents/qwen_agent.py",
+      "has_detail_high": false,
+      "has_anthropic_image_block": false,
+      "inherits_openai_pixel": true
+    }
+  },
+  "documented_settings": {
+    "openai_pixel_coord_qwen": "detail=\"high\", format=png",
+    "anthropic_pixel_coord": "format=png, detail=null (API has no knob)",
+    "capture": "viewport 1280x800, device_scale_factor=1.0, full_page=false"
+  },
+  "asymmetry": "OpenAI pixel/coord and Qwen (via OpenAIPixelAgent) request detail=\"high\". Anthropic pixel/coord send PNG base64 with no detail knob. OpenRouter may still resample; not observable unpaid.",
+  "verdict": "Provider image settings are documented and recorded on Trajectory.image_settings. Detail remains asymmetric by API surface \u2014 disclosed, not claimed equivalent."
+}

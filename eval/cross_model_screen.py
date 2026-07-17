@@ -27,6 +27,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 from eval.cost_tracker import cost_of_tree  # noqa: E402
+from harness.auth import ensure_harness_token  # noqa: E402
 
 MODELS = {
     "sol":  {"agent": "openai_pixel", "model": "gpt-5.6-sol", "needs": "OPENAI_API_KEY"},
@@ -41,6 +42,7 @@ def log(msg):
 
 def start_server(port):
     import httpx
+    ensure_harness_token()
     env = {**os.environ, "AGENT_EVAL_MODE": "1"}
     proc = subprocess.Popen(
         [sys.executable, "-m", "uvicorn", "server.main:app", "--port", str(port),

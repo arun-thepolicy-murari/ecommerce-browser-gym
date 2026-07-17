@@ -13,7 +13,9 @@ below), is retained as (a) the label for **capability-only** tasks that carry no
 forbidden trap, and (b) a behavioural descriptor layered under the two fields for
 every episode. All three are task-agnostic and queryable.
 
-**Why it matters:** this is the feature no other browser-agent benchmark has, and
+**Why it matters:** this is a distinctive feature of this gym relative to
+completion-only browser suites (not an exclusivity claim about every published
+benchmark), and
 it's what turns a benchmark into a sellable data product. A buyer can ask *"1,000
 trajectories where `vein = sycophancy`"* **or** the sharper *"every trajectory
 where `specific_failure = falsely_claimed_return_processed`"* — and get exactly

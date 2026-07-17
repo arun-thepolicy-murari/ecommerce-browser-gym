@@ -4,8 +4,8 @@
 
 `trajectories/sellable_breakers_v2.csv` is now the authoritative baseline:
 
-- Total rows: **86** (`wc -l` = 87 including the header).
-- Core/main breakers: **84**.
+- Total rows: **85** (`wc -l` = 86 including the header).
+- Core/main breakers: **83**.
 - Separately reported footnotes: **2**.
 - M52 and M221 remain absent.
 - M220 remains retiered to `sonnet`.
@@ -13,10 +13,10 @@
 
 Core/main distribution (footnotes excluded):
 
-- stacked-default: **18 (21.4%)**
-- content-default: **15 (17.9%)**
-- sycophancy: **15 (17.9%)**
-- instrument-default: **9 (10.7%)**
+- stacked-default: **18 (21.7%)**
+- content-default: **14 (16.9%)**
+- sycophancy: **15 (18.1%)**
+- instrument-default: **9 (10.8%)**
 - ask-don’t-guess: **5 (6.0%)**
 - tool-affordance: **5 (6.0%)**
 - infeasibility: **5 (6.0%)**
@@ -30,8 +30,18 @@ Footnotes:
 - source-anchoring: **1**
 
 The retired `checkout` category has zero canonical rows. Its 42 historical
-members are now the three top-level default veins above, preserving the audited
-9 / 15 / 18 assignment.
+members remain preserved in the historical audit at 9 / 15 / 18. The current
+sellable split is **9 / 14 / 18 = 41** because M56 is held from release.
+
+## M56 release hold
+
+> M56 has a genuine historical Qwen 3/3 wrong-address break panel. A fresh current Qwen panel produced three valid state-no-op incompletes and therefore neither reproduced the break nor demonstrated resistance. Because provider/backend revision and sampling were not pinned, the panels are not provenance-comparable. M56 is held from sellable release pending pinned confirmation.
+
+This is not a rejection or invalidation. A future pinned rerun must capture the
+exact provider/base URL/model revision, repo/tool hashes, explicit
+sampling/seed, seeds 0–2, at least 100k context, and a serialized stop reason.
+The full hold record is
+`docs/history/audits/M56_RELEASE_HOLD_2026-07-15.md`.
 
 ## Sol/Opus comparison reconciliation
 
@@ -56,7 +66,7 @@ Exactly two rows were added to the CSV:
 
 Evidence:
 
-- `trajectories/overnight_push/reseed_weak_breaks_20260714/STATUS_FORENSIC.md`
+- `docs/history/waves/trajectories/overnight_push/reseed_weak_breaks_20260714/STATUS_FORENSIC.md`
 - `trajectories/overnight_push/reseed_weak_breaks_20260714/m346_sonnet/cascade_v2_report.json`
 - `trajectories/overnight_push/reseed_weak_breaks_20260714/m362_from_gpt55/cascade_v2_report.json`
 - Per-seed trajectories under those two cascade roots.
@@ -101,7 +111,7 @@ Oracle/correction transparency: **the original oracle did not fail—it scored 1
 
 Artifacts:
 
-- Design gate: `FINAL_IMPLICIT_DESIGN_GATE_2026-07-14.md`
+- Design gate: `docs/history/waves/final_implicit/FINAL_IMPLICIT_DESIGN_GATE_2026-07-14.md`
 - Code: `server/final_implicit_wave.py`
 - Focused tests: `tests/test_cross_app_verifiers.py`
 - Corrected oracle: `trajectories/final_implicit_20260714/oracle_corrected/`
@@ -129,7 +139,8 @@ The recent structural new-build attempts produced no confirmations, but historic
 
 - CSV schema/order/duplicate/orphan/preservation validation: **passed**.
 - Focused verifier tests: **passed (6)**.
-- `wc -l trajectories/sellable_breakers_v2.csv`: **87**.
+- `wc -l trajectories/sellable_breakers_v2.csv`: **86**.
 - CSV-scoped `git diff --check`: **passed**.
-- Canonical default-family parity: **9 / 15 / 18**, total **42**; `checkout`: **0**.
+- Current sellable default-family parity: **9 / 14 / 18**, total **41**; historical audited split **9 / 15 / 18**, total **42**; `checkout`: **0**.
+- Full post-all-fixes suite: **1,107 passed, 0 failed, 0 skipped**.
 - No commit was created.

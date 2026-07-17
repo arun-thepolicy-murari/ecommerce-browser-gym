@@ -1,0 +1,121 @@
+{
+  "status": "INVENTORIED_PARTIAL",
+  "within_modality_equivalent": {
+    "dom_anthropic_vs_openai": true,
+    "pixel_anthropic_vs_openai_vs_qwen": true,
+    "coord_anthropic_vs_openai": true
+  },
+  "cross_modality_equivalent": false,
+  "tool_names_by_runner": {
+    "llm_anthropic_dom": [
+      "check",
+      "click",
+      "close_tab",
+      "fill",
+      "finish",
+      "navigate",
+      "open_tab",
+      "select",
+      "submit",
+      "switch_tab"
+    ],
+    "openai_dom": [
+      "check",
+      "click",
+      "close_tab",
+      "fill",
+      "finish",
+      "navigate",
+      "open_tab",
+      "select",
+      "submit",
+      "switch_tab"
+    ],
+    "pixel_anthropic": [
+      "click",
+      "close_tab",
+      "finish",
+      "key",
+      "open_tab",
+      "scroll",
+      "switch_tab",
+      "type_text",
+      "wait"
+    ],
+    "openai_pixel": [
+      "click",
+      "close_tab",
+      "finish",
+      "key",
+      "open_tab",
+      "scroll",
+      "switch_tab",
+      "type_text",
+      "wait"
+    ],
+    "pixel_coord": [
+      "click_at",
+      "close_tab",
+      "finish",
+      "key",
+      "open_tab",
+      "scroll",
+      "switch_tab",
+      "type_at",
+      "wait"
+    ],
+    "openai_coord": [
+      "click_at",
+      "close_tab",
+      "finish",
+      "key",
+      "open_tab",
+      "scroll",
+      "switch_tab",
+      "type_at",
+      "wait"
+    ],
+    "qwen_pixel": [
+      "click",
+      "close_tab",
+      "finish",
+      "key",
+      "open_tab",
+      "scroll",
+      "switch_tab",
+      "type_text",
+      "wait"
+    ]
+  },
+  "asymmetries": [
+    {
+      "id": "dom_vs_pixel_select",
+      "severity": "DOM has select(); pixel/coord have no select_option \u2014 must ArrowDown-cycle native <select> (32 sellable gold paths).",
+      "dom_only": [
+        "check",
+        "fill",
+        "navigate",
+        "select",
+        "submit"
+      ],
+      "pixel_only": [
+        "key",
+        "scroll",
+        "type_text",
+        "wait"
+      ]
+    },
+    {
+      "id": "dom_missing_wait",
+      "severity": "Pixel/coord expose wait(); Anthropic/OpenAI DOM TOOLS lists omit wait (async tick still exists on BrowserCtx for oracle/pixel paths).",
+      "dom_has_wait": false,
+      "pixel_has_wait": true
+    },
+    {
+      "id": "dom_vs_coord_grounding",
+      "severity": "DOM uses CSS selectors; coord uses click_at/type_at pixel coords; pixel uses SoM marks."
+    }
+  ],
+  "paid_model_rescreen": false,
+  "verdict": "Within a modality, cascade models share the same tool schema (dom=True, pixel=True, coord=True). Across modalities, action spaces are intentionally unequal \u2014 native select is the primary construct-validity confound for pixel vs DOM. Keep P0 open for cross-modality claims; within-modality cascade comparisons are schema-equivalent."
+}

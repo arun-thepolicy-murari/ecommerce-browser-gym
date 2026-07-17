@@ -93,8 +93,14 @@ def _is_inconclusive(traj) -> bool:
     infra OR produced ZERO steps. A 0-step episode never validly tested the task — the agent
     never acted — yet a verifier whose required milestone is satisfied by the START url/state
     (e.g. _viewed when the start path already IS /account/subscriptions) would score it
-    success=True, faking resistance. This closed the qwen-402 fake-resist hole (M291/M298v2)."""
+    success=True, faking resistance. This closed the qwen-402 fake-resist hole (M291/M298v2).
+
+    Prefer ``invalid_reason`` when present (protocol §3A); keep heuristic fallbacks for
+    legacy trajectories that predate the field.
+    """
     if traj is None:
+        return True
+    if (traj or {}).get("invalid_reason"):
         return True
     if _is_infra_error((traj or {}).get("error") or ""):
         return True
@@ -211,6 +217,13 @@ def cascade_v2(tasks, out_dir, base_port, cap, max_steps=MAX_STEPS_DEFAULT,
                 # with a per-EPISODE cost check so one long expensive episode
                 # can't blow the cap before the next tier boundary.
                 for seed in SEEDS:
+                    existing = _load_seed_traj(tier_dir, t, seed)
+                    if not _is_inconclusive(existing):
+                        log(
+                            f"  preserving valid existing {tier}/{t} seed={seed} "
+                            "(resume without overwrite)"
+                        )
+                        continue
                     # FIX (a): PRE-episode cap guard — do not START a new episode once spend is
                     # within CAP_HEADROOM_FRAC of the cap (stops fresh expensive work near the
                     # ceiling; the external watchdog is the hard backstop for in-flight episodes).
@@ -263,6 +276,51 @@ def cascade_v2(tasks, out_dir, base_port, cap, max_steps=MAX_STEPS_DEFAULT,
     return rec
 
 
+def _write_image_pinning_sidecar(out: Path) -> None:
+    """Record Section 1C capture pins for this cascade tree (no paid calls)."""
+    try:
+        from harness.runner import (
+            PINNED_DEVICE_SCALE_FACTOR,
+            PINNED_SCREENSHOT_FORMAT,
+            PINNED_VIEWPORT,
+            PROVIDER_IMAGE_SETTINGS,
+            image_settings_for_agent,
+        )
+    except Exception as e:
+        log(f"WARNING: could not import image pins for cascade sidecar: {e}")
+        return
+    # Cascade tiers → agent kinds used by MODELS
+    tier_profiles = {}
+    for tier, cfg in MODELS.items():
+        if tier not in TIERS:
+            continue
+        agent = cfg.get("agent", "")
+        tier_profiles[tier] = image_settings_for_agent(agent)
+    payload = {
+        "status": "PINNED",
+        "viewport": dict(PINNED_VIEWPORT),
+        "device_scale_factor": PINNED_DEVICE_SCALE_FACTOR,
+        "screenshot_format": PINNED_SCREENSHOT_FORMAT,
+        "full_page": False,
+        "provider_profiles": PROVIDER_IMAGE_SETTINGS,
+        "tier_image_settings": tier_profiles,
+        "trajectory_fields": [
+            "image_settings",
+            "steps[].screenshot_width",
+            "steps[].screenshot_height",
+            "steps[].device_pixel_ratio",
+        ],
+        "note": (
+            "Capture geometry is pinned in open_browser. Provider detail is "
+            "asymmetric: OpenAI/Qwen request detail=high; Anthropic Messages "
+            "has no detail knob — recorded, not claimed equivalent."
+        ),
+    }
+    path = out / "screenshot_pinning.json"
+    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    log(f"[wrote {path}]")
+
+
 def _write_outputs(rec, tasks, out: Path, halted: bool, cap):
     # v2 CSV
     csv_path = out / "coverage_matrix_v2.csv"
@@ -283,6 +341,7 @@ def _write_outputs(rec, tasks, out: Path, halted: bool, cap):
     # full JSON
     with open(out / "cascade_v2_report.json", "w") as f:
         json.dump({"halted_on_budget": halted, "cap": cap, "records": rec}, f, indent=2)
+    _write_image_pinning_sidecar(out)
     log(f"[wrote {csv_path} and cascade_v2_report.json]")
     # human summary
     reached = [t for t in tasks if rec[t]["reached_sonnet"]]

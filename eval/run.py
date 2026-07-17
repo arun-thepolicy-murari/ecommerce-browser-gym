@@ -33,6 +33,7 @@ from pathlib import Path
 import httpx
 
 from agents.oracle_agent import SOLVERS as ORACLE_SOLVERS
+from harness.auth import ensure_harness_token, harness_headers
 from harness.facts import get_fact_extractor
 from harness.runner import (
     BrowserCtx, Trajectory, open_browser, reset_gym, save_trajectory,
@@ -77,49 +78,108 @@ def _detect_loop(steps: list) -> bool:
     return False
 
 
+def _agent_name(agent_kind: str, llm_model: str | None) -> str:
+    if agent_kind == "oracle":
+        return "oracle"
+    if agent_kind == "pixel":
+        return f"pixel[{llm_model or 'default'}]"
+    if agent_kind == "pixel_coord":
+        return f"pixel_coord[{llm_model or 'default'}]"
+    if agent_kind == "openai":
+        return f"openai[{llm_model or 'gpt-4o-mini'}]"
+    if agent_kind == "openai_pixel":
+        return f"openai_pixel[{llm_model or 'gpt-4o-mini'}]"
+    if agent_kind == "openai_coord":
+        return f"openai_coord[{llm_model or 'gpt-4o-mini'}]"
+    if agent_kind == "qwen":
+        return f"qwen[{llm_model or 'qwen-vl-plus'}]"
+    return f"llm[{llm_model or 'default'}]"
+
+
+def _invalid_stub_traj(
+    *,
+    task_id: str,
+    seed: int,
+    agent_kind: str,
+    llm_model: str | None,
+    ui: str,
+    invalid_reason: str,
+    err: str,
+) -> Trajectory:
+    """Minimal traj for infra failures before a full episode can start."""
+    from harness.runner import image_settings_for_agent
+
+    traj = Trajectory(
+        episode_id=uuid.uuid4().hex[:8],
+        task_id=task_id,
+        seed=seed,
+        agent_name=_agent_name(agent_kind, llm_model),
+        started_at=time.time(),
+        task_brief="",
+        task_difficulty="",
+        task_category="",
+        ui_variant=ui,
+        image_settings=image_settings_for_agent(agent_kind),
+        error=err,
+        invalid_reason=invalid_reason,
+        invalid_detail=err[:500],
+        verifier_result={},
+    )
+    traj.finished_at = time.time()
+    return traj
+
+
 async def _run_one(*, agent_kind: str, task_id: str, seed: int,
                    server_url: str, headless: bool, record_video: bool,
                    out_traj_dir: Path, out_screens_dir: Path,
                    llm_model: str | None,
                    ui: str = "normal",
                    use_llm_judge: bool = False) -> Trajectory:
-    # Reset the gym for this task (+ optional named UI perturbation).
-    reset = await reset_gym(server_url, task_id, seed, ui=ui)
+    from harness.invalid_episode import INVALID_BROWSER_CRASH, INVALID_RESET
+    from harness.runner import image_settings_for_agent
 
-    pw, browser, ctx_browser, page = await open_browser(
-        server_url=server_url, headless=headless,
-        record_video=record_video,
-        videos_dir=Path("videos") / agent_kind,
-    )
+    # Reset the gym for this task (+ optional named UI perturbation).
+    try:
+        reset = await reset_gym(server_url, task_id, seed, ui=ui)
+    except Exception as e:
+        err = f"{type(e).__name__}: {e}"
+        traj = _invalid_stub_traj(
+            task_id=task_id, seed=seed, agent_kind=agent_kind,
+            llm_model=llm_model, ui=ui,
+            invalid_reason=INVALID_RESET, err=err,
+        )
+        save_trajectory(traj, out_traj_dir)
+        return traj
+
+    try:
+        pw, browser, ctx_browser, page = await open_browser(
+            server_url=server_url, headless=headless,
+            record_video=record_video,
+            videos_dir=Path("videos") / agent_kind,
+        )
+    except Exception as e:
+        err = f"{type(e).__name__}: {e}"
+        traj = _invalid_stub_traj(
+            task_id=task_id, seed=seed, agent_kind=agent_kind,
+            llm_model=llm_model, ui=ui,
+            invalid_reason=INVALID_BROWSER_CRASH, err=err,
+        )
+        save_trajectory(traj, out_traj_dir)
+        return traj
 
     episode_id = uuid.uuid4().hex[:8]
     shots_dir = out_screens_dir / f"{task_id.replace('/', '_')}__{seed}__{episode_id}"
     shots_dir.mkdir(parents=True, exist_ok=True)
 
-    if agent_kind == "oracle":
-        agent_name = "oracle"
-    elif agent_kind == "pixel":
-        agent_name = f"pixel[{llm_model or 'default'}]"
-    elif agent_kind == "pixel_coord":
-        agent_name = f"pixel_coord[{llm_model or 'default'}]"
-    elif agent_kind == "openai":
-        agent_name = f"openai[{llm_model or 'gpt-4o-mini'}]"
-    elif agent_kind == "openai_pixel":
-        agent_name = f"openai_pixel[{llm_model or 'gpt-4o-mini'}]"
-    elif agent_kind == "openai_coord":
-        agent_name = f"openai_coord[{llm_model or 'gpt-4o-mini'}]"
-    elif agent_kind == "qwen":
-        agent_name = f"qwen[{llm_model or 'qwen-vl-plus'}]"
-    else:
-        agent_name = f"llm[{llm_model or 'default'}]"
     traj = Trajectory(
         episode_id=episode_id, task_id=task_id, seed=seed,
-        agent_name=agent_name,
+        agent_name=_agent_name(agent_kind, llm_model),
         started_at=time.time(),
         task_brief=reset["task_brief"],
         task_difficulty=reset["task_difficulty"],
         task_category=reset["task_category"],
         ui_variant=reset.get("ui_variant", ui),
+        image_settings=image_settings_for_agent(agent_kind),
     )
     bctx = BrowserCtx(
         page=page, server_url=server_url, trajectory=traj,
@@ -150,7 +210,7 @@ async def _run_one(*, agent_kind: str, task_id: str, seed: int,
     # Initial snapshot — captured AFTER pre-navigation so initial_url
     # reflects the actual starting page (typically /), not about:blank.
     traj.initial_url = page.url
-    async with httpx.AsyncClient() as c:
+    async with httpx.AsyncClient(headers=harness_headers()) as c:
         snap = (await c.get(f"{server_url}/_harness/snapshot")).json()
     traj.initial_snapshot = snap
 
@@ -203,17 +263,38 @@ async def _run_one(*, agent_kind: str, task_id: str, seed: int,
             await agent.run(bctx, task_brief=reset["task_brief"])
     except Exception as e:
         traj.error = f"{type(e).__name__}: {e}"
+        # Protocol §3A: map infra exceptions to machine-readable invalid reasons
+        # so classify never counts credit/browser crashes as resist/incomplete.
+        from harness.invalid_episode import reason_from_error
+        reason = reason_from_error(traj.error)
+        if reason and not traj.invalid_reason:
+            traj.invalid_reason = reason
+            traj.invalid_detail = (traj.error or "")[:500]
 
     # Final probe
     traj.final_url = page.url
-    async with httpx.AsyncClient() as c:
-        traj.final_snapshot = (await c.get(
-            f"{server_url}/_harness/snapshot",
-        )).json()
-        traj.verifier_result = (await c.post(
-            f"{server_url}/_harness/verify",
-            json={"url": page.url, "step": len(traj.steps)},
-        )).json()
+    async with httpx.AsyncClient(headers=harness_headers()) as c:
+        try:
+            traj.final_snapshot = (await c.get(
+                f"{server_url}/_harness/snapshot",
+            )).json()
+            traj.verifier_result = (await c.post(
+                f"{server_url}/_harness/verify",
+                json={"url": page.url, "step": len(traj.steps)},
+            )).json()
+        except Exception as e:
+            from harness.invalid_episode import (
+                INVALID_VERIFIER_UNAVAILABLE,
+                reason_from_error,
+            )
+            err = f"{type(e).__name__}: {e}"
+            traj.error = traj.error or err
+            if not traj.invalid_reason:
+                traj.invalid_reason = (
+                    reason_from_error(err) or INVALID_VERIFIER_UNAVAILABLE
+                )
+                traj.invalid_detail = err[:500]
+            traj.verifier_result = traj.verifier_result or {}
         # Universal failure classification (task-agnostic). Server runs
         # the rule-based classifier against the real GymState; we pass
         # the behavioural hints it can't see (loop detection, step count).
@@ -321,6 +402,7 @@ def main() -> None:
     ap.add_argument("--out-traj", default=None)
     ap.add_argument("--out-screens", default=None)
     args = ap.parse_args()
+    ensure_harness_token()
 
     tasks = _parse_tasks(args.tasks)
     seeds = _parse_seeds(args.seeds)
@@ -331,7 +413,11 @@ def main() -> None:
 
     # Quick reach check
     try:
-        httpx.get(f"{args.server}/_harness/tasks", timeout=3.0)
+        httpx.get(
+            f"{args.server}/_harness/tasks",
+            timeout=3.0,
+            headers=harness_headers(),
+        ).raise_for_status()
     except Exception as e:
         print(f"ERROR: cannot reach gym at {args.server}: {e}\n"
               "Start the server first: uvicorn server.main:app --reload",

@@ -36,6 +36,102 @@ import httpx
 from playwright.async_api import (
     Browser, BrowserContext, Page, Playwright, async_playwright,
 )
+from harness.auth import harness_headers
+
+
+# --------------------------------------------------------------------------- #
+# Pinned image / viewport settings (Section 1C)
+# --------------------------------------------------------------------------- #
+# Every cascade / eval.run episode must use these capture pins unless an
+# explicit override is passed to open_browser. Provider-side detail knobs are
+# asymmetric by API surface (OpenAI/Qwen have detail="high"; Anthropic Messages
+# has no equivalent) — that asymmetry is recorded, not papered over.
+
+PINNED_VIEWPORT: dict[str, int] = {"width": 1280, "height": 800}
+PINNED_DEVICE_SCALE_FACTOR: float = 1.0
+PINNED_SCREENSHOT_FORMAT: str = "png"
+
+# Documented provider image-encoding settings. Agents must keep these stable;
+# Trajectory.image_settings records which profile applied to the episode.
+PROVIDER_IMAGE_SETTINGS: dict[str, dict[str, Any]] = {
+    "openai_pixel": {
+        "api": "openai",
+        "format": "png",
+        "detail": "high",
+        "detail_field": "image_url.detail / input_image.detail",
+    },
+    "openai_coord": {
+        "api": "openai",
+        "format": "png",
+        "detail": "high",
+        "detail_field": "image_url.detail",
+    },
+    "qwen_pixel": {
+        "api": "openai_compatible",
+        "format": "png",
+        "detail": "high",
+        "detail_field": "image_url.detail",
+        "via": "OpenAIPixelAgent",
+    },
+    "anthropic_pixel": {
+        "api": "anthropic_messages",
+        "format": "png",
+        "detail": None,
+        "detail_field": None,
+        "note": "Anthropic Messages API has no image detail knob",
+    },
+    "anthropic_coord": {
+        "api": "anthropic_messages",
+        "format": "png",
+        "detail": None,
+        "detail_field": None,
+        "note": "Anthropic Messages API has no image detail knob",
+    },
+    "oracle": {
+        "api": None,
+        "format": "png",
+        "detail": None,
+        "detail_field": None,
+        "note": "oracle does not send screenshots to a VLM",
+    },
+    "dom": {
+        "api": None,
+        "format": "png",
+        "detail": None,
+        "detail_field": None,
+        "note": "DOM agents record screenshots but act on JSON, not pixels",
+    },
+}
+
+
+def image_settings_for_agent(agent_kind: str) -> dict[str, Any]:
+    """Return the pinned capture + provider encoding profile for an agent kind."""
+    kind = (agent_kind or "").strip().lower()
+    if kind in ("pixel", "anthropic_pixel"):
+        profile_key = "anthropic_pixel"
+    elif kind in ("pixel_coord", "anthropic_coord"):
+        profile_key = "anthropic_coord"
+    elif kind in ("openai_pixel",):
+        profile_key = "openai_pixel"
+    elif kind in ("openai_coord",):
+        profile_key = "openai_coord"
+    elif kind in ("qwen", "qwen_pixel"):
+        profile_key = "qwen_pixel"
+    elif kind == "oracle":
+        profile_key = "oracle"
+    elif kind in ("llm", "openai", "dom"):
+        profile_key = "dom"
+    else:
+        profile_key = "dom"
+    provider = dict(PROVIDER_IMAGE_SETTINGS[profile_key])
+    return {
+        "viewport": dict(PINNED_VIEWPORT),
+        "device_scale_factor": PINNED_DEVICE_SCALE_FACTOR,
+        "screenshot_format": PINNED_SCREENSHOT_FORMAT,
+        "full_page": False,
+        "provider_profile": profile_key,
+        "provider": provider,
+    }
 
 
 # --------------------------------------------------------------------------- #
@@ -92,6 +188,10 @@ class StepRecord:
     # action. Single-tab episodes record a one-entry strip.
     active_tab: int = 0
     tab_strip: list[dict[str, Any]] = field(default_factory=list)
+    # Section 1C pins: encoded PNG size + devicePixelRatio at capture time.
+    screenshot_width: int | None = None
+    screenshot_height: int | None = None
+    device_pixel_ratio: float | None = None
 
 
 @dataclass
@@ -127,6 +227,14 @@ class Trajectory:
     # 38-class behavioural label, retained as the capability-only fallback).
     vein: str | None = None
     specific_failure: str | None = None
+    # Section 1C: pinned viewport/DPR + provider image-encoding profile for
+    # this episode (see image_settings_for_agent / PINNED_*).
+    image_settings: dict[str, Any] = field(default_factory=dict)
+    # Protocol §3A: infra invalidation (orthogonal to agent_failure_class).
+    # When set, cascade.classify must bucket "invalid" — never break/success/
+    # incomplete. See harness/invalid_episode.py.
+    invalid_reason: str | None = None
+    invalid_detail: str | None = None
 
     def finalize_labels(self) -> None:
         """Set vein + specific_failure from task_id + verifier_result.
@@ -167,6 +275,9 @@ class Trajectory:
             "ui_variant": self.ui_variant,
             "video_path": self.video_path,
             "error": self.error,
+            "image_settings": self.image_settings,
+            "invalid_reason": self.invalid_reason,
+            "invalid_detail": self.invalid_detail,
         }
 
 
@@ -212,7 +323,9 @@ class BrowserCtx:
     trajectory: Trajectory
     screenshot_dir: Path
     http: httpx.Client = field(
-        default_factory=lambda: httpx.Client(timeout=30.0),
+        default_factory=lambda: httpx.Client(
+            timeout=30.0, headers=harness_headers(),
+        ),
     )
     show_cursor: bool = True
     cursor_pause_ms: int = 450  # how long to linger so the human can see
@@ -228,6 +341,64 @@ class BrowserCtx:
     def __post_init__(self) -> None:
         if not self.pages:
             self.pages = [self.page]
+        # Track window.open / target=_blank popups that Playwright creates as
+        # extra pages in this BrowserContext. Without this, only open_tab()
+        # updates ``pages``, so UI popups (e.g. View tracking) never enter the
+        # agent-visible tab strip and screenshots stay on the opener.
+        self._install_popup_tracking()
+
+    def _install_popup_tracking(self) -> None:
+        """Register a BrowserContext 'page' listener (idempotent best-effort)."""
+        try:
+            context = self.page.context
+        except Exception:
+            return
+        if getattr(self, "_popup_tracking_installed", False):
+            return
+
+        def _on_page(new_page: Page) -> None:
+            try:
+                if new_page in self.pages or new_page.is_closed():
+                    return
+                self.pages.append(new_page)
+                self.active_tab = len(self.pages) - 1
+                self.page = new_page
+            except Exception:
+                pass
+
+        try:
+            context.on("page", _on_page)
+            self._popup_tracking_installed = True
+        except Exception:
+            self._popup_tracking_installed = False
+
+    async def _sync_context_pages(self) -> None:
+        """Pull any context pages missing from ``pages`` (popup race safety).
+
+        Prefer the newest unmatched page as active so a just-opened tracking
+        popup becomes the screenshot surface after the click that spawned it.
+        """
+        try:
+            ctx_pages = list(self.page.context.pages)
+        except Exception:
+            return
+        added = False
+        for pg in ctx_pages:
+            try:
+                if pg.is_closed():
+                    continue
+            except Exception:
+                continue
+            if pg not in self.pages:
+                self.pages.append(pg)
+                added = True
+        if added and self.pages:
+            self.active_tab = len(self.pages) - 1
+            self.page = self.pages[self.active_tab]
+            try:
+                await self.page.bring_to_front()
+            except Exception:
+                pass
 
     # --------- helpers the agent calls ---------
     #
@@ -291,6 +462,9 @@ class BrowserCtx:
         await self._animate_cursor(selector, "CLICK")
         try:
             await self.page.click(selector)
+            # window.open popups may race the opener's load; sync first so
+            # wait_for_load_state runs on the popup when one was created.
+            await self._sync_context_pages()
             await self.page.wait_for_load_state("load")
         except Exception as e:
             err = f"{type(e).__name__}: {e}"
@@ -381,8 +555,10 @@ class BrowserCtx:
         try:
             new_page = await self.page.context.new_page()
             await new_page.goto(url, wait_until="load")
-            self.pages.append(new_page)
-            self.active_tab = len(self.pages) - 1
+            # The context 'page' listener may already have appended new_page.
+            if new_page not in self.pages:
+                self.pages.append(new_page)
+            self.active_tab = self.pages.index(new_page)
             self.page = new_page
             await new_page.bring_to_front()
         except Exception as e:
@@ -493,6 +669,7 @@ class BrowserCtx:
             )
             await self.page.mouse.move(*mark.center)
             await self.page.mouse.click(*mark.center)
+            await self._sync_context_pages()
             await self.page.wait_for_load_state("load")
         except Exception as e:
             err = f"{type(e).__name__}: {e}"
@@ -595,6 +772,7 @@ class BrowserCtx:
                                                 detail=f"({x},{y})")
             await self.page.mouse.move(x, y)
             await self.page.mouse.click(x, y)
+            await self._sync_context_pages()
             await self.page.wait_for_load_state("load")
         except Exception as e:
             err = f"{type(e).__name__}: {e}"
@@ -713,10 +891,23 @@ class BrowserCtx:
         step_idx = len(self.trajectory.steps)
         url = self.page.url
 
-        # Screenshot
+        # Screenshot (pinned: viewport PNG, full_page=False)
         shot_path = self.screenshot_dir / f"step_{step_idx:03d}.png"
+        shot_w: int | None = None
+        shot_h: int | None = None
+        dpr: float | None = None
         try:
             await self.page.screenshot(path=str(shot_path), full_page=False)
+            try:
+                from PIL import Image
+                with Image.open(shot_path) as im:
+                    shot_w, shot_h = im.size
+            except Exception:
+                pass
+            try:
+                dpr = float(await self.page.evaluate("() => window.devicePixelRatio"))
+            except Exception:
+                dpr = None
         except Exception:
             shot_path = None
 
@@ -760,6 +951,9 @@ class BrowserCtx:
             facts_visible_or_created=facts,
             active_tab=self.active_tab,
             tab_strip=strip,
+            screenshot_width=shot_w,
+            screenshot_height=shot_h,
+            device_pixel_ratio=dpr,
         )
         self.trajectory.steps.append(rec)
         return rec
@@ -782,9 +976,15 @@ async def open_browser(
     headless: bool = False, record_video: bool = True,
     videos_dir: str | Path = "videos",
     viewport: dict[str, int] | None = None,
+    device_scale_factor: float | None = None,
     inject_cursor: bool = True,
 ) -> tuple[Playwright, Browser, BrowserContext, Page]:
     """Launch a real Chromium and open one page tab.
+
+    Viewport and deviceScaleFactor default to the Section 1C pins
+    (``PINNED_VIEWPORT`` / ``PINNED_DEVICE_SCALE_FACTOR``) so cascade and
+    single-run episodes share identical capture geometry unless explicitly
+    overridden.
 
     If ``inject_cursor`` is True (default), the ghost-cursor JS is
     injected into every page in this context via ``add_init_script``.
@@ -793,8 +993,15 @@ async def open_browser(
     """
     pw = await async_playwright().start()
     browser = await pw.chromium.launch(headless=headless)
+    vp = dict(viewport or PINNED_VIEWPORT)
+    dpr = (
+        PINNED_DEVICE_SCALE_FACTOR
+        if device_scale_factor is None
+        else float(device_scale_factor)
+    )
     ctx_kwargs: dict[str, Any] = {
-        "viewport": viewport or {"width": 1280, "height": 800},
+        "viewport": vp,
+        "device_scale_factor": dpr,
     }
     if record_video:
         Path(videos_dir).mkdir(parents=True, exist_ok=True)
@@ -818,7 +1025,7 @@ async def reset_gym(server_url: str, task_id: str, seed: int,
                     ui: str = "normal") -> dict[str, Any]:
     """Tell the backend to reset state for this task/seed (+ optional named UI
     perturbation, applied to every page of the episode)."""
-    async with httpx.AsyncClient() as c:
+    async with httpx.AsyncClient(headers=harness_headers()) as c:
         r = await c.post(
             f"{server_url}/_harness/reset",
             json={"task_id": task_id, "seed": seed, "ui": ui},
@@ -828,7 +1035,7 @@ async def reset_gym(server_url: str, task_id: str, seed: int,
 
 
 async def final_verify(server_url: str, url: str, step: int) -> dict[str, Any]:
-    async with httpx.AsyncClient() as c:
+    async with httpx.AsyncClient(headers=harness_headers()) as c:
         r = await c.post(
             f"{server_url}/_harness/verify",
             json={"url": url, "step": step},

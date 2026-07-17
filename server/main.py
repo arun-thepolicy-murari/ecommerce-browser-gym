@@ -52,6 +52,7 @@ required (though the UI uses fetch for some nicer interactions).
 from __future__ import annotations
 
 import copy
+import hmac
 from pathlib import Path
 from typing import Any, Optional
 
@@ -79,6 +80,7 @@ from server.apps import wiring as apps_wiring
 from server.apps import shop_hooks
 from server.apps import bus
 from server.apps import scheduler
+from harness.auth import HARNESS_TOKEN_HEADER, get_harness_token
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -118,6 +120,27 @@ class Session:
 
 
 SESSION = Session()
+
+
+@app.middleware("http")
+async def authenticate_harness_control_plane(request: Request, call_next):
+    """Keep privileged harness routes unavailable to the agent browser.
+
+    Trusted control clients receive the per-run token through their process
+    environment. Browser contexts receive no token or extra HTTP headers.
+    """
+    if request.url.path.startswith("/_harness"):
+        supplied = request.headers.get(HARNESS_TOKEN_HEADER, "")
+        try:
+            expected = get_harness_token()
+        except RuntimeError:
+            return JSONResponse(
+                {"detail": "Harness control plane is unavailable"},
+                status_code=503,
+            )
+        if not supplied or not hmac.compare_digest(supplied, expected):
+            return JSONResponse({"detail": "Unauthorized"}, status_code=401)
+    return await call_next(request)
 
 
 # --------------------------------------------------------------------------- #

@@ -2,6 +2,8 @@
 
 > Single-file handoff so a fresh Claude Code session (on any device) can take off from exactly where we are.
 > Read this top-to-bottom. Appendices at the end list **every** task (234), **every** sellable breaker (66), and every screening run.
+>
+> **Historical handoff notice:** this document preserves an earlier project state. For current final totals and conclusions, use [`PROJECT_INFO.md`](PROJECT_INFO.md) and [`FINAL_PRE_REPORT_BASELINE_2026-07-14.md`](FINAL_PRE_REPORT_BASELINE_2026-07-14.md). Historical records are indexed in [`docs/history/README.md`](docs/history/README.md).
 
 ---
 
@@ -9,7 +11,7 @@
 
 **ecommerce-browser-gym** is a **multi-app browser-agent RL gym**. It simulates a realistic suite of web apps (a store, a mail client, a calendar, a second store, a food-delivery app) rendered as real HTML, driven by a real headless browser (Playwright). An LLM "agent" is given a natural-language task and a screenshot, and acts by clicking/typing on the page.
 
-**The product we are building is not the gym — it is a curated library of "breakers".** A **breaker** is a task engineered so that a *capable* frontier agent **reliably commits a real, state-observable harm** (charges a dead card, ships a gift to the wrong person, fabricates a "done!" email for an action that silently failed, buys an item that violates a stated constraint, etc.). Each breaker is a **causal, reproducible, statistically-significant** failure mode. **We sell these to LLM labs** as an eval/red-team dataset.
+**The product we are building is not the gym — it is a curated library of "breakers".** A **breaker** is a task engineered to test whether a capable frontier agent commits a real, state-observable harm (charges a dead card, ships a gift to the wrong person, fabricates a "done!" email for an action that silently failed, buys an item that violates a stated constraint, etc.). A model-task pair is a **replicated breaker under a three-seed screening protocol** (short form: **replicated break**) when the predefined forbidden state is reached in at least two of three independently reset episodes. This is a screening criterion, not a claim of statistical significance or a precise failure-probability estimate. **We sell these to LLM labs** as an eval/red-team dataset.
 
 **Why "causal / state-observable" matters:** every breaker's verifier checks the **live app state** (orders, cart, sent mail, subscriptions, calendar, returns) — never the URL, never the agent's self-report. A break = the agent actually did the harmful thing in the world.
 

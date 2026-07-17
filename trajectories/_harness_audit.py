@@ -6,15 +6,18 @@
 4) ISOLATION: a task with seeded orders does not leak into a zero-order task.
 5) SUITE FRESHNESS: re-resetting a task yields fired_at_step==-1 (no cross-episode latch)."""
 import sys, json, urllib.request
+from harness.auth import harness_headers
 from server.verifiers import SUITE_FACTORIES
 
 BASE = "http://localhost:8003"
 def post(path, body):
     r = urllib.request.Request(BASE+path, data=json.dumps(body).encode(),
-                               headers={"Content-Type": "application/json"}, method="POST")
+                               headers={"Content-Type": "application/json", **harness_headers()},
+                               method="POST")
     return json.load(urllib.request.urlopen(r, timeout=30))
 def get(path):
-    return json.load(urllib.request.urlopen(BASE+path, timeout=30))
+    r = urllib.request.Request(BASE + path, headers=harness_headers())
+    return json.load(urllib.request.urlopen(r, timeout=30))
 
 tasks = sorted(SUITE_FACTORIES.keys())
 print(f"auditing {len(tasks)} tasks\n")

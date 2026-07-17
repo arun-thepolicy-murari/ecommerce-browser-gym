@@ -1,0 +1,63 @@
+{
+  "status": "PARTIAL",
+  "checked_at": "2026-07-16T22:30:00+00:00",
+  "additive_only": true,
+  "additive_only_note": "classify adds invalid bucket only when invalid_reason is set; unset field preserves break/success/incomplete. No sellable outcome relabel.",
+  "additive_only_evidence": [
+    "tests/test_invalid_episode_enum.py::test_classify_additive_without_invalid_reason",
+    "eval/cascade.py::classify (invalid_reason gate before success/break)",
+    "docs/history/audits/INVALID_EPISODE_ENUM_DESIGN_2026-07-16.md"
+  ],
+  "protocol_reasons_required": [
+    "invalid_reset",
+    "invalid_verifier_unavailable",
+    "invalid_browser_crash",
+    "invalid_agent_provider",
+    "invalid_event_delivery",
+    "invalid_instrumentation"
+  ],
+  "enum_in_code": true,
+  "enum_module": "harness/invalid_episode.py",
+  "trajectory_field": "invalid_reason",
+  "trajectory_detail_field": "invalid_detail",
+  "cascade_classify_has_invalid_bucket": true,
+  "cascade_v2_prefers_invalid_reason": true,
+  "emit_sites_landed": [
+    "eval/run.py agent-exception path (reason_from_error)",
+    "eval/run.py verify/snapshot failure (INVALID_VERIFIER_UNAVAILABLE fallback)",
+    "eval/run.py reset_gym failure (INVALID_RESET stub traj)",
+    "eval/run.py open_browser failure (INVALID_BROWSER_CRASH stub traj)"
+  ],
+  "emit_sites_still_open": [
+    "invalid_event_delivery",
+    "invalid_instrumentation"
+  ],
+  "current_inconclusive_mechanism": {
+    "file": "eval/cascade_v2.py",
+    "symbols": [
+      "_INFRA_ERR",
+      "_is_inconclusive",
+      "_run_episode"
+    ],
+    "behavior": "prefer traj.invalid_reason; else retry on infra/zero-step/missing traj heuristics for legacy trajs"
+  },
+  "heuristic_to_protocol_map": {
+    "invalid_agent_provider": "emitted via reason_from_error on agent exceptions; _INFRA_ERR fallback for legacy",
+    "invalid_browser_crash": "dedicated open_browser failure path + reason_from_error Playwright/screenshot strings",
+    "invalid_verifier_unavailable": "emitted on verify/snapshot HTTP failure in eval/run.py",
+    "invalid_reset": "dedicated reset_gym failure path in eval/run.py",
+    "invalid_event_delivery": "not yet dedicated emit",
+    "invalid_instrumentation": "not yet dedicated emit"
+  },
+  "tests": [
+    "tests/test_invalid_episode_enum.py"
+  ],
+  "prior_evidence": [
+    "docs/history/audits/INVALID_EPISODE_ENUM_DESIGN_2026-07-16.md",
+    "eval/reconcile_section3.py",
+    "trajectories/prepublication_section3_20260715/exploit_matrix.json",
+    "docs/history/audits/SECTION_3_REWARD_HACKING_RECONCILIATION_2026-07-15.md"
+  ],
+  "verdict": "Vertical slice additive-only (enum + traj + classify invalid + reset/browser/provider/verify emit). Keep protocol P0 PARTIAL until event-delivery/instrumentation emit sites land and matrix flips CLOSED.",
+  "paid_model_rescreen": false
+}

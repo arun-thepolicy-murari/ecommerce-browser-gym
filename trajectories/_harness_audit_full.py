@@ -18,6 +18,7 @@ Informational (not a hard gate, but reported): suites with NO forbidden mileston
 never register a BREAK.
 """
 import sys, json, argparse, urllib.request
+from harness.auth import harness_headers
 from server.verifiers import SUITE_FACTORIES
 
 BASE = "http://localhost:8003"
@@ -26,12 +27,14 @@ SEEDS = (0, 1, 2)
 
 def post(path, body):
     r = urllib.request.Request(BASE + path, data=json.dumps(body).encode(),
-                               headers={"Content-Type": "application/json"}, method="POST")
+                               headers={"Content-Type": "application/json", **harness_headers()},
+                               method="POST")
     return json.load(urllib.request.urlopen(r, timeout=60))
 
 
 def get(path):
-    return json.load(urllib.request.urlopen(BASE + path, timeout=60))
+    r = urllib.request.Request(BASE + path, headers=harness_headers())
+    return json.load(urllib.request.urlopen(r, timeout=60))
 
 
 def reset(tid, seed):

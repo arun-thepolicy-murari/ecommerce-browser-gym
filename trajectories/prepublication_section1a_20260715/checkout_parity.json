@@ -1,0 +1,1854 @@
+{
+  "protocol_section": "1A checkout route/mutation parity",
+  "task_id": "M73/expired_card_checkout",
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "result": "PASS",
+  "browser_action_used_harness_control": false,
+  "harness_control_usage": [
+    "authenticated reset",
+    "authenticated /_harness/world before/after snapshots"
+  ],
+  "inventory_snapshot_note": "The authenticated world snapshot was cross-checked byte-for-byte against the same live WorldState; the test additionally captured the in-process product catalog because GymState.to_json exposes only products_count, not per-product stock.",
+  "normalization": {
+    "only": [
+      "generated order id",
+      "placed timestamp",
+      "generated shipment id",
+      "generated tracking number",
+      "shipment-event timestamp"
+    ],
+    "substantive_fields_removed": false
+  },
+  "failure_path_boundary": {
+    "comparable_browser_checkout_rejection_available": false,
+    "reason": "The rendered review select can submit only saved payment IDs. place_order rejects login/cart/payment/address shape errors but does not validate card expiry or re-check inventory at commit, so declined-card/OOS checkout rejection parity cannot be tested without fabricating a path the current UI does not expose.",
+    "direct_empty_cart_atomicity_test": "test_place_order_empty_cart_rejects_without_partial_mutation"
+  },
+  "runs": [
+    {
+      "seed": 0,
+      "browser_final_url": "http://127.0.0.1:57006/order/ORD_1EBA5739",
+      "browser_action_path": [
+        "/cart",
+        "/checkout/address",
+        "/checkout/payment",
+        "/checkout/review",
+        "POST /api/checkout/place"
+      ],
+      "direct_action_path": [
+        "mutations.place_order(payment_id='pay_paypal')",
+        "shop_hooks.emit_shop_order_placed(order_id)"
+      ],
+      "raw_diff": {
+        "browser": [
+          {
+            "path": "$.events",
+            "before": [],
+            "after": [
+              {
+                "id": "evt_1",
+                "type": "ShopCheckoutReached",
+                "source_app": "shop",
+                "target_app": "shop",
+                "step": 0,
+                "payload": {},
+                "delivered": false
+              },
+              {
+                "id": "evt_2",
+                "type": "ShopOrderPlaced",
+                "source_app": "shop",
+                "target_app": "mail",
+                "step": 0,
+                "payload": {
+                  "order_id": "ORD_1EBA5739",
+                  "total": 71.08,
+                  "tracking_url": "/account/orders/ORD_1EBA5739/track"
+                },
+                "delivered": true
+              }
+            ]
+          },
+          {
+            "path": "$.mail._next",
+            "before": 4,
+            "after": 5
+          },
+          {
+            "path": "$.mail.inbox.em_4",
+            "before": "<MISSING>",
+            "after": {
+              "id": "em_4",
+              "sender": "orders@shopgym.com",
+              "to": "alice@example.com",
+              "subject": "Your ShopGym order ORD_1EBA5739 is confirmed",
+              "body": "Thanks for your order!\n\nOrder number: ORD_1EBA5739\nTotal: $71.08\n\nUse the tracking link below to see where your package is.\n",
+              "received_at": "2026-05-21T12:05:00",
+              "received_label": "now",
+              "read": false,
+              "labels": [
+                "orders"
+              ],
+              "folder": "inbox",
+              "order_id": "ORD_1EBA5739",
+              "tracking_url": "/account/orders/ORD_1EBA5739/track",
+              "amount_total": 71.08,
+              "eta": null,
+              "product_id": null
+            }
+          },
+          {
+            "path": "$.shop.action_log",
+            "before": [],
+            "after": [
+              {
+                "step": "address",
+                "kind": "checkout_step"
+              },
+              {
+                "step": "payment",
+                "kind": "checkout_step"
+              },
+              {
+                "step": "review",
+                "kind": "checkout_step"
+              },
+              {
+                "step": 0,
+                "kind": "place_order",
+                "order_id": "ORD_1EBA5739",
+                "total": 71.08
+              }
+            ]
+          },
+          {
+            "path": "$.shop.cart.items",
+            "before": [
+              {
+                "id": "ci_coffee",
+                "product_id": "p_coffee_maker",
+                "variant_id": null,
+                "quantity": 1,
+                "gift_wrap": false,
+                "gift_message": "",
+                "ship_to_address_id": null,
+                "scheduled_delivery": null
+              }
+            ],
+            "after": []
+          },
+          {
+            "path": "$.shop.orders.ORD_1EBA5739",
+            "before": "<MISSING>",
+            "after": {
+              "id": "ORD_1EBA5739",
+              "user_id": "u_alice",
+              "placed_at": "2026-07-16T00:48:45.769481+00:00",
+              "items": [
+                {
+                  "id": "ci_coffee",
+                  "product_id": "p_coffee_maker",
+                  "product_name": "Programmable Drip Coffee Maker (12-cup)",
+                  "variant_id": null,
+                  "variant_label": "",
+                  "quantity": 1,
+                  "unit_price": 59.99,
+                  "gift_wrap": false,
+                  "gift_message": "",
+                  "ship_to_address_id": "addr_home",
+                  "scheduled_delivery": null
+                }
+              ],
+              "subtotal": 59.99,
+              "discount": 0.0,
+              "tax": 5.1,
+              "shipping": 5.99,
+              "total": 71.08,
+              "promo_code": null,
+              "payment_id": "pay_paypal",
+              "status": "confirmed",
+              "shipments": [
+                {
+                  "id": "sh_342b4002",
+                  "tracking_number": "1Z8DB0E652E93C",
+                  "carrier": "USPS",
+                  "item_ids": [
+                    "ci_coffee"
+                  ],
+                  "status": "confirmed",
+                  "estimated_delivery": "2026-07-19",
+                  "events": [
+                    {
+                      "timestamp": "2026-07-16T00:48:45.769474+00:00",
+                      "status": "label_created",
+                      "location": "",
+                      "detail": "Shipping label created."
+                    }
+                  ]
+                }
+              ],
+              "is_subscription": false,
+              "subscription_id": null
+            }
+          },
+          {
+            "path": "$.shop.products.p_coffee_maker.stock",
+            "before": 64,
+            "after": 63
+          }
+        ],
+        "direct": [
+          {
+            "path": "$.events",
+            "before": [],
+            "after": [
+              {
+                "id": "evt_1",
+                "type": "ShopCheckoutReached",
+                "source_app": "shop",
+                "target_app": "shop",
+                "step": 0,
+                "payload": {},
+                "delivered": false
+              },
+              {
+                "id": "evt_2",
+                "type": "ShopOrderPlaced",
+                "source_app": "shop",
+                "target_app": "mail",
+                "step": 0,
+                "payload": {
+                  "order_id": "ORD_715FB94F",
+                  "total": 71.08,
+                  "tracking_url": "/account/orders/ORD_715FB94F/track"
+                },
+                "delivered": true
+              }
+            ]
+          },
+          {
+            "path": "$.mail._next",
+            "before": 4,
+            "after": 5
+          },
+          {
+            "path": "$.mail.inbox.em_4",
+            "before": "<MISSING>",
+            "after": {
+              "id": "em_4",
+              "sender": "orders@shopgym.com",
+              "to": "alice@example.com",
+              "subject": "Your ShopGym order ORD_715FB94F is confirmed",
+              "body": "Thanks for your order!\n\nOrder number: ORD_715FB94F\nTotal: $71.08\n\nUse the tracking link below to see where your package is.\n",
+              "received_at": "2026-05-21T12:05:00",
+              "received_label": "now",
+              "read": false,
+              "labels": [
+                "orders"
+              ],
+              "folder": "inbox",
+              "order_id": "ORD_715FB94F",
+              "tracking_url": "/account/orders/ORD_715FB94F/track",
+              "amount_total": 71.08,
+              "eta": null,
+              "product_id": null
+            }
+          },
+          {
+            "path": "$.shop.action_log",
+            "before": [],
+            "after": [
+              {
+                "step": "address",
+                "kind": "checkout_step"
+              },
+              {
+                "step": "payment",
+                "kind": "checkout_step"
+              },
+              {
+                "step": "review",
+                "kind": "checkout_step"
+              },
+              {
+                "step": 0,
+                "kind": "place_order",
+                "order_id": "ORD_715FB94F",
+                "total": 71.08
+              }
+            ]
+          },
+          {
+            "path": "$.shop.cart.items",
+            "before": [
+              {
+                "id": "ci_coffee",
+                "product_id": "p_coffee_maker",
+                "variant_id": null,
+                "quantity": 1,
+                "gift_wrap": false,
+                "gift_message": "",
+                "ship_to_address_id": null,
+                "scheduled_delivery": null
+              }
+            ],
+            "after": []
+          },
+          {
+            "path": "$.shop.orders.ORD_715FB94F",
+            "before": "<MISSING>",
+            "after": {
+              "id": "ORD_715FB94F",
+              "user_id": "u_alice",
+              "placed_at": "2026-07-16T00:48:45.115959+00:00",
+              "items": [
+                {
+                  "id": "ci_coffee",
+                  "product_id": "p_coffee_maker",
+                  "product_name": "Programmable Drip Coffee Maker (12-cup)",
+                  "variant_id": null,
+                  "variant_label": "",
+                  "quantity": 1,
+                  "unit_price": 59.99,
+                  "gift_wrap": false,
+                  "gift_message": "",
+                  "ship_to_address_id": "addr_home",
+                  "scheduled_delivery": null
+                }
+              ],
+              "subtotal": 59.99,
+              "discount": 0.0,
+              "tax": 5.1,
+              "shipping": 5.99,
+              "total": 71.08,
+              "promo_code": null,
+              "payment_id": "pay_paypal",
+              "status": "confirmed",
+              "shipments": [
+                {
+                  "id": "sh_a6024991",
+                  "tracking_number": "1ZC80F2CB75451",
+                  "carrier": "USPS",
+                  "item_ids": [
+                    "ci_coffee"
+                  ],
+                  "status": "confirmed",
+                  "estimated_delivery": "2026-07-19",
+                  "events": [
+                    {
+                      "timestamp": "2026-07-16T00:48:45.115947+00:00",
+                      "status": "label_created",
+                      "location": "",
+                      "detail": "Shipping label created."
+                    }
+                  ]
+                }
+              ],
+              "is_subscription": false,
+              "subscription_id": null
+            }
+          },
+          {
+            "path": "$.shop.products.p_coffee_maker.stock",
+            "before": 64,
+            "after": 63
+          }
+        ]
+      },
+      "normalized_diff": {
+        "browser": [
+          {
+            "path": "$.cart.items",
+            "before": [
+              {
+                "id": "ci_coffee",
+                "product_id": "p_coffee_maker",
+                "variant_id": null,
+                "quantity": 1,
+                "gift_wrap": false,
+                "gift_message": "",
+                "ship_to_address_id": null,
+                "scheduled_delivery": null
+              }
+            ],
+            "after": []
+          },
+          {
+            "path": "$.events",
+            "before": [],
+            "after": [
+              {
+                "id": "evt_1",
+                "type": "ShopCheckoutReached",
+                "source_app": "shop",
+                "target_app": "shop",
+                "step": 0,
+                "payload": {},
+                "delivered": false
+              },
+              {
+                "id": "evt_2",
+                "type": "ShopOrderPlaced",
+                "source_app": "shop",
+                "target_app": "mail",
+                "step": 0,
+                "payload": {
+                  "order_id": "<ORDER_ID>",
+                  "total": 71.08,
+                  "tracking_url": "/account/orders/<ORDER_ID>/track"
+                },
+                "delivered": true
+              }
+            ]
+          },
+          {
+            "path": "$.inventory.p_coffee_maker",
+            "before": 64,
+            "after": 63
+          },
+          {
+            "path": "$.order",
+            "before": null,
+            "after": {
+              "id": "<ORDER_ID>",
+              "user_id": "u_alice",
+              "placed_at": "<TIMESTAMP>",
+              "items": [
+                {
+                  "id": "ci_coffee",
+                  "product_id": "p_coffee_maker",
+                  "product_name": "Programmable Drip Coffee Maker (12-cup)",
+                  "variant_id": null,
+                  "variant_label": "",
+                  "quantity": 1,
+                  "unit_price": 59.99,
+                  "gift_wrap": false,
+                  "gift_message": "",
+                  "ship_to_address_id": "addr_home",
+                  "scheduled_delivery": null
+                }
+              ],
+              "subtotal": 59.99,
+              "discount": 0.0,
+              "tax": 5.1,
+              "shipping": 5.99,
+              "total": 71.08,
+              "promo_code": null,
+              "payment_id": "pay_paypal",
+              "status": "confirmed",
+              "shipments": [
+                {
+                  "id": "<SHIPMENT_ID>",
+                  "tracking_number": "<TRACKING_NUMBER>",
+                  "carrier": "USPS",
+                  "item_ids": [
+                    "ci_coffee"
+                  ],
+                  "status": "confirmed",
+                  "estimated_delivery": "2026-07-19",
+                  "events": [
+                    {
+                      "timestamp": "<TIMESTAMP>",
+                      "status": "label_created",
+                      "location": "",
+                      "detail": "Shipping label created."
+                    }
+                  ]
+                }
+              ],
+              "is_subscription": false,
+              "subscription_id": null
+            }
+          },
+          {
+            "path": "$.receipt",
+            "before": null,
+            "after": {
+              "id": "em_4",
+              "sender": "orders@shopgym.com",
+              "to": "alice@example.com",
+              "subject": "Your ShopGym order <ORDER_ID> is confirmed",
+              "body": "Thanks for your order!\n\nOrder number: <ORDER_ID>\nTotal: $71.08\n\nUse the tracking link below to see where your package is.\n",
+              "received_at": "2026-05-21T12:05:00",
+              "received_label": "now",
+              "read": false,
+              "labels": [
+                "orders"
+              ],
+              "folder": "inbox",
+              "order_id": "<ORDER_ID>",
+              "tracking_url": "/account/orders/<ORDER_ID>/track",
+              "amount_total": 71.08,
+              "eta": null,
+              "product_id": null
+            }
+          }
+        ],
+        "direct": [
+          {
+            "path": "$.cart.items",
+            "before": [
+              {
+                "id": "ci_coffee",
+                "product_id": "p_coffee_maker",
+                "variant_id": null,
+                "quantity": 1,
+                "gift_wrap": false,
+                "gift_message": "",
+                "ship_to_address_id": null,
+                "scheduled_delivery": null
+              }
+            ],
+            "after": []
+          },
+          {
+            "path": "$.events",
+            "before": [],
+            "after": [
+              {
+                "id": "evt_1",
+                "type": "ShopCheckoutReached",
+                "source_app": "shop",
+                "target_app": "shop",
+                "step": 0,
+                "payload": {},
+                "delivered": false
+              },
+              {
+                "id": "evt_2",
+                "type": "ShopOrderPlaced",
+                "source_app": "shop",
+                "target_app": "mail",
+                "step": 0,
+                "payload": {
+                  "order_id": "<ORDER_ID>",
+                  "total": 71.08,
+                  "tracking_url": "/account/orders/<ORDER_ID>/track"
+                },
+                "delivered": true
+              }
+            ]
+          },
+          {
+            "path": "$.inventory.p_coffee_maker",
+            "before": 64,
+            "after": 63
+          },
+          {
+            "path": "$.order",
+            "before": null,
+            "after": {
+              "id": "<ORDER_ID>",
+              "user_id": "u_alice",
+              "placed_at": "<TIMESTAMP>",
+              "items": [
+                {
+                  "id": "ci_coffee",
+                  "product_id": "p_coffee_maker",
+                  "product_name": "Programmable Drip Coffee Maker (12-cup)",
+                  "variant_id": null,
+                  "variant_label": "",
+                  "quantity": 1,
+                  "unit_price": 59.99,
+                  "gift_wrap": false,
+                  "gift_message": "",
+                  "ship_to_address_id": "addr_home",
+                  "scheduled_delivery": null
+                }
+              ],
+              "subtotal": 59.99,
+              "discount": 0.0,
+              "tax": 5.1,
+              "shipping": 5.99,
+              "total": 71.08,
+              "promo_code": null,
+              "payment_id": "pay_paypal",
+              "status": "confirmed",
+              "shipments": [
+                {
+                  "id": "<SHIPMENT_ID>",
+                  "tracking_number": "<TRACKING_NUMBER>",
+                  "carrier": "USPS",
+                  "item_ids": [
+                    "ci_coffee"
+                  ],
+                  "status": "confirmed",
+                  "estimated_delivery": "2026-07-19",
+                  "events": [
+                    {
+                      "timestamp": "<TIMESTAMP>",
+                      "status": "label_created",
+                      "location": "",
+                      "detail": "Shipping label created."
+                    }
+                  ]
+                }
+              ],
+              "is_subscription": false,
+              "subscription_id": null
+            }
+          },
+          {
+            "path": "$.receipt",
+            "before": null,
+            "after": {
+              "id": "em_4",
+              "sender": "orders@shopgym.com",
+              "to": "alice@example.com",
+              "subject": "Your ShopGym order <ORDER_ID> is confirmed",
+              "body": "Thanks for your order!\n\nOrder number: <ORDER_ID>\nTotal: $71.08\n\nUse the tracking link below to see where your package is.\n",
+              "received_at": "2026-05-21T12:05:00",
+              "received_label": "now",
+              "read": false,
+              "labels": [
+                "orders"
+              ],
+              "folder": "inbox",
+              "order_id": "<ORDER_ID>",
+              "tracking_url": "/account/orders/<ORDER_ID>/track",
+              "amount_total": 71.08,
+              "eta": null,
+              "product_id": null
+            }
+          }
+        ]
+      },
+      "normalized_semantic_states_equal": true,
+      "unrelated_state": {
+        "browser_before_sha256": "6450083e78a3e9592e9ae3d12af43d5380018fde91fe730309e219e75de6875e",
+        "browser_after_sha256": "6450083e78a3e9592e9ae3d12af43d5380018fde91fe730309e219e75de6875e",
+        "direct_before_sha256": "6450083e78a3e9592e9ae3d12af43d5380018fde91fe730309e219e75de6875e",
+        "direct_after_sha256": "6450083e78a3e9592e9ae3d12af43d5380018fde91fe730309e219e75de6875e",
+        "unchanged": true
+      },
+      "field_results": {
+        "order_line_quantity_total": "PASS",
+        "inventory_exact_decrement": "PASS",
+        "payment_instrument": "PASS",
+        "ship_to_address_and_line_routing": "PASS",
+        "cart_cleared": "PASS",
+        "receipt_reference_and_recipient": "PASS",
+        "event_and_subscriber_delivery": "PASS",
+        "no_unrelated_mutation": "PASS"
+      }
+    },
+    {
+      "seed": 1,
+      "browser_final_url": "http://127.0.0.1:57006/order/ORD_0B2DEB37",
+      "browser_action_path": [
+        "/cart",
+        "/checkout/address",
+        "/checkout/payment",
+        "/checkout/review",
+        "POST /api/checkout/place"
+      ],
+      "direct_action_path": [
+        "mutations.place_order(payment_id='pay_paypal')",
+        "shop_hooks.emit_shop_order_placed(order_id)"
+      ],
+      "raw_diff": {
+        "browser": [
+          {
+            "path": "$.events",
+            "before": [],
+            "after": [
+              {
+                "id": "evt_1",
+                "type": "ShopCheckoutReached",
+                "source_app": "shop",
+                "target_app": "shop",
+                "step": 0,
+                "payload": {},
+                "delivered": false
+              },
+              {
+                "id": "evt_2",
+                "type": "ShopOrderPlaced",
+                "source_app": "shop",
+                "target_app": "mail",
+                "step": 0,
+                "payload": {
+                  "order_id": "ORD_0B2DEB37",
+                  "total": 71.08,
+                  "tracking_url": "/account/orders/ORD_0B2DEB37/track"
+                },
+                "delivered": true
+              }
+            ]
+          },
+          {
+            "path": "$.mail._next",
+            "before": 4,
+            "after": 5
+          },
+          {
+            "path": "$.mail.inbox.em_4",
+            "before": "<MISSING>",
+            "after": {
+              "id": "em_4",
+              "sender": "orders@shopgym.com",
+              "to": "alice@example.com",
+              "subject": "Your ShopGym order ORD_0B2DEB37 is confirmed",
+              "body": "Thanks for your order!\n\nOrder number: ORD_0B2DEB37\nTotal: $71.08\n\nUse the tracking link below to see where your package is.\n",
+              "received_at": "2026-05-21T12:05:00",
+              "received_label": "now",
+              "read": false,
+              "labels": [
+                "orders"
+              ],
+              "folder": "inbox",
+              "order_id": "ORD_0B2DEB37",
+              "tracking_url": "/account/orders/ORD_0B2DEB37/track",
+              "amount_total": 71.08,
+              "eta": null,
+              "product_id": null
+            }
+          },
+          {
+            "path": "$.shop.action_log",
+            "before": [],
+            "after": [
+              {
+                "step": "address",
+                "kind": "checkout_step"
+              },
+              {
+                "step": "payment",
+                "kind": "checkout_step"
+              },
+              {
+                "step": "review",
+                "kind": "checkout_step"
+              },
+              {
+                "step": 0,
+                "kind": "place_order",
+                "order_id": "ORD_0B2DEB37",
+                "total": 71.08
+              }
+            ]
+          },
+          {
+            "path": "$.shop.cart.items",
+            "before": [
+              {
+                "id": "ci_coffee",
+                "product_id": "p_coffee_maker",
+                "variant_id": null,
+                "quantity": 1,
+                "gift_wrap": false,
+                "gift_message": "",
+                "ship_to_address_id": null,
+                "scheduled_delivery": null
+              }
+            ],
+            "after": []
+          },
+          {
+            "path": "$.shop.orders.ORD_0B2DEB37",
+            "before": "<MISSING>",
+            "after": {
+              "id": "ORD_0B2DEB37",
+              "user_id": "u_alice",
+              "placed_at": "2026-07-16T00:48:46.185478+00:00",
+              "items": [
+                {
+                  "id": "ci_coffee",
+                  "product_id": "p_coffee_maker",
+                  "product_name": "Programmable Drip Coffee Maker (12-cup)",
+                  "variant_id": null,
+                  "variant_label": "",
+                  "quantity": 1,
+                  "unit_price": 59.99,
+                  "gift_wrap": false,
+                  "gift_message": "",
+                  "ship_to_address_id": "addr_home",
+                  "scheduled_delivery": null
+                }
+              ],
+              "subtotal": 59.99,
+              "discount": 0.0,
+              "tax": 5.1,
+              "shipping": 5.99,
+              "total": 71.08,
+              "promo_code": null,
+              "payment_id": "pay_paypal",
+              "status": "confirmed",
+              "shipments": [
+                {
+                  "id": "sh_e11a5bb7",
+                  "tracking_number": "1Z675B337A60D3",
+                  "carrier": "USPS",
+                  "item_ids": [
+                    "ci_coffee"
+                  ],
+                  "status": "confirmed",
+                  "estimated_delivery": "2026-07-19",
+                  "events": [
+                    {
+                      "timestamp": "2026-07-16T00:48:46.185471+00:00",
+                      "status": "label_created",
+                      "location": "",
+                      "detail": "Shipping label created."
+                    }
+                  ]
+                }
+              ],
+              "is_subscription": false,
+              "subscription_id": null
+            }
+          },
+          {
+            "path": "$.shop.products.p_coffee_maker.stock",
+            "before": 64,
+            "after": 63
+          }
+        ],
+        "direct": [
+          {
+            "path": "$.events",
+            "before": [],
+            "after": [
+              {
+                "id": "evt_1",
+                "type": "ShopCheckoutReached",
+                "source_app": "shop",
+                "target_app": "shop",
+                "step": 0,
+                "payload": {},
+                "delivered": false
+              },
+              {
+                "id": "evt_2",
+                "type": "ShopOrderPlaced",
+                "source_app": "shop",
+                "target_app": "mail",
+                "step": 0,
+                "payload": {
+                  "order_id": "ORD_698EE19B",
+                  "total": 71.08,
+                  "tracking_url": "/account/orders/ORD_698EE19B/track"
+                },
+                "delivered": true
+              }
+            ]
+          },
+          {
+            "path": "$.mail._next",
+            "before": 4,
+            "after": 5
+          },
+          {
+            "path": "$.mail.inbox.em_4",
+            "before": "<MISSING>",
+            "after": {
+              "id": "em_4",
+              "sender": "orders@shopgym.com",
+              "to": "alice@example.com",
+              "subject": "Your ShopGym order ORD_698EE19B is confirmed",
+              "body": "Thanks for your order!\n\nOrder number: ORD_698EE19B\nTotal: $71.08\n\nUse the tracking link below to see where your package is.\n",
+              "received_at": "2026-05-21T12:05:00",
+              "received_label": "now",
+              "read": false,
+              "labels": [
+                "orders"
+              ],
+              "folder": "inbox",
+              "order_id": "ORD_698EE19B",
+              "tracking_url": "/account/orders/ORD_698EE19B/track",
+              "amount_total": 71.08,
+              "eta": null,
+              "product_id": null
+            }
+          },
+          {
+            "path": "$.shop.action_log",
+            "before": [],
+            "after": [
+              {
+                "step": "address",
+                "kind": "checkout_step"
+              },
+              {
+                "step": "payment",
+                "kind": "checkout_step"
+              },
+              {
+                "step": "review",
+                "kind": "checkout_step"
+              },
+              {
+                "step": 0,
+                "kind": "place_order",
+                "order_id": "ORD_698EE19B",
+                "total": 71.08
+              }
+            ]
+          },
+          {
+            "path": "$.shop.cart.items",
+            "before": [
+              {
+                "id": "ci_coffee",
+                "product_id": "p_coffee_maker",
+                "variant_id": null,
+                "quantity": 1,
+                "gift_wrap": false,
+                "gift_message": "",
+                "ship_to_address_id": null,
+                "scheduled_delivery": null
+              }
+            ],
+            "after": []
+          },
+          {
+            "path": "$.shop.orders.ORD_698EE19B",
+            "before": "<MISSING>",
+            "after": {
+              "id": "ORD_698EE19B",
+              "user_id": "u_alice",
+              "placed_at": "2026-07-16T00:48:45.836998+00:00",
+              "items": [
+                {
+                  "id": "ci_coffee",
+                  "product_id": "p_coffee_maker",
+                  "product_name": "Programmable Drip Coffee Maker (12-cup)",
+                  "variant_id": null,
+                  "variant_label": "",
+                  "quantity": 1,
+                  "unit_price": 59.99,
+                  "gift_wrap": false,
+                  "gift_message": "",
+                  "ship_to_address_id": "addr_home",
+                  "scheduled_delivery": null
+                }
+              ],
+              "subtotal": 59.99,
+              "discount": 0.0,
+              "tax": 5.1,
+              "shipping": 5.99,
+              "total": 71.08,
+              "promo_code": null,
+              "payment_id": "pay_paypal",
+              "status": "confirmed",
+              "shipments": [
+                {
+                  "id": "sh_17e3d674",
+                  "tracking_number": "1Z2D78813142D2",
+                  "carrier": "USPS",
+                  "item_ids": [
+                    "ci_coffee"
+                  ],
+                  "status": "confirmed",
+                  "estimated_delivery": "2026-07-19",
+                  "events": [
+                    {
+                      "timestamp": "2026-07-16T00:48:45.836991+00:00",
+                      "status": "label_created",
+                      "location": "",
+                      "detail": "Shipping label created."
+                    }
+                  ]
+                }
+              ],
+              "is_subscription": false,
+              "subscription_id": null
+            }
+          },
+          {
+            "path": "$.shop.products.p_coffee_maker.stock",
+            "before": 64,
+            "after": 63
+          }
+        ]
+      },
+      "normalized_diff": {
+        "browser": [
+          {
+            "path": "$.cart.items",
+            "before": [
+              {
+                "id": "ci_coffee",
+                "product_id": "p_coffee_maker",
+                "variant_id": null,
+                "quantity": 1,
+                "gift_wrap": false,
+                "gift_message": "",
+                "ship_to_address_id": null,
+                "scheduled_delivery": null
+              }
+            ],
+            "after": []
+          },
+          {
+            "path": "$.events",
+            "before": [],
+            "after": [
+              {
+                "id": "evt_1",
+                "type": "ShopCheckoutReached",
+                "source_app": "shop",
+                "target_app": "shop",
+                "step": 0,
+                "payload": {},
+                "delivered": false
+              },
+              {
+                "id": "evt_2",
+                "type": "ShopOrderPlaced",
+                "source_app": "shop",
+                "target_app": "mail",
+                "step": 0,
+                "payload": {
+                  "order_id": "<ORDER_ID>",
+                  "total": 71.08,
+                  "tracking_url": "/account/orders/<ORDER_ID>/track"
+                },
+                "delivered": true
+              }
+            ]
+          },
+          {
+            "path": "$.inventory.p_coffee_maker",
+            "before": 64,
+            "after": 63
+          },
+          {
+            "path": "$.order",
+            "before": null,
+            "after": {
+              "id": "<ORDER_ID>",
+              "user_id": "u_alice",
+              "placed_at": "<TIMESTAMP>",
+              "items": [
+                {
+                  "id": "ci_coffee",
+                  "product_id": "p_coffee_maker",
+                  "product_name": "Programmable Drip Coffee Maker (12-cup)",
+                  "variant_id": null,
+                  "variant_label": "",
+                  "quantity": 1,
+                  "unit_price": 59.99,
+                  "gift_wrap": false,
+                  "gift_message": "",
+                  "ship_to_address_id": "addr_home",
+                  "scheduled_delivery": null
+                }
+              ],
+              "subtotal": 59.99,
+              "discount": 0.0,
+              "tax": 5.1,
+              "shipping": 5.99,
+              "total": 71.08,
+              "promo_code": null,
+              "payment_id": "pay_paypal",
+              "status": "confirmed",
+              "shipments": [
+                {
+                  "id": "<SHIPMENT_ID>",
+                  "tracking_number": "<TRACKING_NUMBER>",
+                  "carrier": "USPS",
+                  "item_ids": [
+                    "ci_coffee"
+                  ],
+                  "status": "confirmed",
+                  "estimated_delivery": "2026-07-19",
+                  "events": [
+                    {
+                      "timestamp": "<TIMESTAMP>",
+                      "status": "label_created",
+                      "location": "",
+                      "detail": "Shipping label created."
+                    }
+                  ]
+                }
+              ],
+              "is_subscription": false,
+              "subscription_id": null
+            }
+          },
+          {
+            "path": "$.receipt",
+            "before": null,
+            "after": {
+              "id": "em_4",
+              "sender": "orders@shopgym.com",
+              "to": "alice@example.com",
+              "subject": "Your ShopGym order <ORDER_ID> is confirmed",
+              "body": "Thanks for your order!\n\nOrder number: <ORDER_ID>\nTotal: $71.08\n\nUse the tracking link below to see where your package is.\n",
+              "received_at": "2026-05-21T12:05:00",
+              "received_label": "now",
+              "read": false,
+              "labels": [
+                "orders"
+              ],
+              "folder": "inbox",
+              "order_id": "<ORDER_ID>",
+              "tracking_url": "/account/orders/<ORDER_ID>/track",
+              "amount_total": 71.08,
+              "eta": null,
+              "product_id": null
+            }
+          }
+        ],
+        "direct": [
+          {
+            "path": "$.cart.items",
+            "before": [
+              {
+                "id": "ci_coffee",
+                "product_id": "p_coffee_maker",
+                "variant_id": null,
+                "quantity": 1,
+                "gift_wrap": false,
+                "gift_message": "",
+                "ship_to_address_id": null,
+                "scheduled_delivery": null
+              }
+            ],
+            "after": []
+          },
+          {
+            "path": "$.events",
+            "before": [],
+            "after": [
+              {
+                "id": "evt_1",
+                "type": "ShopCheckoutReached",
+                "source_app": "shop",
+                "target_app": "shop",
+                "step": 0,
+                "payload": {},
+                "delivered": false
+              },
+              {
+                "id": "evt_2",
+                "type": "ShopOrderPlaced",
+                "source_app": "shop",
+                "target_app": "mail",
+                "step": 0,
+                "payload": {
+                  "order_id": "<ORDER_ID>",
+                  "total": 71.08,
+                  "tracking_url": "/account/orders/<ORDER_ID>/track"
+                },
+                "delivered": true
+              }
+            ]
+          },
+          {
+            "path": "$.inventory.p_coffee_maker",
+            "before": 64,
+            "after": 63
+          },
+          {
+            "path": "$.order",
+            "before": null,
+            "after": {
+              "id": "<ORDER_ID>",
+              "user_id": "u_alice",
+              "placed_at": "<TIMESTAMP>",
+              "items": [
+                {
+                  "id": "ci_coffee",
+                  "product_id": "p_coffee_maker",
+                  "product_name": "Programmable Drip Coffee Maker (12-cup)",
+                  "variant_id": null,
+                  "variant_label": "",
+                  "quantity": 1,
+                  "unit_price": 59.99,
+                  "gift_wrap": false,
+                  "gift_message": "",
+                  "ship_to_address_id": "addr_home",
+                  "scheduled_delivery": null
+                }
+              ],
+              "subtotal": 59.99,
+              "discount": 0.0,
+              "tax": 5.1,
+              "shipping": 5.99,
+              "total": 71.08,
+              "promo_code": null,
+              "payment_id": "pay_paypal",
+              "status": "confirmed",
+              "shipments": [
+                {
+                  "id": "<SHIPMENT_ID>",
+                  "tracking_number": "<TRACKING_NUMBER>",
+                  "carrier": "USPS",
+                  "item_ids": [
+                    "ci_coffee"
+                  ],
+                  "status": "confirmed",
+                  "estimated_delivery": "2026-07-19",
+                  "events": [
+                    {
+                      "timestamp": "<TIMESTAMP>",
+                      "status": "label_created",
+                      "location": "",
+                      "detail": "Shipping label created."
+                    }
+                  ]
+                }
+              ],
+              "is_subscription": false,
+              "subscription_id": null
+            }
+          },
+          {
+            "path": "$.receipt",
+            "before": null,
+            "after": {
+              "id": "em_4",
+              "sender": "orders@shopgym.com",
+              "to": "alice@example.com",
+              "subject": "Your ShopGym order <ORDER_ID> is confirmed",
+              "body": "Thanks for your order!\n\nOrder number: <ORDER_ID>\nTotal: $71.08\n\nUse the tracking link below to see where your package is.\n",
+              "received_at": "2026-05-21T12:05:00",
+              "received_label": "now",
+              "read": false,
+              "labels": [
+                "orders"
+              ],
+              "folder": "inbox",
+              "order_id": "<ORDER_ID>",
+              "tracking_url": "/account/orders/<ORDER_ID>/track",
+              "amount_total": 71.08,
+              "eta": null,
+              "product_id": null
+            }
+          }
+        ]
+      },
+      "normalized_semantic_states_equal": true,
+      "unrelated_state": {
+        "browser_before_sha256": "452f04e56ae35f37670808f3260b3cee3120fc01b104f1e939fd0a8ddad25abe",
+        "browser_after_sha256": "452f04e56ae35f37670808f3260b3cee3120fc01b104f1e939fd0a8ddad25abe",
+        "direct_before_sha256": "452f04e56ae35f37670808f3260b3cee3120fc01b104f1e939fd0a8ddad25abe",
+        "direct_after_sha256": "452f04e56ae35f37670808f3260b3cee3120fc01b104f1e939fd0a8ddad25abe",
+        "unchanged": true
+      },
+      "field_results": {
+        "order_line_quantity_total": "PASS",
+        "inventory_exact_decrement": "PASS",
+        "payment_instrument": "PASS",
+        "ship_to_address_and_line_routing": "PASS",
+        "cart_cleared": "PASS",
+        "receipt_reference_and_recipient": "PASS",
+        "event_and_subscriber_delivery": "PASS",
+        "no_unrelated_mutation": "PASS"
+      }
+    },
+    {
+      "seed": 2,
+      "browser_final_url": "http://127.0.0.1:57006/order/ORD_2A90C30C",
+      "browser_action_path": [
+        "/cart",
+        "/checkout/address",
+        "/checkout/payment",
+        "/checkout/review",
+        "POST /api/checkout/place"
+      ],
+      "direct_action_path": [
+        "mutations.place_order(payment_id='pay_paypal')",
+        "shop_hooks.emit_shop_order_placed(order_id)"
+      ],
+      "raw_diff": {
+        "browser": [
+          {
+            "path": "$.events",
+            "before": [],
+            "after": [
+              {
+                "id": "evt_1",
+                "type": "ShopCheckoutReached",
+                "source_app": "shop",
+                "target_app": "shop",
+                "step": 0,
+                "payload": {},
+                "delivered": false
+              },
+              {
+                "id": "evt_2",
+                "type": "ShopOrderPlaced",
+                "source_app": "shop",
+                "target_app": "mail",
+                "step": 0,
+                "payload": {
+                  "order_id": "ORD_2A90C30C",
+                  "total": 71.08,
+                  "tracking_url": "/account/orders/ORD_2A90C30C/track"
+                },
+                "delivered": true
+              }
+            ]
+          },
+          {
+            "path": "$.mail._next",
+            "before": 4,
+            "after": 5
+          },
+          {
+            "path": "$.mail.inbox.em_4",
+            "before": "<MISSING>",
+            "after": {
+              "id": "em_4",
+              "sender": "orders@shopgym.com",
+              "to": "alice@example.com",
+              "subject": "Your ShopGym order ORD_2A90C30C is confirmed",
+              "body": "Thanks for your order!\n\nOrder number: ORD_2A90C30C\nTotal: $71.08\n\nUse the tracking link below to see where your package is.\n",
+              "received_at": "2026-05-21T12:05:00",
+              "received_label": "now",
+              "read": false,
+              "labels": [
+                "orders"
+              ],
+              "folder": "inbox",
+              "order_id": "ORD_2A90C30C",
+              "tracking_url": "/account/orders/ORD_2A90C30C/track",
+              "amount_total": 71.08,
+              "eta": null,
+              "product_id": null
+            }
+          },
+          {
+            "path": "$.shop.action_log",
+            "before": [],
+            "after": [
+              {
+                "step": "address",
+                "kind": "checkout_step"
+              },
+              {
+                "step": "payment",
+                "kind": "checkout_step"
+              },
+              {
+                "step": "review",
+                "kind": "checkout_step"
+              },
+              {
+                "step": 0,
+                "kind": "place_order",
+                "order_id": "ORD_2A90C30C",
+                "total": 71.08
+              }
+            ]
+          },
+          {
+            "path": "$.shop.cart.items",
+            "before": [
+              {
+                "id": "ci_coffee",
+                "product_id": "p_coffee_maker",
+                "variant_id": null,
+                "quantity": 1,
+                "gift_wrap": false,
+                "gift_message": "",
+                "ship_to_address_id": null,
+                "scheduled_delivery": null
+              }
+            ],
+            "after": []
+          },
+          {
+            "path": "$.shop.orders.ORD_2A90C30C",
+            "before": "<MISSING>",
+            "after": {
+              "id": "ORD_2A90C30C",
+              "user_id": "u_alice",
+              "placed_at": "2026-07-16T00:48:46.568723+00:00",
+              "items": [
+                {
+                  "id": "ci_coffee",
+                  "product_id": "p_coffee_maker",
+                  "product_name": "Programmable Drip Coffee Maker (12-cup)",
+                  "variant_id": null,
+                  "variant_label": "",
+                  "quantity": 1,
+                  "unit_price": 59.99,
+                  "gift_wrap": false,
+                  "gift_message": "",
+                  "ship_to_address_id": "addr_home",
+                  "scheduled_delivery": null
+                }
+              ],
+              "subtotal": 59.99,
+              "discount": 0.0,
+              "tax": 5.1,
+              "shipping": 5.99,
+              "total": 71.08,
+              "promo_code": null,
+              "payment_id": "pay_paypal",
+              "status": "confirmed",
+              "shipments": [
+                {
+                  "id": "sh_bc228948",
+                  "tracking_number": "1ZD4E9C92B95D8",
+                  "carrier": "USPS",
+                  "item_ids": [
+                    "ci_coffee"
+                  ],
+                  "status": "confirmed",
+                  "estimated_delivery": "2026-07-19",
+                  "events": [
+                    {
+                      "timestamp": "2026-07-16T00:48:46.568715+00:00",
+                      "status": "label_created",
+                      "location": "",
+                      "detail": "Shipping label created."
+                    }
+                  ]
+                }
+              ],
+              "is_subscription": false,
+              "subscription_id": null
+            }
+          },
+          {
+            "path": "$.shop.products.p_coffee_maker.stock",
+            "before": 64,
+            "after": 63
+          }
+        ],
+        "direct": [
+          {
+            "path": "$.events",
+            "before": [],
+            "after": [
+              {
+                "id": "evt_1",
+                "type": "ShopCheckoutReached",
+                "source_app": "shop",
+                "target_app": "shop",
+                "step": 0,
+                "payload": {},
+                "delivered": false
+              },
+              {
+                "id": "evt_2",
+                "type": "ShopOrderPlaced",
+                "source_app": "shop",
+                "target_app": "mail",
+                "step": 0,
+                "payload": {
+                  "order_id": "ORD_FBE84C20",
+                  "total": 71.08,
+                  "tracking_url": "/account/orders/ORD_FBE84C20/track"
+                },
+                "delivered": true
+              }
+            ]
+          },
+          {
+            "path": "$.mail._next",
+            "before": 4,
+            "after": 5
+          },
+          {
+            "path": "$.mail.inbox.em_4",
+            "before": "<MISSING>",
+            "after": {
+              "id": "em_4",
+              "sender": "orders@shopgym.com",
+              "to": "alice@example.com",
+              "subject": "Your ShopGym order ORD_FBE84C20 is confirmed",
+              "body": "Thanks for your order!\n\nOrder number: ORD_FBE84C20\nTotal: $71.08\n\nUse the tracking link below to see where your package is.\n",
+              "received_at": "2026-05-21T12:05:00",
+              "received_label": "now",
+              "read": false,
+              "labels": [
+                "orders"
+              ],
+              "folder": "inbox",
+              "order_id": "ORD_FBE84C20",
+              "tracking_url": "/account/orders/ORD_FBE84C20/track",
+              "amount_total": 71.08,
+              "eta": null,
+              "product_id": null
+            }
+          },
+          {
+            "path": "$.shop.action_log",
+            "before": [],
+            "after": [
+              {
+                "step": "address",
+                "kind": "checkout_step"
+              },
+              {
+                "step": "payment",
+                "kind": "checkout_step"
+              },
+              {
+                "step": "review",
+                "kind": "checkout_step"
+              },
+              {
+                "step": 0,
+                "kind": "place_order",
+                "order_id": "ORD_FBE84C20",
+                "total": 71.08
+              }
+            ]
+          },
+          {
+            "path": "$.shop.cart.items",
+            "before": [
+              {
+                "id": "ci_coffee",
+                "product_id": "p_coffee_maker",
+                "variant_id": null,
+                "quantity": 1,
+                "gift_wrap": false,
+                "gift_message": "",
+                "ship_to_address_id": null,
+                "scheduled_delivery": null
+              }
+            ],
+            "after": []
+          },
+          {
+            "path": "$.shop.orders.ORD_FBE84C20",
+            "before": "<MISSING>",
+            "after": {
+              "id": "ORD_FBE84C20",
+              "user_id": "u_alice",
+              "placed_at": "2026-07-16T00:48:46.248551+00:00",
+              "items": [
+                {
+                  "id": "ci_coffee",
+                  "product_id": "p_coffee_maker",
+                  "product_name": "Programmable Drip Coffee Maker (12-cup)",
+                  "variant_id": null,
+                  "variant_label": "",
+                  "quantity": 1,
+                  "unit_price": 59.99,
+                  "gift_wrap": false,
+                  "gift_message": "",
+                  "ship_to_address_id": "addr_home",
+                  "scheduled_delivery": null
+                }
+              ],
+              "subtotal": 59.99,
+              "discount": 0.0,
+              "tax": 5.1,
+              "shipping": 5.99,
+              "total": 71.08,
+              "promo_code": null,
+              "payment_id": "pay_paypal",
+              "status": "confirmed",
+              "shipments": [
+                {
+                  "id": "sh_91b5dc73",
+                  "tracking_number": "1Z101BCAE21051",
+                  "carrier": "USPS",
+                  "item_ids": [
+                    "ci_coffee"
+                  ],
+                  "status": "confirmed",
+                  "estimated_delivery": "2026-07-19",
+                  "events": [
+                    {
+                      "timestamp": "2026-07-16T00:48:46.248546+00:00",
+                      "status": "label_created",
+                      "location": "",
+                      "detail": "Shipping label created."
+                    }
+                  ]
+                }
+              ],
+              "is_subscription": false,
+              "subscription_id": null
+            }
+          },
+          {
+            "path": "$.shop.products.p_coffee_maker.stock",
+            "before": 64,
+            "after": 63
+          }
+        ]
+      },
+      "normalized_diff": {
+        "browser": [
+          {
+            "path": "$.cart.items",
+            "before": [
+              {
+                "id": "ci_coffee",
+                "product_id": "p_coffee_maker",
+                "variant_id": null,
+                "quantity": 1,
+                "gift_wrap": false,
+                "gift_message": "",
+                "ship_to_address_id": null,
+                "scheduled_delivery": null
+              }
+            ],
+            "after": []
+          },
+          {
+            "path": "$.events",
+            "before": [],
+            "after": [
+              {
+                "id": "evt_1",
+                "type": "ShopCheckoutReached",
+                "source_app": "shop",
+                "target_app": "shop",
+                "step": 0,
+                "payload": {},
+                "delivered": false
+              },
+              {
+                "id": "evt_2",
+                "type": "ShopOrderPlaced",
+                "source_app": "shop",
+                "target_app": "mail",
+                "step": 0,
+                "payload": {
+                  "order_id": "<ORDER_ID>",
+                  "total": 71.08,
+                  "tracking_url": "/account/orders/<ORDER_ID>/track"
+                },
+                "delivered": true
+              }
+            ]
+          },
+          {
+            "path": "$.inventory.p_coffee_maker",
+            "before": 64,
+            "after": 63
+          },
+          {
+            "path": "$.order",
+            "before": null,
+            "after": {
+              "id": "<ORDER_ID>",
+              "user_id": "u_alice",
+              "placed_at": "<TIMESTAMP>",
+              "items": [
+                {
+                  "id": "ci_coffee",
+                  "product_id": "p_coffee_maker",
+                  "product_name": "Programmable Drip Coffee Maker (12-cup)",
+                  "variant_id": null,
+                  "variant_label": "",
+                  "quantity": 1,
+                  "unit_price": 59.99,
+                  "gift_wrap": false,
+                  "gift_message": "",
+                  "ship_to_address_id": "addr_home",
+                  "scheduled_delivery": null
+                }
+              ],
+              "subtotal": 59.99,
+              "discount": 0.0,
+              "tax": 5.1,
+              "shipping": 5.99,
+              "total": 71.08,
+              "promo_code": null,
+              "payment_id": "pay_paypal",
+              "status": "confirmed",
+              "shipments": [
+                {
+                  "id": "<SHIPMENT_ID>",
+                  "tracking_number": "<TRACKING_NUMBER>",
+                  "carrier": "USPS",
+                  "item_ids": [
+                    "ci_coffee"
+                  ],
+                  "status": "confirmed",
+                  "estimated_delivery": "2026-07-19",
+                  "events": [
+                    {
+                      "timestamp": "<TIMESTAMP>",
+                      "status": "label_created",
+                      "location": "",
+                      "detail": "Shipping label created."
+                    }
+                  ]
+                }
+              ],
+              "is_subscription": false,
+              "subscription_id": null
+            }
+          },
+          {
+            "path": "$.receipt",
+            "before": null,
+            "after": {
+              "id": "em_4",
+              "sender": "orders@shopgym.com",
+              "to": "alice@example.com",
+              "subject": "Your ShopGym order <ORDER_ID> is confirmed",
+              "body": "Thanks for your order!\n\nOrder number: <ORDER_ID>\nTotal: $71.08\n\nUse the tracking link below to see where your package is.\n",
+              "received_at": "2026-05-21T12:05:00",
+              "received_label": "now",
+              "read": false,
+              "labels": [
+                "orders"
+              ],
+              "folder": "inbox",
+              "order_id": "<ORDER_ID>",
+              "tracking_url": "/account/orders/<ORDER_ID>/track",
+              "amount_total": 71.08,
+              "eta": null,
+              "product_id": null
+            }
+          }
+        ],
+        "direct": [
+          {
+            "path": "$.cart.items",
+            "before": [
+              {
+                "id": "ci_coffee",
+                "product_id": "p_coffee_maker",
+                "variant_id": null,
+                "quantity": 1,
+                "gift_wrap": false,
+                "gift_message": "",
+                "ship_to_address_id": null,
+                "scheduled_delivery": null
+              }
+            ],
+            "after": []
+          },
+          {
+            "path": "$.events",
+            "before": [],
+            "after": [
+              {
+                "id": "evt_1",
+                "type": "ShopCheckoutReached",
+                "source_app": "shop",
+                "target_app": "shop",
+                "step": 0,
+                "payload": {},
+                "delivered": false
+              },
+              {
+                "id": "evt_2",
+                "type": "ShopOrderPlaced",
+                "source_app": "shop",
+                "target_app": "mail",
+                "step": 0,
+                "payload": {
+                  "order_id": "<ORDER_ID>",
+                  "total": 71.08,
+                  "tracking_url": "/account/orders/<ORDER_ID>/track"
+                },
+                "delivered": true
+              }
+            ]
+          },
+          {
+            "path": "$.inventory.p_coffee_maker",
+            "before": 64,
+            "after": 63
+          },
+          {
+            "path": "$.order",
+            "before": null,
+            "after": {
+              "id": "<ORDER_ID>",
+              "user_id": "u_alice",
+              "placed_at": "<TIMESTAMP>",
+              "items": [
+                {
+                  "id": "ci_coffee",
+                  "product_id": "p_coffee_maker",
+                  "product_name": "Programmable Drip Coffee Maker (12-cup)",
+                  "variant_id": null,
+                  "variant_label": "",
+                  "quantity": 1,
+                  "unit_price": 59.99,
+                  "gift_wrap": false,
+                  "gift_message": "",
+                  "ship_to_address_id": "addr_home",
+                  "scheduled_delivery": null
+                }
+              ],
+              "subtotal": 59.99,
+              "discount": 0.0,
+              "tax": 5.1,
+              "shipping": 5.99,
+              "total": 71.08,
+              "promo_code": null,
+              "payment_id": "pay_paypal",
+              "status": "confirmed",
+              "shipments": [
+                {
+                  "id": "<SHIPMENT_ID>",
+                  "tracking_number": "<TRACKING_NUMBER>",
+                  "carrier": "USPS",
+                  "item_ids": [
+                    "ci_coffee"
+                  ],
+                  "status": "confirmed",
+                  "estimated_delivery": "2026-07-19",
+                  "events": [
+                    {
+                      "timestamp": "<TIMESTAMP>",
+                      "status": "label_created",
+                      "location": "",
+                      "detail": "Shipping label created."
+                    }
+                  ]
+                }
+              ],
+              "is_subscription": false,
+              "subscription_id": null
+            }
+          },
+          {
+            "path": "$.receipt",
+            "before": null,
+            "after": {
+              "id": "em_4",
+              "sender": "orders@shopgym.com",
+              "to": "alice@example.com",
+              "subject": "Your ShopGym order <ORDER_ID> is confirmed",
+              "body": "Thanks for your order!\n\nOrder number: <ORDER_ID>\nTotal: $71.08\n\nUse the tracking link below to see where your package is.\n",
+              "received_at": "2026-05-21T12:05:00",
+              "received_label": "now",
+              "read": false,
+              "labels": [
+                "orders"
+              ],
+              "folder": "inbox",
+              "order_id": "<ORDER_ID>",
+              "tracking_url": "/account/orders/<ORDER_ID>/track",
+              "amount_total": 71.08,
+              "eta": null,
+              "product_id": null
+            }
+          }
+        ]
+      },
+      "normalized_semantic_states_equal": true,
+      "unrelated_state": {
+        "browser_before_sha256": "706267cd064b0786c96b5195636b85926311a5c3db6edf59af30a0282a0c7e8a",
+        "browser_after_sha256": "706267cd064b0786c96b5195636b85926311a5c3db6edf59af30a0282a0c7e8a",
+        "direct_before_sha256": "706267cd064b0786c96b5195636b85926311a5c3db6edf59af30a0282a0c7e8a",
+        "direct_after_sha256": "706267cd064b0786c96b5195636b85926311a5c3db6edf59af30a0282a0c7e8a",
+        "unchanged": true
+      },
+      "field_results": {
+        "order_line_quantity_total": "PASS",
+        "inventory_exact_decrement": "PASS",
+        "payment_instrument": "PASS",
+        "ship_to_address_and_line_routing": "PASS",
+        "cart_cleared": "PASS",
+        "receipt_reference_and_recipient": "PASS",
+        "event_and_subscriber_delivery": "PASS",
+        "no_unrelated_mutation": "PASS"
+      }
+    }
+  ]
+}

@@ -43,6 +43,7 @@ from pathlib import Path
 import httpx
 
 from agents.oracle_agent import SOLVERS as ORACLE_SOLVERS
+from harness.auth import ensure_harness_token, harness_headers
 from harness.runner import (
     BrowserCtx, Trajectory, open_browser, reset_gym, save_trajectory,
 )
@@ -70,7 +71,7 @@ async def _run_one(*, agent_kind: str, task_id: str, seed: int,
     shots_dir = out_screens_dir / f"{task_id.replace('/', '_')}__{seed}__{episode_id}"
     shots_dir.mkdir(parents=True, exist_ok=True)
 
-    async with httpx.AsyncClient() as c:
+    async with httpx.AsyncClient(headers=harness_headers()) as c:
         r = (await c.get(f"{server_url}/_harness/snapshot")).json()
     traj = Trajectory(
         episode_id=episode_id, task_id=task_id, seed=seed,
@@ -98,7 +99,7 @@ async def _run_one(*, agent_kind: str, task_id: str, seed: int,
         traj.error = f"{type(e).__name__}: {e}"
 
     traj.final_url = page.url
-    async with httpx.AsyncClient() as c:
+    async with httpx.AsyncClient(headers=harness_headers()) as c:
         traj.final_snapshot = (await c.get(
             f"{server_url}/_harness/snapshot",
         )).json()
@@ -178,6 +179,7 @@ def _print_scorecard(by_task: list[dict], k: int) -> None:
 # --------------------------------------------------------------------------- #
 
 def main() -> None:
+    ensure_harness_token()
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--agent", choices=["oracle", "llm"], default="llm")
     ap.add_argument("--tasks", default="all",
@@ -201,7 +203,11 @@ def main() -> None:
 
     # Reachability check
     try:
-        httpx.get(f"{args.server}/_harness/tasks", timeout=3.0)
+        httpx.get(
+            f"{args.server}/_harness/tasks",
+            timeout=3.0,
+            headers=harness_headers(),
+        ).raise_for_status()
     except Exception as e:
         print(f"ERROR: cannot reach gym at {args.server}: {e}\n"
               "Start the server first: uvicorn server.main:app --reload",

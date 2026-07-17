@@ -1,0 +1,70 @@
+{
+  "status": "DISCLOSED_INTENTIONAL_NON_EQUIVALENCE",
+  "paid_model_rescreen": false,
+  "within_modality_closed": true,
+  "cross_modality_equivalent": false,
+  "capability_matrix": {
+    "navigate_css": {
+      "dom": true,
+      "pixel": false,
+      "coord": false
+    },
+    "select_native": {
+      "dom": true,
+      "pixel": false,
+      "coord": false
+    },
+    "som_mark_click": {
+      "dom": false,
+      "pixel": true,
+      "coord": false
+    },
+    "xy_click": {
+      "dom": false,
+      "pixel": false,
+      "coord": true
+    },
+    "wait_tool": {
+      "dom": false,
+      "pixel": true,
+      "coord": true
+    },
+    "arrowdown_select_workaround": {
+      "dom": false,
+      "pixel": true,
+      "coord": true,
+      "note": "Documented in pixel SYSTEM; 32 sellable gold paths use ctx.select"
+    }
+  },
+  "affected_sellable_native_select": 32,
+  "asymmetries": [
+    {
+      "id": "dom_vs_pixel_select",
+      "severity": "DOM has select(); pixel/coord have no select_option \u2014 must ArrowDown-cycle native <select> (32 sellable gold paths).",
+      "dom_only": [
+        "check",
+        "fill",
+        "navigate",
+        "select",
+        "submit"
+      ],
+      "pixel_only": [
+        "key",
+        "scroll",
+        "type_text",
+        "wait"
+      ]
+    },
+    {
+      "id": "dom_missing_wait",
+      "severity": "Pixel/coord expose wait(); Anthropic/OpenAI DOM TOOLS lists omit wait (async tick still exists on BrowserCtx for oracle/pixel paths).",
+      "dom_has_wait": false,
+      "pixel_has_wait": true
+    },
+    {
+      "id": "dom_vs_coord_grounding",
+      "severity": "DOM uses CSS selectors; coord uses click_at/type_at pixel coords; pixel uses SoM marks."
+    }
+  ],
+  "verdict": "Cross-modality action-space equivalence is false by architecture, not by missing evidence. Within-modality Anthropic/OpenAI/Qwen tool names match. Protocol P0 stays open for any claim that pixel\u2261DOM; disclosure artifact records intentional non-equivalence."
+}

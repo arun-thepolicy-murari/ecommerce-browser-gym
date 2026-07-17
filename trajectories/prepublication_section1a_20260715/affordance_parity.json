@@ -1,0 +1,1825 @@
+{
+  "protocol_section": "1A major-affordance route/mutation parity",
+  "active_sellables": 85,
+  "inventory": {
+    "shop_order_checkout_and_line_configuration": [
+      "M46",
+      "M57",
+      "M66",
+      "M68",
+      "M70",
+      "M72",
+      "M73",
+      "M74",
+      "M75",
+      "M77",
+      "M78",
+      "M79",
+      "M81",
+      "M82",
+      "M83",
+      "M84",
+      "M85",
+      "M86",
+      "M87",
+      "M88",
+      "M89",
+      "M90",
+      "M91",
+      "M92",
+      "M93",
+      "M94",
+      "M95",
+      "M96",
+      "M97",
+      "M98",
+      "M99",
+      "M100",
+      "M101",
+      "M102",
+      "M103",
+      "M104",
+      "M111",
+      "M141",
+      "M142",
+      "M148",
+      "M207",
+      "M210",
+      "M214",
+      "M219",
+      "M227",
+      "M252",
+      "M271",
+      "M272",
+      "M307",
+      "M312"
+    ],
+    "mail_send": [
+      "M37",
+      "M39",
+      "M40",
+      "M41",
+      "M47",
+      "M51",
+      "M57",
+      "M59",
+      "M76",
+      "M80",
+      "M105",
+      "M106",
+      "M107",
+      "M108",
+      "M109",
+      "M111",
+      "M115",
+      "M116",
+      "M117",
+      "M141",
+      "M142",
+      "M148",
+      "M164",
+      "M200",
+      "M211",
+      "M212",
+      "M213",
+      "M214",
+      "M217",
+      "M219",
+      "M220",
+      "M224",
+      "M227",
+      "M248",
+      "M252",
+      "M271",
+      "M272",
+      "M312",
+      "M343",
+      "M346",
+      "M348",
+      "M349",
+      "M354",
+      "M362",
+      "M366"
+    ],
+    "calendar_create": [
+      "M43",
+      "M57"
+    ],
+    "calendar_update_reschedule": [
+      "M80",
+      "M200"
+    ],
+    "calendar_delete": [
+      "M366"
+    ],
+    "food_order": [
+      "M248",
+      "M343",
+      "M346",
+      "M348",
+      "M349",
+      "M354",
+      "M362"
+    ],
+    "marketplace_order": [
+      "M354"
+    ],
+    "subscription_create": [
+      "M61"
+    ],
+    "subscription_cancel": [
+      "M76",
+      "M164",
+      "M212",
+      "M217"
+    ],
+    "return_initiation": [
+      "M41",
+      "M47",
+      "M109"
+    ],
+    "shop_order_cancel": [
+      "M108",
+      "M211"
+    ],
+    "payment_method_or_default_change": [
+      "M117",
+      "M213"
+    ],
+    "address_or_default_change": [
+      "M220"
+    ]
+  },
+  "coverage": {
+    "tested_archetypes": [
+      "shop_order_checkout_and_line_configuration",
+      "food_order",
+      "calendar_create",
+      "calendar_update_reschedule",
+      "calendar_delete",
+      "marketplace_order",
+      "mail_send",
+      "subscription_create",
+      "subscription_cancel",
+      "return_initiation",
+      "payment_method_or_default_change",
+      "address_or_default_change"
+    ],
+    "tested_count": 12,
+    "structural_exceptions": [
+      "shop_order_cancel"
+    ],
+    "exception_count": 1,
+    "total_count": 13,
+    "status": "CLOSED_WITH_NAMED_EXCEPTIONS",
+    "score": "12/13 PASS + 1 STRUCTURAL_EXCEPTION",
+    "checkout_evidence": "checkout_parity.json",
+    "untested": []
+  },
+  "normalization": {
+    "generated_fields_removed": [
+      "subscription_create: subscription id + next_delivery_date",
+      "return_initiation: return id + created_at + event payload return_id"
+    ],
+    "note": "Calendar/Mail/Food/ValueMart mint deterministic IDs for these fixtures. Subscription create and return initiation mint secrets.token_hex IDs and clock timestamps, so those affordances compare normalized payloads."
+  },
+  "runs": [
+    {
+      "affordance": "food_order",
+      "seed": 0,
+      "raw_semantic_states_equal": true,
+      "normalized_semantic_states_equal": true,
+      "semantic_before_sha256": "e79c5d7d0ced27f849473731128a230e48c2338c56c5e5971e1173d9efa95827",
+      "semantic_after_sha256": "fa1ba74fe26bf685eb9fcc6844e20173a85c4c16219fc738ebe34a4808905d5b",
+      "raw_diff": [
+        {
+          "path": "$.events",
+          "before": [],
+          "after": [
+            {
+              "id": "evt_1",
+              "type": "FoodOrderPlaced",
+              "source_app": "food",
+              "target_app": "mail",
+              "step": 0,
+              "payload": {
+                "order_id": "FOOD-1041",
+                "restaurant": "Burger Barn",
+                "subtotal": 20.0,
+                "delivery_fee": 2.49,
+                "total": 22.49,
+                "eta": "7:20 PM",
+                "items": [
+                  {
+                    "name": "Classic Cheeseburger",
+                    "qty": 2
+                  }
+                ],
+                "delivery_note": "Please leave at the door; unavailable 6\u20137 PM."
+              },
+              "delivered": true
+            }
+          ]
+        },
+        {
+          "path": "$.food._next",
+          "before": 1,
+          "after": 2
+        },
+        {
+          "path": "$.food.orders.FOOD-1041",
+          "before": "<MISSING>",
+          "after": {
+            "id": "FOOD-1041",
+            "restaurant_id": "r_burger",
+            "restaurant_name": "Burger Barn",
+            "items": [
+              {
+                "dish_id": "d_classic",
+                "restaurant_id": "r_burger",
+                "name": "Classic Cheeseburger",
+                "unit_price": 10.0,
+                "quantity": 2
+              }
+            ],
+            "subtotal": 20.0,
+            "delivery_fee": 2.49,
+            "total": 22.49,
+            "placed_at": "2026-05-21T18:30:00",
+            "eta_label": "7:20 PM",
+            "status": "preparing",
+            "delivery_note": "Please leave at the door; unavailable 6\u20137 PM."
+          }
+        },
+        {
+          "path": "$.receipts.em_5",
+          "before": "<MISSING>",
+          "after": {
+            "id": "em_5",
+            "sender": "receipts@foodapp.com",
+            "to": "alice@shopgym.com",
+            "subject": "Your Burger Barn order is on the way",
+            "body": "Thanks for your order from Burger Barn!\n\n  2 x Classic Cheeseburger\n\nSubtotal: $20.00\nDelivery: $2.49\nTotal charged: $22.49\n\nEstimated arrival: 7:20 PM\n",
+            "received_at": "2026-05-21T18:31:00",
+            "received_label": "now",
+            "read": false,
+            "labels": [
+              "receipts"
+            ],
+            "folder": "inbox",
+            "order_id": "FOOD-1041",
+            "tracking_url": null,
+            "amount_total": 22.49,
+            "eta": "7:20 PM",
+            "product_id": null
+          }
+        }
+      ],
+      "unrelated_state_unchanged": true,
+      "browser_network_request_count": 24,
+      "browser_action_trace": [
+        "GET /food/restaurant/r_burger",
+        "POST /food/cart/add (d_classic, quantity 1) x2",
+        "GET /food/cart",
+        "POST /food/checkout (generic delivery note)",
+        "GET /food/order/<generated>"
+      ],
+      "privileged_request_count": 0,
+      "control_header_request_count": 0
+    },
+    {
+      "affordance": "food_order",
+      "seed": 1,
+      "raw_semantic_states_equal": true,
+      "normalized_semantic_states_equal": true,
+      "semantic_before_sha256": "e79c5d7d0ced27f849473731128a230e48c2338c56c5e5971e1173d9efa95827",
+      "semantic_after_sha256": "fa1ba74fe26bf685eb9fcc6844e20173a85c4c16219fc738ebe34a4808905d5b",
+      "raw_diff": [
+        {
+          "path": "$.events",
+          "before": [],
+          "after": [
+            {
+              "id": "evt_1",
+              "type": "FoodOrderPlaced",
+              "source_app": "food",
+              "target_app": "mail",
+              "step": 0,
+              "payload": {
+                "order_id": "FOOD-1041",
+                "restaurant": "Burger Barn",
+                "subtotal": 20.0,
+                "delivery_fee": 2.49,
+                "total": 22.49,
+                "eta": "7:20 PM",
+                "items": [
+                  {
+                    "name": "Classic Cheeseburger",
+                    "qty": 2
+                  }
+                ],
+                "delivery_note": "Please leave at the door; unavailable 6\u20137 PM."
+              },
+              "delivered": true
+            }
+          ]
+        },
+        {
+          "path": "$.food._next",
+          "before": 1,
+          "after": 2
+        },
+        {
+          "path": "$.food.orders.FOOD-1041",
+          "before": "<MISSING>",
+          "after": {
+            "id": "FOOD-1041",
+            "restaurant_id": "r_burger",
+            "restaurant_name": "Burger Barn",
+            "items": [
+              {
+                "dish_id": "d_classic",
+                "restaurant_id": "r_burger",
+                "name": "Classic Cheeseburger",
+                "unit_price": 10.0,
+                "quantity": 2
+              }
+            ],
+            "subtotal": 20.0,
+            "delivery_fee": 2.49,
+            "total": 22.49,
+            "placed_at": "2026-05-21T18:30:00",
+            "eta_label": "7:20 PM",
+            "status": "preparing",
+            "delivery_note": "Please leave at the door; unavailable 6\u20137 PM."
+          }
+        },
+        {
+          "path": "$.receipts.em_5",
+          "before": "<MISSING>",
+          "after": {
+            "id": "em_5",
+            "sender": "receipts@foodapp.com",
+            "to": "alice@shopgym.com",
+            "subject": "Your Burger Barn order is on the way",
+            "body": "Thanks for your order from Burger Barn!\n\n  2 x Classic Cheeseburger\n\nSubtotal: $20.00\nDelivery: $2.49\nTotal charged: $22.49\n\nEstimated arrival: 7:20 PM\n",
+            "received_at": "2026-05-21T18:31:00",
+            "received_label": "now",
+            "read": false,
+            "labels": [
+              "receipts"
+            ],
+            "folder": "inbox",
+            "order_id": "FOOD-1041",
+            "tracking_url": null,
+            "amount_total": 22.49,
+            "eta": "7:20 PM",
+            "product_id": null
+          }
+        }
+      ],
+      "unrelated_state_unchanged": true,
+      "browser_network_request_count": 23,
+      "browser_action_trace": [
+        "GET /food/restaurant/r_burger",
+        "POST /food/cart/add (d_classic, quantity 1) x2",
+        "GET /food/cart",
+        "POST /food/checkout (generic delivery note)",
+        "GET /food/order/<generated>"
+      ],
+      "privileged_request_count": 0,
+      "control_header_request_count": 0
+    },
+    {
+      "affordance": "food_order",
+      "seed": 2,
+      "raw_semantic_states_equal": true,
+      "normalized_semantic_states_equal": true,
+      "semantic_before_sha256": "e79c5d7d0ced27f849473731128a230e48c2338c56c5e5971e1173d9efa95827",
+      "semantic_after_sha256": "fa1ba74fe26bf685eb9fcc6844e20173a85c4c16219fc738ebe34a4808905d5b",
+      "raw_diff": [
+        {
+          "path": "$.events",
+          "before": [],
+          "after": [
+            {
+              "id": "evt_1",
+              "type": "FoodOrderPlaced",
+              "source_app": "food",
+              "target_app": "mail",
+              "step": 0,
+              "payload": {
+                "order_id": "FOOD-1041",
+                "restaurant": "Burger Barn",
+                "subtotal": 20.0,
+                "delivery_fee": 2.49,
+                "total": 22.49,
+                "eta": "7:20 PM",
+                "items": [
+                  {
+                    "name": "Classic Cheeseburger",
+                    "qty": 2
+                  }
+                ],
+                "delivery_note": "Please leave at the door; unavailable 6\u20137 PM."
+              },
+              "delivered": true
+            }
+          ]
+        },
+        {
+          "path": "$.food._next",
+          "before": 1,
+          "after": 2
+        },
+        {
+          "path": "$.food.orders.FOOD-1041",
+          "before": "<MISSING>",
+          "after": {
+            "id": "FOOD-1041",
+            "restaurant_id": "r_burger",
+            "restaurant_name": "Burger Barn",
+            "items": [
+              {
+                "dish_id": "d_classic",
+                "restaurant_id": "r_burger",
+                "name": "Classic Cheeseburger",
+                "unit_price": 10.0,
+                "quantity": 2
+              }
+            ],
+            "subtotal": 20.0,
+            "delivery_fee": 2.49,
+            "total": 22.49,
+            "placed_at": "2026-05-21T18:30:00",
+            "eta_label": "7:20 PM",
+            "status": "preparing",
+            "delivery_note": "Please leave at the door; unavailable 6\u20137 PM."
+          }
+        },
+        {
+          "path": "$.receipts.em_5",
+          "before": "<MISSING>",
+          "after": {
+            "id": "em_5",
+            "sender": "receipts@foodapp.com",
+            "to": "alice@shopgym.com",
+            "subject": "Your Burger Barn order is on the way",
+            "body": "Thanks for your order from Burger Barn!\n\n  2 x Classic Cheeseburger\n\nSubtotal: $20.00\nDelivery: $2.49\nTotal charged: $22.49\n\nEstimated arrival: 7:20 PM\n",
+            "received_at": "2026-05-21T18:31:00",
+            "received_label": "now",
+            "read": false,
+            "labels": [
+              "receipts"
+            ],
+            "folder": "inbox",
+            "order_id": "FOOD-1041",
+            "tracking_url": null,
+            "amount_total": 22.49,
+            "eta": "7:20 PM",
+            "product_id": null
+          }
+        }
+      ],
+      "unrelated_state_unchanged": true,
+      "browser_network_request_count": 23,
+      "browser_action_trace": [
+        "GET /food/restaurant/r_burger",
+        "POST /food/cart/add (d_classic, quantity 1) x2",
+        "GET /food/cart",
+        "POST /food/checkout (generic delivery note)",
+        "GET /food/order/<generated>"
+      ],
+      "privileged_request_count": 0,
+      "control_header_request_count": 0
+    },
+    {
+      "affordance": "calendar_create",
+      "seed": 0,
+      "raw_semantic_states_equal": true,
+      "normalized_semantic_states_equal": true,
+      "semantic_before_sha256": "b54a4cd5b653e69d146399d98d2e49086bc7f485c8607f8800cf602ae888505b",
+      "semantic_after_sha256": "fe4f9e27e51bc18b6205e84a1d8427f19215126046606678568e019a6c20197f",
+      "raw_diff": [
+        {
+          "path": "$.calendar._next",
+          "before": 4,
+          "after": 5
+        },
+        {
+          "path": "$.calendar.events.ev_4",
+          "before": "<MISSING>",
+          "after": {
+            "id": "ev_4",
+            "title": "Package delivery \u2014 be home (ORD-5501)",
+            "day": "2026-05-21",
+            "day_label": "Today (Thu May 21)",
+            "start": "19:00",
+            "end": "20:00",
+            "source": "user"
+          }
+        }
+      ],
+      "unrelated_state_unchanged": true,
+      "browser_network_request_count": 9,
+      "browser_action_trace": [
+        "GET /calendar/new",
+        "POST /calendar/create (title/day/start/end)",
+        "GET /calendar"
+      ],
+      "privileged_request_count": 0,
+      "control_header_request_count": 0
+    },
+    {
+      "affordance": "calendar_create",
+      "seed": 1,
+      "raw_semantic_states_equal": true,
+      "normalized_semantic_states_equal": true,
+      "semantic_before_sha256": "f3fbf9b89755298bbd9c4578efeed9a61227e5718529f5bdd56c24f48f6a5905",
+      "semantic_after_sha256": "865cb19880ec25491fec45953b81221207e304fd0b2d53513384019e50051ce2",
+      "raw_diff": [
+        {
+          "path": "$.calendar._next",
+          "before": 5,
+          "after": 6
+        },
+        {
+          "path": "$.calendar.events.ev_5",
+          "before": "<MISSING>",
+          "after": {
+            "id": "ev_5",
+            "title": "Package delivery \u2014 be home (ORD-5501)",
+            "day": "2026-05-21",
+            "day_label": "Today (Thu May 21)",
+            "start": "19:00",
+            "end": "20:00",
+            "source": "user"
+          }
+        }
+      ],
+      "unrelated_state_unchanged": true,
+      "browser_network_request_count": 9,
+      "browser_action_trace": [
+        "GET /calendar/new",
+        "POST /calendar/create (title/day/start/end)",
+        "GET /calendar"
+      ],
+      "privileged_request_count": 0,
+      "control_header_request_count": 0
+    },
+    {
+      "affordance": "calendar_create",
+      "seed": 2,
+      "raw_semantic_states_equal": true,
+      "normalized_semantic_states_equal": true,
+      "semantic_before_sha256": "b54a4cd5b653e69d146399d98d2e49086bc7f485c8607f8800cf602ae888505b",
+      "semantic_after_sha256": "fe4f9e27e51bc18b6205e84a1d8427f19215126046606678568e019a6c20197f",
+      "raw_diff": [
+        {
+          "path": "$.calendar._next",
+          "before": 4,
+          "after": 5
+        },
+        {
+          "path": "$.calendar.events.ev_4",
+          "before": "<MISSING>",
+          "after": {
+            "id": "ev_4",
+            "title": "Package delivery \u2014 be home (ORD-5501)",
+            "day": "2026-05-21",
+            "day_label": "Today (Thu May 21)",
+            "start": "19:00",
+            "end": "20:00",
+            "source": "user"
+          }
+        }
+      ],
+      "unrelated_state_unchanged": true,
+      "browser_network_request_count": 9,
+      "browser_action_trace": [
+        "GET /calendar/new",
+        "POST /calendar/create (title/day/start/end)",
+        "GET /calendar"
+      ],
+      "privileged_request_count": 0,
+      "control_header_request_count": 0
+    },
+    {
+      "affordance": "calendar_update_reschedule",
+      "seed": 0,
+      "raw_semantic_states_equal": true,
+      "normalized_semantic_states_equal": true,
+      "semantic_before_sha256": "dec300b4f404b3dd1a9bf7065e96ec702b4f3f1f14517d5dbd0070f2fb8f56a2",
+      "semantic_after_sha256": "cd2c65cc7c8c4a674d3ca5171110d22f8948350075f65d68d73cf04a93ef1329",
+      "raw_diff": [
+        {
+          "path": "$.calendar.events.ev_6.end",
+          "before": "10:45",
+          "after": "11:00"
+        },
+        {
+          "path": "$.calendar.events.ev_6.start",
+          "before": "10:00",
+          "after": "10:15"
+        }
+      ],
+      "unrelated_state_unchanged": true,
+      "browser_network_request_count": 9,
+      "browser_action_trace": [
+        "GET /calendar/edit/<dentist_event_id>",
+        "POST /calendar/update (start 10:15 / end 11:00)",
+        "GET /calendar"
+      ],
+      "privileged_request_count": 0,
+      "control_header_request_count": 0
+    },
+    {
+      "affordance": "calendar_update_reschedule",
+      "seed": 1,
+      "raw_semantic_states_equal": true,
+      "normalized_semantic_states_equal": true,
+      "semantic_before_sha256": "b1e890a9ad374cb25769e853b07c7ab52915872f755e1526002eee79f053209c",
+      "semantic_after_sha256": "d62bb0bd84e0faed0e253e1b98323d402346925f0e2914a59d4d299d2025866b",
+      "raw_diff": [
+        {
+          "path": "$.calendar.events.ev_7.end",
+          "before": "10:45",
+          "after": "11:00"
+        },
+        {
+          "path": "$.calendar.events.ev_7.start",
+          "before": "10:00",
+          "after": "10:15"
+        }
+      ],
+      "unrelated_state_unchanged": true,
+      "browser_network_request_count": 9,
+      "browser_action_trace": [
+        "GET /calendar/edit/<dentist_event_id>",
+        "POST /calendar/update (start 10:15 / end 11:00)",
+        "GET /calendar"
+      ],
+      "privileged_request_count": 0,
+      "control_header_request_count": 0
+    },
+    {
+      "affordance": "calendar_update_reschedule",
+      "seed": 2,
+      "raw_semantic_states_equal": true,
+      "normalized_semantic_states_equal": true,
+      "semantic_before_sha256": "dec300b4f404b3dd1a9bf7065e96ec702b4f3f1f14517d5dbd0070f2fb8f56a2",
+      "semantic_after_sha256": "cd2c65cc7c8c4a674d3ca5171110d22f8948350075f65d68d73cf04a93ef1329",
+      "raw_diff": [
+        {
+          "path": "$.calendar.events.ev_6.end",
+          "before": "10:45",
+          "after": "11:00"
+        },
+        {
+          "path": "$.calendar.events.ev_6.start",
+          "before": "10:00",
+          "after": "10:15"
+        }
+      ],
+      "unrelated_state_unchanged": true,
+      "browser_network_request_count": 9,
+      "browser_action_trace": [
+        "GET /calendar/edit/<dentist_event_id>",
+        "POST /calendar/update (start 10:15 / end 11:00)",
+        "GET /calendar"
+      ],
+      "privileged_request_count": 0,
+      "control_header_request_count": 0
+    },
+    {
+      "affordance": "calendar_delete",
+      "seed": 0,
+      "raw_semantic_states_equal": true,
+      "normalized_semantic_states_equal": true,
+      "semantic_before_sha256": "4d40eac8b63181902b69dea96808ad5e8f5696d5e31216bfbd0c82f326e7a5b7",
+      "semantic_after_sha256": "02fbf31cc7ff554ea8318738cd268701843b06e190a6979a03b7b746ca5f7daa",
+      "raw_diff": [
+        {
+          "path": "$.calendar.events.cal_m366_vendor_review",
+          "before": {
+            "id": "cal_m366_vendor_review",
+            "title": "Vendor Review",
+            "day": "2026-05-22",
+            "day_label": "Tomorrow (Fri May 22)",
+            "start": "14:00",
+            "end": "15:00",
+            "source": "seed"
+          },
+          "after": "<MISSING>"
+        }
+      ],
+      "unrelated_state_unchanged": true,
+      "browser_network_request_count": 9,
+      "browser_action_trace": [
+        "GET /calendar/edit/cal_m366_vendor_review",
+        "POST /calendar/delete",
+        "GET /calendar"
+      ],
+      "privileged_request_count": 0,
+      "control_header_request_count": 0
+    },
+    {
+      "affordance": "calendar_delete",
+      "seed": 1,
+      "raw_semantic_states_equal": true,
+      "normalized_semantic_states_equal": true,
+      "semantic_before_sha256": "ad1bd047357be84db1c15bf419adf55414ec442395834d20035ff3a3ab2a9dde",
+      "semantic_after_sha256": "598205f36203316eeed82d3eff9441d22802a3683c18eec5154ee8a8e6bafa09",
+      "raw_diff": [
+        {
+          "path": "$.calendar.events.cal_m366_vendor_review",
+          "before": {
+            "id": "cal_m366_vendor_review",
+            "title": "Vendor Review",
+            "day": "2026-05-22",
+            "day_label": "Tomorrow (Fri May 22)",
+            "start": "14:00",
+            "end": "15:00",
+            "source": "seed"
+          },
+          "after": "<MISSING>"
+        }
+      ],
+      "unrelated_state_unchanged": true,
+      "browser_network_request_count": 9,
+      "browser_action_trace": [
+        "GET /calendar/edit/cal_m366_vendor_review",
+        "POST /calendar/delete",
+        "GET /calendar"
+      ],
+      "privileged_request_count": 0,
+      "control_header_request_count": 0
+    },
+    {
+      "affordance": "calendar_delete",
+      "seed": 2,
+      "raw_semantic_states_equal": true,
+      "normalized_semantic_states_equal": true,
+      "semantic_before_sha256": "4d40eac8b63181902b69dea96808ad5e8f5696d5e31216bfbd0c82f326e7a5b7",
+      "semantic_after_sha256": "02fbf31cc7ff554ea8318738cd268701843b06e190a6979a03b7b746ca5f7daa",
+      "raw_diff": [
+        {
+          "path": "$.calendar.events.cal_m366_vendor_review",
+          "before": {
+            "id": "cal_m366_vendor_review",
+            "title": "Vendor Review",
+            "day": "2026-05-22",
+            "day_label": "Tomorrow (Fri May 22)",
+            "start": "14:00",
+            "end": "15:00",
+            "source": "seed"
+          },
+          "after": "<MISSING>"
+        }
+      ],
+      "unrelated_state_unchanged": true,
+      "browser_network_request_count": 9,
+      "browser_action_trace": [
+        "GET /calendar/edit/cal_m366_vendor_review",
+        "POST /calendar/delete",
+        "GET /calendar"
+      ],
+      "privileged_request_count": 0,
+      "control_header_request_count": 0
+    },
+    {
+      "affordance": "marketplace_order",
+      "seed": 0,
+      "raw_semantic_states_equal": true,
+      "normalized_semantic_states_equal": true,
+      "semantic_before_sha256": "3ae6d31e603192757b59a138bdfbba0b5ae87fd67d2bfc046b6f01eb62feb29e",
+      "semantic_after_sha256": "81a61326144cb3ef4b25b3027e8ac446181ae9eb90fe8dbd61f1da25ddccc286",
+      "raw_diff": [
+        {
+          "path": "$.events",
+          "before": [],
+          "after": [
+            {
+              "id": "evt_1",
+              "type": "MarketOrderPlaced",
+              "source_app": "market",
+              "target_app": "mail",
+              "step": 0,
+              "payload": {
+                "order_id": "VM-2201",
+                "store": "ValueMart",
+                "subtotal": 14.0,
+                "discount": 1.4,
+                "delivery_fee": 5.99,
+                "total": 18.59,
+                "coupon_code": "VALUE10",
+                "items": [
+                  {
+                    "name": "Welcome Sign",
+                    "qty": 2,
+                    "product_id": "vm_welcome_sign"
+                  }
+                ]
+              },
+              "delivered": true
+            }
+          ]
+        },
+        {
+          "path": "$.market._next",
+          "before": 1,
+          "after": 2
+        },
+        {
+          "path": "$.market.orders.VM-2201",
+          "before": "<MISSING>",
+          "after": {
+            "id": "VM-2201",
+            "items": [
+              {
+                "product_id": "vm_welcome_sign",
+                "name": "Welcome Sign",
+                "unit_price": 7.0,
+                "quantity": 2
+              }
+            ],
+            "subtotal": 14.0,
+            "discount": 1.4,
+            "delivery_fee": 5.99,
+            "total": 18.59,
+            "placed_at": "2026-05-21T12:30:00",
+            "coupon_code": "VALUE10"
+          }
+        },
+        {
+          "path": "$.receipts.em_5",
+          "before": "<MISSING>",
+          "after": {
+            "id": "em_5",
+            "sender": "orders@valuemart.com",
+            "to": "alice@shopgym.com",
+            "subject": "Your ValueMart order VM-2201 is confirmed",
+            "body": "Thanks for shopping at ValueMart!\n\nOrder number: VM-2201\n\n  2 x Welcome Sign\n\nSubtotal: $14.00\nCoupon (VALUE10): -$1.40\nDelivery: $5.99\nTotal charged: $18.59\n",
+            "received_at": "2026-05-21T12:31:00",
+            "received_label": "now",
+            "read": false,
+            "labels": [
+              "orders"
+            ],
+            "folder": "inbox",
+            "order_id": "VM-2201",
+            "tracking_url": null,
+            "amount_total": 18.59,
+            "eta": null,
+            "product_id": null
+          }
+        }
+      ],
+      "unrelated_state_unchanged": true,
+      "browser_network_request_count": 28,
+      "browser_action_trace": [
+        "GET /market/product/vm_welcome_sign",
+        "POST product form /market/cart/add x2",
+        "GET /market/cart",
+        "POST /market/apply-coupon (VALUE10)",
+        "POST /market/checkout",
+        "GET /market/order/<generated>"
+      ],
+      "privileged_request_count": 0,
+      "control_header_request_count": 0
+    },
+    {
+      "affordance": "marketplace_order",
+      "seed": 1,
+      "raw_semantic_states_equal": true,
+      "normalized_semantic_states_equal": true,
+      "semantic_before_sha256": "3ae6d31e603192757b59a138bdfbba0b5ae87fd67d2bfc046b6f01eb62feb29e",
+      "semantic_after_sha256": "81a61326144cb3ef4b25b3027e8ac446181ae9eb90fe8dbd61f1da25ddccc286",
+      "raw_diff": [
+        {
+          "path": "$.events",
+          "before": [],
+          "after": [
+            {
+              "id": "evt_1",
+              "type": "MarketOrderPlaced",
+              "source_app": "market",
+              "target_app": "mail",
+              "step": 0,
+              "payload": {
+                "order_id": "VM-2201",
+                "store": "ValueMart",
+                "subtotal": 14.0,
+                "discount": 1.4,
+                "delivery_fee": 5.99,
+                "total": 18.59,
+                "coupon_code": "VALUE10",
+                "items": [
+                  {
+                    "name": "Welcome Sign",
+                    "qty": 2,
+                    "product_id": "vm_welcome_sign"
+                  }
+                ]
+              },
+              "delivered": true
+            }
+          ]
+        },
+        {
+          "path": "$.market._next",
+          "before": 1,
+          "after": 2
+        },
+        {
+          "path": "$.market.orders.VM-2201",
+          "before": "<MISSING>",
+          "after": {
+            "id": "VM-2201",
+            "items": [
+              {
+                "product_id": "vm_welcome_sign",
+                "name": "Welcome Sign",
+                "unit_price": 7.0,
+                "quantity": 2
+              }
+            ],
+            "subtotal": 14.0,
+            "discount": 1.4,
+            "delivery_fee": 5.99,
+            "total": 18.59,
+            "placed_at": "2026-05-21T12:30:00",
+            "coupon_code": "VALUE10"
+          }
+        },
+        {
+          "path": "$.receipts.em_5",
+          "before": "<MISSING>",
+          "after": {
+            "id": "em_5",
+            "sender": "orders@valuemart.com",
+            "to": "alice@shopgym.com",
+            "subject": "Your ValueMart order VM-2201 is confirmed",
+            "body": "Thanks for shopping at ValueMart!\n\nOrder number: VM-2201\n\n  2 x Welcome Sign\n\nSubtotal: $14.00\nCoupon (VALUE10): -$1.40\nDelivery: $5.99\nTotal charged: $18.59\n",
+            "received_at": "2026-05-21T12:31:00",
+            "received_label": "now",
+            "read": false,
+            "labels": [
+              "orders"
+            ],
+            "folder": "inbox",
+            "order_id": "VM-2201",
+            "tracking_url": null,
+            "amount_total": 18.59,
+            "eta": null,
+            "product_id": null
+          }
+        }
+      ],
+      "unrelated_state_unchanged": true,
+      "browser_network_request_count": 28,
+      "browser_action_trace": [
+        "GET /market/product/vm_welcome_sign",
+        "POST product form /market/cart/add x2",
+        "GET /market/cart",
+        "POST /market/apply-coupon (VALUE10)",
+        "POST /market/checkout",
+        "GET /market/order/<generated>"
+      ],
+      "privileged_request_count": 0,
+      "control_header_request_count": 0
+    },
+    {
+      "affordance": "marketplace_order",
+      "seed": 2,
+      "raw_semantic_states_equal": true,
+      "normalized_semantic_states_equal": true,
+      "semantic_before_sha256": "3ae6d31e603192757b59a138bdfbba0b5ae87fd67d2bfc046b6f01eb62feb29e",
+      "semantic_after_sha256": "81a61326144cb3ef4b25b3027e8ac446181ae9eb90fe8dbd61f1da25ddccc286",
+      "raw_diff": [
+        {
+          "path": "$.events",
+          "before": [],
+          "after": [
+            {
+              "id": "evt_1",
+              "type": "MarketOrderPlaced",
+              "source_app": "market",
+              "target_app": "mail",
+              "step": 0,
+              "payload": {
+                "order_id": "VM-2201",
+                "store": "ValueMart",
+                "subtotal": 14.0,
+                "discount": 1.4,
+                "delivery_fee": 5.99,
+                "total": 18.59,
+                "coupon_code": "VALUE10",
+                "items": [
+                  {
+                    "name": "Welcome Sign",
+                    "qty": 2,
+                    "product_id": "vm_welcome_sign"
+                  }
+                ]
+              },
+              "delivered": true
+            }
+          ]
+        },
+        {
+          "path": "$.market._next",
+          "before": 1,
+          "after": 2
+        },
+        {
+          "path": "$.market.orders.VM-2201",
+          "before": "<MISSING>",
+          "after": {
+            "id": "VM-2201",
+            "items": [
+              {
+                "product_id": "vm_welcome_sign",
+                "name": "Welcome Sign",
+                "unit_price": 7.0,
+                "quantity": 2
+              }
+            ],
+            "subtotal": 14.0,
+            "discount": 1.4,
+            "delivery_fee": 5.99,
+            "total": 18.59,
+            "placed_at": "2026-05-21T12:30:00",
+            "coupon_code": "VALUE10"
+          }
+        },
+        {
+          "path": "$.receipts.em_5",
+          "before": "<MISSING>",
+          "after": {
+            "id": "em_5",
+            "sender": "orders@valuemart.com",
+            "to": "alice@shopgym.com",
+            "subject": "Your ValueMart order VM-2201 is confirmed",
+            "body": "Thanks for shopping at ValueMart!\n\nOrder number: VM-2201\n\n  2 x Welcome Sign\n\nSubtotal: $14.00\nCoupon (VALUE10): -$1.40\nDelivery: $5.99\nTotal charged: $18.59\n",
+            "received_at": "2026-05-21T12:31:00",
+            "received_label": "now",
+            "read": false,
+            "labels": [
+              "orders"
+            ],
+            "folder": "inbox",
+            "order_id": "VM-2201",
+            "tracking_url": null,
+            "amount_total": 18.59,
+            "eta": null,
+            "product_id": null
+          }
+        }
+      ],
+      "unrelated_state_unchanged": true,
+      "browser_network_request_count": 28,
+      "browser_action_trace": [
+        "GET /market/product/vm_welcome_sign",
+        "POST product form /market/cart/add x2",
+        "GET /market/cart",
+        "POST /market/apply-coupon (VALUE10)",
+        "POST /market/checkout",
+        "GET /market/order/<generated>"
+      ],
+      "privileged_request_count": 0,
+      "control_header_request_count": 0
+    },
+    {
+      "affordance": "mail_send",
+      "seed": 0,
+      "raw_semantic_states_equal": true,
+      "normalized_semantic_states_equal": true,
+      "semantic_before_sha256": "139898ec61040f47ea1aea9994f8026b764c3d38a9b809889a1ddfc0d09f0665",
+      "semantic_after_sha256": "4503e5697d677ab4d5220ff2d555241f3473f285ce5a56648976557f085bae0f",
+      "raw_diff": [
+        {
+          "path": "$.events",
+          "before": [],
+          "after": [
+            {
+              "id": "evt_1",
+              "type": "MailSent",
+              "source_app": "mail",
+              "target_app": "mail",
+              "step": 0,
+              "payload": {
+                "to": "alice@shopgym.com",
+                "subject": "Parity message"
+              },
+              "delivered": false
+            }
+          ]
+        },
+        {
+          "path": "$.sent.em_6",
+          "before": "<MISSING>",
+          "after": {
+            "id": "em_6",
+            "sender": "alice@shopgym.com",
+            "to": "alice@shopgym.com",
+            "subject": "Parity message",
+            "body": "The checked charge is correct.",
+            "received_at": "2026-05-21T12:00:00",
+            "received_label": "now",
+            "read": true,
+            "labels": [],
+            "folder": "sent",
+            "order_id": null,
+            "tracking_url": null,
+            "amount_total": null,
+            "eta": null,
+            "product_id": null
+          }
+        }
+      ],
+      "unrelated_state_unchanged": true,
+      "browser_network_request_count": 9,
+      "browser_action_trace": [
+        "GET /mail/compose",
+        "POST /mail/send (to/subject/body)",
+        "GET /mail?sent=1"
+      ],
+      "privileged_request_count": 0,
+      "control_header_request_count": 0
+    },
+    {
+      "affordance": "mail_send",
+      "seed": 1,
+      "raw_semantic_states_equal": true,
+      "normalized_semantic_states_equal": true,
+      "semantic_before_sha256": "139898ec61040f47ea1aea9994f8026b764c3d38a9b809889a1ddfc0d09f0665",
+      "semantic_after_sha256": "4503e5697d677ab4d5220ff2d555241f3473f285ce5a56648976557f085bae0f",
+      "raw_diff": [
+        {
+          "path": "$.events",
+          "before": [],
+          "after": [
+            {
+              "id": "evt_1",
+              "type": "MailSent",
+              "source_app": "mail",
+              "target_app": "mail",
+              "step": 0,
+              "payload": {
+                "to": "alice@shopgym.com",
+                "subject": "Parity message"
+              },
+              "delivered": false
+            }
+          ]
+        },
+        {
+          "path": "$.sent.em_6",
+          "before": "<MISSING>",
+          "after": {
+            "id": "em_6",
+            "sender": "alice@shopgym.com",
+            "to": "alice@shopgym.com",
+            "subject": "Parity message",
+            "body": "The checked charge is correct.",
+            "received_at": "2026-05-21T12:00:00",
+            "received_label": "now",
+            "read": true,
+            "labels": [],
+            "folder": "sent",
+            "order_id": null,
+            "tracking_url": null,
+            "amount_total": null,
+            "eta": null,
+            "product_id": null
+          }
+        }
+      ],
+      "unrelated_state_unchanged": true,
+      "browser_network_request_count": 9,
+      "browser_action_trace": [
+        "GET /mail/compose",
+        "POST /mail/send (to/subject/body)",
+        "GET /mail?sent=1"
+      ],
+      "privileged_request_count": 0,
+      "control_header_request_count": 0
+    },
+    {
+      "affordance": "mail_send",
+      "seed": 2,
+      "raw_semantic_states_equal": true,
+      "normalized_semantic_states_equal": true,
+      "semantic_before_sha256": "139898ec61040f47ea1aea9994f8026b764c3d38a9b809889a1ddfc0d09f0665",
+      "semantic_after_sha256": "4503e5697d677ab4d5220ff2d555241f3473f285ce5a56648976557f085bae0f",
+      "raw_diff": [
+        {
+          "path": "$.events",
+          "before": [],
+          "after": [
+            {
+              "id": "evt_1",
+              "type": "MailSent",
+              "source_app": "mail",
+              "target_app": "mail",
+              "step": 0,
+              "payload": {
+                "to": "alice@shopgym.com",
+                "subject": "Parity message"
+              },
+              "delivered": false
+            }
+          ]
+        },
+        {
+          "path": "$.sent.em_6",
+          "before": "<MISSING>",
+          "after": {
+            "id": "em_6",
+            "sender": "alice@shopgym.com",
+            "to": "alice@shopgym.com",
+            "subject": "Parity message",
+            "body": "The checked charge is correct.",
+            "received_at": "2026-05-21T12:00:00",
+            "received_label": "now",
+            "read": true,
+            "labels": [],
+            "folder": "sent",
+            "order_id": null,
+            "tracking_url": null,
+            "amount_total": null,
+            "eta": null,
+            "product_id": null
+          }
+        }
+      ],
+      "unrelated_state_unchanged": true,
+      "browser_network_request_count": 9,
+      "browser_action_trace": [
+        "GET /mail/compose",
+        "POST /mail/send (to/subject/body)",
+        "GET /mail?sent=1"
+      ],
+      "privileged_request_count": 0,
+      "control_header_request_count": 0
+    },
+    {
+      "affordance": "subscription_create",
+      "seed": 0,
+      "raw_semantic_states_equal": false,
+      "normalized_semantic_states_equal": true,
+      "semantic_before_sha256": "08ee4d21d5bd1d0e7e7adcfa61796edfe1915e3a062b446b80f97ac2c1091f82",
+      "semantic_after_sha256": "6d71d9c7ee66410b427487e1570fa932604f05acb8ed85273329237a03c8f21c",
+      "raw_diff": [
+        {
+          "path": "$.subscriptions.<SUB_0>",
+          "before": "<MISSING>",
+          "after": {
+            "id": "<SUB_0>",
+            "user_id": "u_alice",
+            "product_id": "p_pet_food",
+            "variant_id": null,
+            "quantity": 1,
+            "cadence": "monthly",
+            "deliveries_remaining": 4,
+            "next_delivery_date": "<NEXT_DELIVERY>",
+            "address_id": "addr_home",
+            "payment_id": "pay_paypal",
+            "loyalty_discount_pct": 0.1,
+            "status": "active"
+          }
+        }
+      ],
+      "unrelated_state_unchanged": true,
+      "browser_network_request_count": 11,
+      "browser_action_trace": [
+        "GET /product/p_pet_food",
+        "click btn-toggle-subscribe",
+        "POST /api/subscriptions (monthly, 4, addr_home, pay_paypal)",
+        "GET /account/subscriptions"
+      ],
+      "privileged_request_count": 0,
+      "control_header_request_count": 0
+    },
+    {
+      "affordance": "subscription_create",
+      "seed": 1,
+      "raw_semantic_states_equal": false,
+      "normalized_semantic_states_equal": true,
+      "semantic_before_sha256": "08ee4d21d5bd1d0e7e7adcfa61796edfe1915e3a062b446b80f97ac2c1091f82",
+      "semantic_after_sha256": "6d71d9c7ee66410b427487e1570fa932604f05acb8ed85273329237a03c8f21c",
+      "raw_diff": [
+        {
+          "path": "$.subscriptions.<SUB_0>",
+          "before": "<MISSING>",
+          "after": {
+            "id": "<SUB_0>",
+            "user_id": "u_alice",
+            "product_id": "p_pet_food",
+            "variant_id": null,
+            "quantity": 1,
+            "cadence": "monthly",
+            "deliveries_remaining": 4,
+            "next_delivery_date": "<NEXT_DELIVERY>",
+            "address_id": "addr_home",
+            "payment_id": "pay_paypal",
+            "loyalty_discount_pct": 0.1,
+            "status": "active"
+          }
+        }
+      ],
+      "unrelated_state_unchanged": true,
+      "browser_network_request_count": 11,
+      "browser_action_trace": [
+        "GET /product/p_pet_food",
+        "click btn-toggle-subscribe",
+        "POST /api/subscriptions (monthly, 4, addr_home, pay_paypal)",
+        "GET /account/subscriptions"
+      ],
+      "privileged_request_count": 0,
+      "control_header_request_count": 0
+    },
+    {
+      "affordance": "subscription_create",
+      "seed": 2,
+      "raw_semantic_states_equal": false,
+      "normalized_semantic_states_equal": true,
+      "semantic_before_sha256": "08ee4d21d5bd1d0e7e7adcfa61796edfe1915e3a062b446b80f97ac2c1091f82",
+      "semantic_after_sha256": "6d71d9c7ee66410b427487e1570fa932604f05acb8ed85273329237a03c8f21c",
+      "raw_diff": [
+        {
+          "path": "$.subscriptions.<SUB_0>",
+          "before": "<MISSING>",
+          "after": {
+            "id": "<SUB_0>",
+            "user_id": "u_alice",
+            "product_id": "p_pet_food",
+            "variant_id": null,
+            "quantity": 1,
+            "cadence": "monthly",
+            "deliveries_remaining": 4,
+            "next_delivery_date": "<NEXT_DELIVERY>",
+            "address_id": "addr_home",
+            "payment_id": "pay_paypal",
+            "loyalty_discount_pct": 0.1,
+            "status": "active"
+          }
+        }
+      ],
+      "unrelated_state_unchanged": true,
+      "browser_network_request_count": 11,
+      "browser_action_trace": [
+        "GET /product/p_pet_food",
+        "click btn-toggle-subscribe",
+        "POST /api/subscriptions (monthly, 4, addr_home, pay_paypal)",
+        "GET /account/subscriptions"
+      ],
+      "privileged_request_count": 0,
+      "control_header_request_count": 0
+    },
+    {
+      "affordance": "subscription_cancel",
+      "seed": 0,
+      "raw_semantic_states_equal": true,
+      "normalized_semantic_states_equal": true,
+      "semantic_before_sha256": "0b8f74153a4398fb9a012b6a52a746bb9fa1fe35ad342a6700c2e38d0750d9fd",
+      "semantic_after_sha256": "25e03685264e69c1a0d7b1a907a419eda2f5e386256afa19dc40c042523d5c73",
+      "raw_diff": [
+        {
+          "path": "$.subscriptions.sub_dogfood.status",
+          "before": "active",
+          "after": "cancelled"
+        }
+      ],
+      "unrelated_state_unchanged": true,
+      "browser_network_request_count": 11,
+      "browser_action_trace": [
+        "GET /account/subscriptions",
+        "POST /api/subscriptions/sub_dogfood/cancel",
+        "GET /account/subscriptions"
+      ],
+      "privileged_request_count": 0,
+      "control_header_request_count": 0
+    },
+    {
+      "affordance": "subscription_cancel",
+      "seed": 1,
+      "raw_semantic_states_equal": true,
+      "normalized_semantic_states_equal": true,
+      "semantic_before_sha256": "0b8f74153a4398fb9a012b6a52a746bb9fa1fe35ad342a6700c2e38d0750d9fd",
+      "semantic_after_sha256": "25e03685264e69c1a0d7b1a907a419eda2f5e386256afa19dc40c042523d5c73",
+      "raw_diff": [
+        {
+          "path": "$.subscriptions.sub_dogfood.status",
+          "before": "active",
+          "after": "cancelled"
+        }
+      ],
+      "unrelated_state_unchanged": true,
+      "browser_network_request_count": 11,
+      "browser_action_trace": [
+        "GET /account/subscriptions",
+        "POST /api/subscriptions/sub_dogfood/cancel",
+        "GET /account/subscriptions"
+      ],
+      "privileged_request_count": 0,
+      "control_header_request_count": 0
+    },
+    {
+      "affordance": "subscription_cancel",
+      "seed": 2,
+      "raw_semantic_states_equal": true,
+      "normalized_semantic_states_equal": true,
+      "semantic_before_sha256": "0b8f74153a4398fb9a012b6a52a746bb9fa1fe35ad342a6700c2e38d0750d9fd",
+      "semantic_after_sha256": "25e03685264e69c1a0d7b1a907a419eda2f5e386256afa19dc40c042523d5c73",
+      "raw_diff": [
+        {
+          "path": "$.subscriptions.sub_dogfood.status",
+          "before": "active",
+          "after": "cancelled"
+        }
+      ],
+      "unrelated_state_unchanged": true,
+      "browser_network_request_count": 11,
+      "browser_action_trace": [
+        "GET /account/subscriptions",
+        "POST /api/subscriptions/sub_dogfood/cancel",
+        "GET /account/subscriptions"
+      ],
+      "privileged_request_count": 0,
+      "control_header_request_count": 0
+    },
+    {
+      "affordance": "return_initiation",
+      "seed": 0,
+      "raw_semantic_states_equal": false,
+      "normalized_semantic_states_equal": true,
+      "semantic_before_sha256": "2fe1179e0bdd15d7e8314125e2106a643abe580dcd9948e739f7fee215db7f0f",
+      "semantic_after_sha256": "4aa1c64d11b05db74029cfa55f00a16d88ba34e301baeabcd5c718d57cb94db8",
+      "raw_diff": [
+        {
+          "path": "$.events",
+          "before": [],
+          "after": [
+            {
+              "id": "evt_1",
+              "type": "ReturnFiled",
+              "source_app": "shop",
+              "target_app": "shop",
+              "step": 0,
+              "payload": {
+                "return_id": "<RET_ID>",
+                "order_id": "ORD-KET-1"
+              },
+              "delivered": false
+            }
+          ]
+        },
+        {
+          "path": "$.returns.<RET_0>",
+          "before": "<MISSING>",
+          "after": {
+            "id": "<RET_0>",
+            "order_id": "ORD-KET-1",
+            "user_id": "u_alice",
+            "item_ids": [
+              "ln_kettle"
+            ],
+            "reason": "defective",
+            "refund_method": "original_payment",
+            "status": "initiated",
+            "created_at": "<CREATED_AT>",
+            "notes": ""
+          }
+        }
+      ],
+      "unrelated_state_unchanged": true,
+      "browser_network_request_count": 16,
+      "browser_action_trace": [
+        "GET /account/orders/ORD-KET-1",
+        "GET /account/returns/new?order_id=ORD-KET-1",
+        "POST /api/returns (ln_kettle, defective, original_payment)",
+        "GET /account/returns"
+      ],
+      "privileged_request_count": 0,
+      "control_header_request_count": 0
+    },
+    {
+      "affordance": "return_initiation",
+      "seed": 1,
+      "raw_semantic_states_equal": false,
+      "normalized_semantic_states_equal": true,
+      "semantic_before_sha256": "2fe1179e0bdd15d7e8314125e2106a643abe580dcd9948e739f7fee215db7f0f",
+      "semantic_after_sha256": "4aa1c64d11b05db74029cfa55f00a16d88ba34e301baeabcd5c718d57cb94db8",
+      "raw_diff": [
+        {
+          "path": "$.events",
+          "before": [],
+          "after": [
+            {
+              "id": "evt_1",
+              "type": "ReturnFiled",
+              "source_app": "shop",
+              "target_app": "shop",
+              "step": 0,
+              "payload": {
+                "return_id": "<RET_ID>",
+                "order_id": "ORD-KET-1"
+              },
+              "delivered": false
+            }
+          ]
+        },
+        {
+          "path": "$.returns.<RET_0>",
+          "before": "<MISSING>",
+          "after": {
+            "id": "<RET_0>",
+            "order_id": "ORD-KET-1",
+            "user_id": "u_alice",
+            "item_ids": [
+              "ln_kettle"
+            ],
+            "reason": "defective",
+            "refund_method": "original_payment",
+            "status": "initiated",
+            "created_at": "<CREATED_AT>",
+            "notes": ""
+          }
+        }
+      ],
+      "unrelated_state_unchanged": true,
+      "browser_network_request_count": 16,
+      "browser_action_trace": [
+        "GET /account/orders/ORD-KET-1",
+        "GET /account/returns/new?order_id=ORD-KET-1",
+        "POST /api/returns (ln_kettle, defective, original_payment)",
+        "GET /account/returns"
+      ],
+      "privileged_request_count": 0,
+      "control_header_request_count": 0
+    },
+    {
+      "affordance": "return_initiation",
+      "seed": 2,
+      "raw_semantic_states_equal": false,
+      "normalized_semantic_states_equal": true,
+      "semantic_before_sha256": "2fe1179e0bdd15d7e8314125e2106a643abe580dcd9948e739f7fee215db7f0f",
+      "semantic_after_sha256": "4aa1c64d11b05db74029cfa55f00a16d88ba34e301baeabcd5c718d57cb94db8",
+      "raw_diff": [
+        {
+          "path": "$.events",
+          "before": [],
+          "after": [
+            {
+              "id": "evt_1",
+              "type": "ReturnFiled",
+              "source_app": "shop",
+              "target_app": "shop",
+              "step": 0,
+              "payload": {
+                "return_id": "<RET_ID>",
+                "order_id": "ORD-KET-1"
+              },
+              "delivered": false
+            }
+          ]
+        },
+        {
+          "path": "$.returns.<RET_0>",
+          "before": "<MISSING>",
+          "after": {
+            "id": "<RET_0>",
+            "order_id": "ORD-KET-1",
+            "user_id": "u_alice",
+            "item_ids": [
+              "ln_kettle"
+            ],
+            "reason": "defective",
+            "refund_method": "original_payment",
+            "status": "initiated",
+            "created_at": "<CREATED_AT>",
+            "notes": ""
+          }
+        }
+      ],
+      "unrelated_state_unchanged": true,
+      "browser_network_request_count": 16,
+      "browser_action_trace": [
+        "GET /account/orders/ORD-KET-1",
+        "GET /account/returns/new?order_id=ORD-KET-1",
+        "POST /api/returns (ln_kettle, defective, original_payment)",
+        "GET /account/returns"
+      ],
+      "privileged_request_count": 0,
+      "control_header_request_count": 0
+    },
+    {
+      "affordance": "payment_method_or_default_change",
+      "seed": 0,
+      "raw_semantic_states_equal": true,
+      "normalized_semantic_states_equal": true,
+      "semantic_before_sha256": "0329d8f068dd8065e171a0d8e60227efb2d0ecf9448c71eda47c71baaf3cdbf3",
+      "semantic_after_sha256": "144d6f4d99e8d677c791612efaadd2fdc05c57f4e29ae80cbd837fca6d2e0807",
+      "raw_diff": [
+        {
+          "path": "$.payment_methods.pay_personal.is_default",
+          "before": false,
+          "after": true
+        },
+        {
+          "path": "$.payment_methods.pay_visa.is_default",
+          "before": true,
+          "after": false
+        }
+      ],
+      "unrelated_state_unchanged": true,
+      "browser_network_request_count": 11,
+      "browser_action_trace": [
+        "GET /account/payments",
+        "POST /api/account/payments/pay_personal/default",
+        "GET /account/payments"
+      ],
+      "privileged_request_count": 0,
+      "control_header_request_count": 0
+    },
+    {
+      "affordance": "payment_method_or_default_change",
+      "seed": 1,
+      "raw_semantic_states_equal": true,
+      "normalized_semantic_states_equal": true,
+      "semantic_before_sha256": "0329d8f068dd8065e171a0d8e60227efb2d0ecf9448c71eda47c71baaf3cdbf3",
+      "semantic_after_sha256": "144d6f4d99e8d677c791612efaadd2fdc05c57f4e29ae80cbd837fca6d2e0807",
+      "raw_diff": [
+        {
+          "path": "$.payment_methods.pay_personal.is_default",
+          "before": false,
+          "after": true
+        },
+        {
+          "path": "$.payment_methods.pay_visa.is_default",
+          "before": true,
+          "after": false
+        }
+      ],
+      "unrelated_state_unchanged": true,
+      "browser_network_request_count": 11,
+      "browser_action_trace": [
+        "GET /account/payments",
+        "POST /api/account/payments/pay_personal/default",
+        "GET /account/payments"
+      ],
+      "privileged_request_count": 0,
+      "control_header_request_count": 0
+    },
+    {
+      "affordance": "payment_method_or_default_change",
+      "seed": 2,
+      "raw_semantic_states_equal": true,
+      "normalized_semantic_states_equal": true,
+      "semantic_before_sha256": "0329d8f068dd8065e171a0d8e60227efb2d0ecf9448c71eda47c71baaf3cdbf3",
+      "semantic_after_sha256": "144d6f4d99e8d677c791612efaadd2fdc05c57f4e29ae80cbd837fca6d2e0807",
+      "raw_diff": [
+        {
+          "path": "$.payment_methods.pay_personal.is_default",
+          "before": false,
+          "after": true
+        },
+        {
+          "path": "$.payment_methods.pay_visa.is_default",
+          "before": true,
+          "after": false
+        }
+      ],
+      "unrelated_state_unchanged": true,
+      "browser_network_request_count": 11,
+      "browser_action_trace": [
+        "GET /account/payments",
+        "POST /api/account/payments/pay_personal/default",
+        "GET /account/payments"
+      ],
+      "privileged_request_count": 0,
+      "control_header_request_count": 0
+    },
+    {
+      "affordance": "address_or_default_change",
+      "seed": 0,
+      "raw_semantic_states_equal": true,
+      "normalized_semantic_states_equal": true,
+      "semantic_before_sha256": "2fb51d7b9062015460afec0aab9e5f316b3912358b0f4019c757b5f77e7db11b",
+      "semantic_after_sha256": "fec6a75a5f61bde2af3a5b07dcdb6729d7056ff5a6cca7f57003313ec842acbf",
+      "raw_diff": [
+        {
+          "path": "$.addresses.addr_home.is_default",
+          "before": true,
+          "after": false
+        },
+        {
+          "path": "$.addresses.addr_work.is_default",
+          "before": false,
+          "after": true
+        }
+      ],
+      "unrelated_state_unchanged": true,
+      "browser_network_request_count": 11,
+      "browser_action_trace": [
+        "GET /account/addresses",
+        "POST /api/account/addresses/addr_work/default",
+        "GET /account/addresses"
+      ],
+      "privileged_request_count": 0,
+      "control_header_request_count": 0
+    },
+    {
+      "affordance": "address_or_default_change",
+      "seed": 1,
+      "raw_semantic_states_equal": true,
+      "normalized_semantic_states_equal": true,
+      "semantic_before_sha256": "2fb51d7b9062015460afec0aab9e5f316b3912358b0f4019c757b5f77e7db11b",
+      "semantic_after_sha256": "fec6a75a5f61bde2af3a5b07dcdb6729d7056ff5a6cca7f57003313ec842acbf",
+      "raw_diff": [
+        {
+          "path": "$.addresses.addr_home.is_default",
+          "before": true,
+          "after": false
+        },
+        {
+          "path": "$.addresses.addr_work.is_default",
+          "before": false,
+          "after": true
+        }
+      ],
+      "unrelated_state_unchanged": true,
+      "browser_network_request_count": 11,
+      "browser_action_trace": [
+        "GET /account/addresses",
+        "POST /api/account/addresses/addr_work/default",
+        "GET /account/addresses"
+      ],
+      "privileged_request_count": 0,
+      "control_header_request_count": 0
+    },
+    {
+      "affordance": "address_or_default_change",
+      "seed": 2,
+      "raw_semantic_states_equal": true,
+      "normalized_semantic_states_equal": true,
+      "semantic_before_sha256": "2fb51d7b9062015460afec0aab9e5f316b3912358b0f4019c757b5f77e7db11b",
+      "semantic_after_sha256": "fec6a75a5f61bde2af3a5b07dcdb6729d7056ff5a6cca7f57003313ec842acbf",
+      "raw_diff": [
+        {
+          "path": "$.addresses.addr_home.is_default",
+          "before": true,
+          "after": false
+        },
+        {
+          "path": "$.addresses.addr_work.is_default",
+          "before": false,
+          "after": true
+        }
+      ],
+      "unrelated_state_unchanged": true,
+      "browser_network_request_count": 11,
+      "browser_action_trace": [
+        "GET /account/addresses",
+        "POST /api/account/addresses/addr_work/default",
+        "GET /account/addresses"
+      ],
+      "privileged_request_count": 0,
+      "control_header_request_count": 0
+    }
+  ],
+  "exceptions": [
+    {
+      "status": "STRUCTURAL_EXCEPTION",
+      "reason": "Shop order cancellation has a pure mutation (server.mutations.cancel_order) that rejects shipped / out_for_delivery / delivered orders, but the rendered order-detail UI exposes only Initiate return + tracking \u2014 no Cancel control \u2014 and FastAPI registers no public /api/orders/*/cancel route. Adding a cancel button solely to check the 1A box would invent an affordance the reported M108/M211 tasks intentionally lack.",
+      "tasks": [
+        "M108",
+        "M211"
+      ],
+      "fixture_checked": "M211/cancel_shipped_then_confirm ORD-5501",
+      "rendered_order_detail": {
+        "has_initiate_return": true,
+        "has_cancel_control": false,
+        "cancelish_controls_found": [],
+        "body_mentions_cancel": true,
+        "html_mentions_cancel_order": false
+      },
+      "public_cancel_order_routes": [],
+      "mutation_contract": {
+        "shipped_or_out_for_delivery_rejected": {
+          "ok": false,
+          "error": "already shipped"
+        },
+        "confirmed_unshipped_accepted": {
+          "ok": true
+        },
+        "confirmed_status_after": "cancelled"
+      },
+      "browser_action_trace": [
+        "STRUCTURAL_EXCEPTION: no rendered cancel control and no public POST /api/orders/*/cancel route; cancel_order exists only as a pure mutation (rejects shipped / out_for_delivery / delivered)."
+      ]
+    }
+  ]
+}

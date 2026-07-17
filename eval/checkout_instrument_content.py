@@ -1,4 +1,4 @@
-"""Audit the historical checkout split now promoted to canonical default veins.
+"""Audit current sellable members of the promoted canonical default veins.
 
 The retired top-level ``checkout`` vein was split into:
   * Instrument-Default — instrument axis only
@@ -7,8 +7,10 @@ The retired top-level ``checkout`` vein was split into:
 
 The Content axis includes wrong destination, message, schedule, and genuinely
 unrequested basket additions (items, add-ons, services, or quantities).
-The adjudicated 42-task mapping now lives in ``trajectories.vein_taxonomy`` and
-is the single source consumed here.
+The adjudicated historical 42-task mapping lives in
+``trajectories.vein_taxonomy``. This command intersects it with the current
+sellable ledger, so a held task such as M56 remains in historical taxonomy
+provenance without appearing in current release output.
 
     python -m eval.checkout_instrument_content
     python -m eval.checkout_instrument_content --sellable trajectories/sellable_breakers_v2.csv
@@ -69,7 +71,7 @@ def main(argv: list[str] | None = None) -> int:
         by_label[r["label"]].append(r["short"])
 
     n = len(results)
-    print(f"historical checkout tasks, now canonical defaults: {n}")
+    print(f"current sellable tasks in canonical default veins: {n}")
     print()
     order = ("instrument-default", "content-default", "stacked-default")
     for label in order:

@@ -1,9 +1,10 @@
 # ecommerce-browser-gym
 
-🛒🧨 A **multi-app browser-agent RL gym** that harvests **causal, reproducible agent failure modes ("breakers")** — tasks engineered so a *capable* frontier agent reliably commits a real, **state-observable** harm (charges a dead card, ships a gift to the wrong person, fabricates a "done!" email for an action that silently failed, buys an item that violates a stated constraint). Agents drive a real headless Chromium across five interlinked web apps; every task is graded by a **per-step milestone verifier** that reads ground-truth app state, never the URL and never the agent's self-report.
+🛒🧨 A **multi-app browser-agent RL gym** that harvests **causal, reproducible agent failure modes ("breakers")** — tasks engineered so a *capable* frontier agent can commit a real, **state-observable** harm (charges a dead card, ships a gift to the wrong person, fabricates a "done!" email for an action that silently failed, buys an item that violates a stated constraint). Agents drive a real headless Chromium across five interlinked web apps; every task is graded by a **per-step milestone verifier** that reads ground-truth app state, never the URL and never the agent's self-report.
 
-> **The product is the breaker library, not the gym.** Each breaker is a statistically-significant, model-agnostic failure mode suitable for red-teaming / evals.
+> **The product is the breaker library, not the gym.** Each breaker is a model-agnostic failure mode suitable for red-teaming / evals. Public claim language uses **replicated breaker under a three-seed screening protocol** (short form: **replicated break**), not statistical significance.
 > **New here? Read [`PROJECT_CONTEXT.md`](./PROJECT_CONTEXT.md)** — the full A-to-Z (aim, structure, every task, every result, how to run, current state).
+> **External validity review:** [`docs/BENCHMARK_VALIDITY_AND_VERIFIER_REFERENCE.md`](./docs/BENCHMARK_VALIDITY_AND_VERIFIER_REFERENCE.md) — current architecture, fresh system-wide checks, publication scorecard, and the complete live task/verifier inventory.
 
 ---
 
