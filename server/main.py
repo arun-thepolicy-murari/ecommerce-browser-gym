@@ -68,6 +68,7 @@ from server import mutations, verifiers
 from server.state import GymState, flash, log_action
 from server.tasks import TASKS, make_task, START_PATHS
 from server.apps.world import WorldState
+from server.apps import statecodec
 from server.apps.mail.state import make_mailstate
 from server.apps.mail import routes as mail_routes
 from server.apps.food.state import make_foodstate
@@ -971,6 +972,36 @@ def harness_reset(req: HarnessResetRequest) -> dict[str, Any]:
             "ui_variant": SESSION.ui_variant,
             "start_path": START_PATHS.get(s.task_id, "/"),
             "current_user_id": s.current_user_id}
+
+
+class HarnessLoadStateRequest(BaseModel):
+    task_id: str
+    seed: int = 0
+    ui: str = "normal"
+    state: dict = {}
+    step: int | None = None
+
+
+@app.post("/_harness/load_state")
+def harness_load_state(req: HarnessLoadStateRequest) -> dict[str, Any]:
+    """Resume from a corrected mid-episode state. Resets to the seed baseline —
+    rebuilding every catalog and keeping SESSION.initial / initial_world pristine
+    so delta & cross-app verifiers still compare against the seed — then OVERLAYS
+    the supplied mutable slice (cart / orders / account / sub-app state / events /
+    clock). The verifier suite re-evaluates fresh against the corrected world on
+    the next /_harness/verify, giving a REAL verdict on the corrected state."""
+    if req.task_id not in TASKS:
+        raise HTTPException(404, "unknown task")
+    _reset_inline(req.task_id, req.seed, ui=req.ui)
+    try:
+        statecodec.apply_snapshot(SESSION.world, req.state or {})
+    except Exception as exc:  # noqa: BLE001 — a bad snapshot is a 422, not a 500
+        raise HTTPException(422, f"could not load state: {type(exc).__name__}: {exc}")
+    if req.step is not None:
+        _state().step = req.step
+    s = _state()
+    return {"ok": True, "task_id": s.task_id, "seed": s.seed, "step": s.step,
+            "current_user_id": s.current_user_id, "snapshot": harness_snapshot()}
 
 
 @app.get("/_harness/state")
