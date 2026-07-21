@@ -1093,11 +1093,57 @@ async def harness_run_agent(req: HarnessRunAgentRequest) -> dict[str, Any]:
             if bt:
                 score = bt.get("score")
                 success = (score or 0) >= 0.999
+    # Load the trajectory the run just wrote, and return a lite view an external
+    # reviewer (the annotator platform) can render.
+    traj: dict[str, Any] | None = None
+    flat = req.task_id.replace("/", "_")
+    tdir = root / "trajectories" / req.agent
+    cands = sorted(tdir.glob(f"{flat}__{req.seed}__*.jsonl"), key=lambda p: p.stat().st_mtime) if tdir.exists() else []
+    if cands:
+        try:
+            d = json.loads(cands[-1].read_text())
+            traj = {
+                "episode_id": d.get("episode_id"),
+                "task_brief": d.get("task_brief"),
+                "task_category": d.get("task_category"),
+                "task_difficulty": d.get("task_difficulty"),
+                "initial_url": d.get("initial_url"),
+                "final_url": d.get("final_url"),
+                "verifier_result": d.get("verifier_result"),
+                "steps": [
+                    {
+                        "step_idx": s.get("step_idx"),
+                        "action_kind": s.get("action_kind"),
+                        "action_args": s.get("action_args"),
+                        "url_after": s.get("url_after"),
+                        "screenshot_path": s.get("screenshot_path"),
+                        "reasoning": s.get("reasoning"),
+                        "action_error": s.get("action_error"),
+                        "active_tab": s.get("active_tab"),
+                        "tab_strip": s.get("tab_strip"),
+                    }
+                    for s in d.get("steps", [])
+                ],
+            }
+        except (ValueError, OSError):
+            traj = None
     return {
         "ok": proc.returncode == 0, "agent": req.agent, "task_id": req.task_id,
         "seed": req.seed, "score": score, "success": success,
-        "returncode": proc.returncode, "log_tail": text[-800:],
+        "returncode": proc.returncode, "trajectory": traj, "log_tail": text[-400:],
     }
+
+
+@app.get("/_harness/screenshot")
+def harness_screenshot(path: str):
+    """Serve a per-step screenshot PNG captured during a run (path is relative to
+    the repo root, e.g. screenshots/oracle/<episode>/step_004.png)."""
+    from fastapi.responses import FileResponse
+    root = Path(__file__).resolve().parent.parent
+    rel = (root / path).resolve()
+    if not str(rel).startswith(str((root / "screenshots").resolve())) or not rel.is_file():
+        raise HTTPException(404, "screenshot not found")
+    return FileResponse(str(rel), media_type="image/png")
 
 
 @app.post("/_harness/classify_failure")
