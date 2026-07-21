@@ -134,13 +134,35 @@ async def _run_one(*, agent_kind: str, task_id: str, seed: int,
                    out_traj_dir: Path, out_screens_dir: Path,
                    llm_model: str | None,
                    ui: str = "normal",
-                   use_llm_judge: bool = False) -> Trajectory:
+                   use_llm_judge: bool = False,
+                   resume_state: dict | None = None,
+                   resume_step: int | None = None,
+                   resume_url: str | None = None) -> Trajectory:
     from harness.invalid_episode import INVALID_BROWSER_CRASH, INVALID_RESET
     from harness.runner import image_settings_for_agent
 
-    # Reset the gym for this task (+ optional named UI perturbation).
+    # START the episode. Normally reset-to-seed; on RESUME, load a corrected
+    # mid-episode world onto SESSION (no reset wipe) and drive FORWARD from it.
     try:
-        reset = await reset_gym(server_url, task_id, seed, ui=ui)
+        if resume_state is not None:
+            from urllib.parse import urlparse
+            async with httpx.AsyncClient(headers=harness_headers()) as c:
+                r = await c.post(f"{server_url}/_harness/load_state", json={
+                    "task_id": task_id, "seed": seed, "ui": ui,
+                    "state": resume_state, "step": resume_step,
+                })
+                r.raise_for_status()
+                st = (await c.get(f"{server_url}/_harness/state")).json()
+            reset = {
+                "task_brief": st.get("task_brief", ""),
+                "task_difficulty": st.get("task_difficulty", "easy"),
+                "task_category": st.get("task_category", "A"),
+                "ui_variant": ui,
+                # navigate to the mid-episode page (a PATH; the goto prefixes host)
+                "start_path": (urlparse(resume_url).path or "/") if resume_url else "/",
+            }
+        else:
+            reset = await reset_gym(server_url, task_id, seed, ui=ui)
     except Exception as e:
         err = f"{type(e).__name__}: {e}"
         traj = _invalid_stub_traj(
@@ -401,8 +423,15 @@ def main() -> None:
                          "Costs a few cents per unclassified failure.")
     ap.add_argument("--out-traj", default=None)
     ap.add_argument("--out-screens", default=None)
+    # Resume-from-corrected-state: load a world snapshot (too big for argv, so a
+    # file) and drive the agent FORWARD from a mid-episode URL instead of reset.
+    ap.add_argument("--resume-file", default=None, help="JSON world snapshot to load before driving")
+    ap.add_argument("--resume-step", type=int, default=None)
+    ap.add_argument("--resume-url", default=None, help="mid-episode URL to navigate to on resume")
     args = ap.parse_args()
     ensure_harness_token()
+
+    resume_state = json.loads(Path(args.resume_file).read_text()) if args.resume_file else None
 
     tasks = _parse_tasks(args.tasks)
     seeds = _parse_seeds(args.seeds)
@@ -439,6 +468,9 @@ def main() -> None:
                 llm_model=args.model,
                 ui=args.ui,
                 use_llm_judge=args.llm_judge,
+                resume_state=resume_state,
+                resume_step=args.resume_step,
+                resume_url=args.resume_url,
             ))
             v = traj.verifier_result
             print(f"  -> score={v.get('score', 0):.2f} "

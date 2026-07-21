@@ -1079,34 +1079,29 @@ class HarnessRunAgentRequest(BaseModel):
     seed: int = 0
 
 
-@app.post("/_harness/run_agent")
-async def harness_run_agent(req: HarnessRunAgentRequest) -> dict[str, Any]:
-    """Run an agent end-to-end for a task against THIS live server, then report
-    the true score. Spawns ``eval.run`` (which resets → drives via Playwright →
-    verifies), so the annotator can trigger a real run over HTTP. ``oracle`` is
-    deterministic (no API key); LLM agents need their key in the env."""
+_AGENTS = {"oracle", "llm", "openai", "openai_pixel", "openai_coord", "pixel", "pixel_coord"}
+
+
+async def _spawn_eval_run(agent: str, task_id: str, seed: int, extra_argv: list[str], timeout: int = 240) -> dict[str, Any]:
+    """Spawn ``eval.run`` against THIS live server, parse the true score, and
+    return a lite trajectory view. Shared by run_agent (reset+drive) and
+    resume_run (load_state+drive-forward — via extra_argv)."""
     import asyncio
     import json
     import os
     import re
     import sys
 
-    if req.task_id not in TASKS:
-        raise HTTPException(404, "unknown task")
-    allowed = {"oracle", "llm", "openai", "openai_pixel", "openai_coord", "pixel", "pixel_coord"}
-    if req.agent not in allowed:
-        raise HTTPException(400, f"unknown agent; use one of {sorted(allowed)}")
-
     root = Path(__file__).resolve().parent.parent
     proc = await asyncio.create_subprocess_exec(
         sys.executable, "-m", "eval.run",
-        "--agent", req.agent, "--tasks", req.task_id, "--seeds", str(req.seed),
-        "--server", "http://localhost:8000",
+        "--agent", agent, "--tasks", task_id, "--seeds", str(seed),
+        "--server", "http://localhost:8000", *extra_argv,
         cwd=str(root), env={**os.environ},
         stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT,
     )
     try:
-        out, _ = await asyncio.wait_for(proc.communicate(), timeout=240)
+        out, _ = await asyncio.wait_for(proc.communicate(), timeout=timeout)
     except TimeoutError:
         proc.kill()
         raise HTTPException(504, "agent run timed out")
@@ -1118,18 +1113,16 @@ async def harness_run_agent(req: HarnessRunAgentRequest) -> dict[str, Any]:
     if m:
         score, success = float(m.group(1)), m.group(2) == "True"
     else:
-        sc = root / "trajectories" / req.agent / "_scorecard.json"
+        sc = root / "trajectories" / agent / "_scorecard.json"
         if sc.exists():
-            bt = json.loads(sc.read_text()).get("by_task", {}).get(req.task_id)
+            bt = json.loads(sc.read_text()).get("by_task", {}).get(task_id)
             if bt:
                 score = bt.get("score")
                 success = (score or 0) >= 0.999
-    # Load the trajectory the run just wrote, and return a lite view an external
-    # reviewer (the annotator platform) can render.
     traj: dict[str, Any] | None = None
-    flat = req.task_id.replace("/", "_")
-    tdir = root / "trajectories" / req.agent
-    cands = sorted(tdir.glob(f"{flat}__{req.seed}__*.jsonl"), key=lambda p: p.stat().st_mtime) if tdir.exists() else []
+    flat = task_id.replace("/", "_")
+    tdir = root / "trajectories" / agent
+    cands = sorted(tdir.glob(f"{flat}__{seed}__*.jsonl"), key=lambda p: p.stat().st_mtime) if tdir.exists() else []
     if cands:
         try:
             d = json.loads(cands[-1].read_text())
@@ -1159,10 +1152,56 @@ async def harness_run_agent(req: HarnessRunAgentRequest) -> dict[str, Any]:
         except (ValueError, OSError):
             traj = None
     return {
-        "ok": proc.returncode == 0, "agent": req.agent, "task_id": req.task_id,
-        "seed": req.seed, "score": score, "success": success,
+        "ok": proc.returncode == 0, "agent": agent, "task_id": task_id,
+        "seed": seed, "score": score, "success": success,
         "returncode": proc.returncode, "trajectory": traj, "log_tail": text[-400:],
     }
+
+
+@app.post("/_harness/run_agent")
+async def harness_run_agent(req: HarnessRunAgentRequest) -> dict[str, Any]:
+    """Run an agent end-to-end for a task against THIS live server, then report
+    the true score. Spawns ``eval.run`` (resets → drives via Playwright →
+    verifies), so the annotator can trigger a real run over HTTP. ``oracle`` is
+    deterministic (no API key); LLM agents need their key in the env."""
+    if req.task_id not in TASKS:
+        raise HTTPException(404, "unknown task")
+    if req.agent not in _AGENTS:
+        raise HTTPException(400, f"unknown agent; use one of {sorted(_AGENTS)}")
+    return await _spawn_eval_run(req.agent, req.task_id, req.seed, [])
+
+
+class HarnessResumeRunRequest(BaseModel):
+    agent: str = "llm"
+    task_id: str
+    seed: int = 0
+    state: dict = {}
+    step: int | None = None
+    url: str = "/"
+
+
+@app.post("/_harness/resume_run")
+async def harness_resume_run(req: HarnessResumeRunRequest) -> dict[str, Any]:
+    """Drive-forward resume: load a corrected mid-episode world onto SESSION
+    (NOT reset), navigate to the mid-episode URL, and drive the agent FORWARD
+    from there, then verify. The observing agent (``llm``) genuinely continues
+    from the corrected state; ``oracle`` re-runs from home and is only meaningful
+    when resuming a seed-equivalent state. Needs the agent's API key in the env
+    for LLM agents (stochastic)."""
+    import json
+    import tempfile
+
+    if req.task_id not in TASKS:
+        raise HTTPException(404, "unknown task")
+    if req.agent not in _AGENTS:
+        raise HTTPException(400, f"unknown agent; use one of {sorted(_AGENTS)}")
+    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
+        json.dump(req.state or {}, f)
+        state_path = f.name
+    extra = ["--resume-file", state_path, "--resume-url", req.url or "/"]
+    if req.step is not None:
+        extra += ["--resume-step", str(req.step)]
+    return await _spawn_eval_run(req.agent, req.task_id, req.seed, extra, timeout=300)
 
 
 @app.get("/_harness/screenshot")
