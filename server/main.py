@@ -1042,6 +1042,64 @@ def harness_tick(req: HarnessTickRequest) -> dict[str, Any]:
     }
 
 
+class HarnessRunAgentRequest(BaseModel):
+    agent: str = "oracle"
+    task_id: str
+    seed: int = 0
+
+
+@app.post("/_harness/run_agent")
+async def harness_run_agent(req: HarnessRunAgentRequest) -> dict[str, Any]:
+    """Run an agent end-to-end for a task against THIS live server, then report
+    the true score. Spawns ``eval.run`` (which resets → drives via Playwright →
+    verifies), so the annotator can trigger a real run over HTTP. ``oracle`` is
+    deterministic (no API key); LLM agents need their key in the env."""
+    import asyncio
+    import json
+    import os
+    import re
+    import sys
+
+    if req.task_id not in TASKS:
+        raise HTTPException(404, "unknown task")
+    allowed = {"oracle", "llm", "openai", "openai_pixel", "openai_coord", "pixel", "pixel_coord"}
+    if req.agent not in allowed:
+        raise HTTPException(400, f"unknown agent; use one of {sorted(allowed)}")
+
+    root = Path(__file__).resolve().parent.parent
+    proc = await asyncio.create_subprocess_exec(
+        sys.executable, "-m", "eval.run",
+        "--agent", req.agent, "--tasks", req.task_id, "--seeds", str(req.seed),
+        "--server", "http://localhost:8000",
+        cwd=str(root), env={**os.environ},
+        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT,
+    )
+    try:
+        out, _ = await asyncio.wait_for(proc.communicate(), timeout=240)
+    except TimeoutError:
+        proc.kill()
+        raise HTTPException(504, "agent run timed out")
+    text = out.decode(errors="replace")
+
+    score: float | None = None
+    success: bool | None = None
+    m = re.search(r"score=([\d.]+)\s+success=(True|False)", text)
+    if m:
+        score, success = float(m.group(1)), m.group(2) == "True"
+    else:
+        sc = root / "trajectories" / req.agent / "_scorecard.json"
+        if sc.exists():
+            bt = json.loads(sc.read_text()).get("by_task", {}).get(req.task_id)
+            if bt:
+                score = bt.get("score")
+                success = (score or 0) >= 0.999
+    return {
+        "ok": proc.returncode == 0, "agent": req.agent, "task_id": req.task_id,
+        "seed": req.seed, "score": score, "success": success,
+        "returncode": proc.returncode, "log_tail": text[-800:],
+    }
+
+
 @app.post("/_harness/classify_failure")
 def harness_classify_failure(payload: dict) -> dict[str, Any]:
     """Run the UNIVERSAL failure classifier against the real GymState.
