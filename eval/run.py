@@ -79,6 +79,11 @@ def _detect_loop(steps: list) -> bool:
 
 
 def _agent_name(agent_kind: str, llm_model: str | None) -> str:
+    import os
+    # OpenAI agents read their model from $OPENAI_MODEL (not the Anthropic --model
+    # flag), so record THAT — otherwise the trajectory mislabels e.g. a gpt-5.5 run
+    # as the gpt-4o-mini default.
+    _oai = llm_model or os.getenv("OPENAI_MODEL") or "gpt-4o-mini"
     if agent_kind == "oracle":
         return "oracle"
     if agent_kind == "pixel":
@@ -86,11 +91,11 @@ def _agent_name(agent_kind: str, llm_model: str | None) -> str:
     if agent_kind == "pixel_coord":
         return f"pixel_coord[{llm_model or 'default'}]"
     if agent_kind == "openai":
-        return f"openai[{llm_model or 'gpt-4o-mini'}]"
+        return f"openai[{_oai}]"
     if agent_kind == "openai_pixel":
-        return f"openai_pixel[{llm_model or 'gpt-4o-mini'}]"
+        return f"openai_pixel[{_oai}]"
     if agent_kind == "openai_coord":
-        return f"openai_coord[{llm_model or 'gpt-4o-mini'}]"
+        return f"openai_coord[{_oai}]"
     if agent_kind == "qwen":
         return f"qwen[{llm_model or 'qwen-vl-plus'}]"
     return f"llm[{llm_model or 'default'}]"

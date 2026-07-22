@@ -1163,6 +1163,7 @@ async def _spawn_eval_run(agent: str, task_id: str, seed: int, extra_argv: list[
             d = json.loads(cands[-1].read_text())
             traj = {
                 "episode_id": d.get("episode_id"),
+                "agent_name": d.get("agent_name"),  # e.g. "openai[gpt-5.5]" — for the review label
                 "task_brief": d.get("task_brief"),
                 "task_category": d.get("task_category"),
                 "task_difficulty": d.get("task_difficulty"),
