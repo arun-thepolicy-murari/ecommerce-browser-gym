@@ -163,9 +163,11 @@ async def _run_one(*, agent_kind: str, task_id: str, seed: int,
                 "start_path": (urlparse(resume_url).path or "/") if resume_url else "/",
             }
         else:
-            reset = await reset_gym(server_url, task_id, seed, ui=ui)
-        # Annotator prompt-edit: drive the agent with an OVERRIDDEN brief (a fresh
-        # full run under the new instruction), on both the reset and resume paths.
+            # brief override also updates the SERVER state so the in-page banner +
+            # every screenshot render the new instruction (not just the agent).
+            reset = await reset_gym(server_url, task_id, seed, ui=ui, brief=brief_override)
+        # Belt-and-suspenders (and the resume path, which has no reset_gym): the
+        # agent + persisted trajectory record the overridden brief.
         if brief_override:
             reset["task_brief"] = brief_override
     except Exception as e:

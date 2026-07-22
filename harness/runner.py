@@ -1022,14 +1022,16 @@ async def open_browser(
 
 
 async def reset_gym(server_url: str, task_id: str, seed: int,
-                    ui: str = "normal") -> dict[str, Any]:
+                    ui: str = "normal", brief: str | None = None) -> dict[str, Any]:
     """Tell the backend to reset state for this task/seed (+ optional named UI
-    perturbation, applied to every page of the episode)."""
+    perturbation, applied to every page of the episode). `brief` overrides the
+    task instruction ON THE SERVER STATE too, so the in-page brief banner (and
+    every screenshot) reflects an annotator's prompt edit."""
+    body: dict[str, Any] = {"task_id": task_id, "seed": seed, "ui": ui}
+    if brief:
+        body["brief"] = brief
     async with httpx.AsyncClient(headers=harness_headers()) as c:
-        r = await c.post(
-            f"{server_url}/_harness/reset",
-            json={"task_id": task_id, "seed": seed, "ui": ui},
-        )
+        r = await c.post(f"{server_url}/_harness/reset", json=body)
         r.raise_for_status()
         return r.json()
 

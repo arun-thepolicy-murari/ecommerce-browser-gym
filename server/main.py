@@ -947,6 +947,7 @@ class HarnessResetRequest(BaseModel):
     task_id: str
     seed: int = 0
     ui: str = "normal"
+    brief: str | None = None  # annotator prompt edit → render this brief in-page
 
 
 class HarnessVerifyRequest(BaseModel):
@@ -965,6 +966,10 @@ def harness_reset(req: HarnessResetRequest) -> dict[str, Any]:
         raise HTTPException(404, "unknown task")
     _reset_inline(req.task_id, req.seed, ui=req.ui)
     s = _state()
+    # Annotator prompt edit: render the NEW brief in-page (banner + screenshots),
+    # not just what the agent is told — so the reviewed run is self-consistent.
+    if req.brief:
+        s.task_brief = req.brief
     return {"ok": True, "task_id": s.task_id, "seed": s.seed,
             "task_brief": s.task_brief,
             "task_category": s.task_category,
