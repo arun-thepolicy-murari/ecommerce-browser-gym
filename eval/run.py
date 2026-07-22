@@ -137,7 +137,8 @@ async def _run_one(*, agent_kind: str, task_id: str, seed: int,
                    use_llm_judge: bool = False,
                    resume_state: dict | None = None,
                    resume_step: int | None = None,
-                   resume_url: str | None = None) -> Trajectory:
+                   resume_url: str | None = None,
+                   brief_override: str | None = None) -> Trajectory:
     from harness.invalid_episode import INVALID_BROWSER_CRASH, INVALID_RESET
     from harness.runner import image_settings_for_agent
 
@@ -163,6 +164,10 @@ async def _run_one(*, agent_kind: str, task_id: str, seed: int,
             }
         else:
             reset = await reset_gym(server_url, task_id, seed, ui=ui)
+        # Annotator prompt-edit: drive the agent with an OVERRIDDEN brief (a fresh
+        # full run under the new instruction), on both the reset and resume paths.
+        if brief_override:
+            reset["task_brief"] = brief_override
     except Exception as e:
         err = f"{type(e).__name__}: {e}"
         traj = _invalid_stub_traj(
@@ -428,6 +433,7 @@ def main() -> None:
     ap.add_argument("--resume-file", default=None, help="JSON world snapshot to load before driving")
     ap.add_argument("--resume-step", type=int, default=None)
     ap.add_argument("--resume-url", default=None, help="mid-episode URL to navigate to on resume")
+    ap.add_argument("--brief-override", default=None, help="drive the agent under a replacement task brief (annotator prompt edit)")
     args = ap.parse_args()
     ensure_harness_token()
 
@@ -471,6 +477,7 @@ def main() -> None:
                 resume_state=resume_state,
                 resume_step=args.resume_step,
                 resume_url=args.resume_url,
+                brief_override=args.brief_override,
             ))
             v = traj.verifier_result
             print(f"  -> score={v.get('score', 0):.2f} "

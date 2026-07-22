@@ -1077,6 +1077,7 @@ class HarnessRunAgentRequest(BaseModel):
     agent: str = "oracle"
     task_id: str
     seed: int = 0
+    brief: str | None = None  # annotator prompt edit → drive a fresh run under this brief
 
 
 _AGENTS = {"oracle", "llm", "openai", "openai_pixel", "openai_coord", "pixel", "pixel_coord"}
@@ -1197,7 +1198,8 @@ async def harness_run_agent(req: HarnessRunAgentRequest) -> dict[str, Any]:
         raise HTTPException(404, "unknown task")
     if req.agent not in _AGENTS:
         raise HTTPException(400, f"unknown agent; use one of {sorted(_AGENTS)}")
-    return await _spawn_eval_run(req.agent, req.task_id, req.seed, [])
+    extra = ["--brief-override", req.brief] if req.brief else []
+    return await _spawn_eval_run(req.agent, req.task_id, req.seed, extra)
 
 
 class HarnessResumeRunRequest(BaseModel):
