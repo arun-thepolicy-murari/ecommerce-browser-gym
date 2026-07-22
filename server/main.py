@@ -1128,10 +1128,17 @@ async def _spawn_eval_run(agent: str, task_id: str, seed: int, extra_argv: list[
     # the UI, so a real Chromium window must NOT pop up on the reviewer's screen.
     # (Set GYM_HEADED=1 to watch the browser during local debugging.)
     headless = [] if agent_env.get("GYM_HEADED") == "1" else ["--headless"]
+    # Isolate THIS run's trajectory jsonl + scorecard to a unique dir, so the
+    # returned trajectory always belongs to the run whose score we parse — never
+    # the newest-on-disk file from a CONCURRENT run of the same task+seed.
+    # (Screenshots keep the default dir so /_harness/screenshot paths resolve.)
+    import shutil
+    import tempfile
+    run_out = tempfile.mkdtemp(prefix=f"gymrun_{agent.replace('/', '_')}_")
     proc = await asyncio.create_subprocess_exec(
         sys.executable, "-m", "eval.run",
         "--agent", agent, "--tasks", task_id, "--seeds", str(seed),
-        "--server", "http://localhost:8000", *headless, *extra_argv,
+        "--server", "http://localhost:8000", "--out-traj", run_out, *headless, *extra_argv,
         cwd=str(root), env=agent_env,
         stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT,
     )
@@ -1148,16 +1155,15 @@ async def _spawn_eval_run(agent: str, task_id: str, seed: int, extra_argv: list[
     if m:
         score, success = float(m.group(1)), m.group(2) == "True"
     else:
-        sc = root / "trajectories" / agent / "_scorecard.json"
+        sc = Path(run_out) / "_scorecard.json"  # this run's own scorecard
         if sc.exists():
             bt = json.loads(sc.read_text()).get("by_task", {}).get(task_id)
             if bt:
                 score = bt.get("score")
                 success = (score or 0) >= 0.999
     traj: dict[str, Any] | None = None
-    flat = task_id.replace("/", "_")
-    tdir = root / "trajectories" / agent
-    cands = sorted(tdir.glob(f"{flat}__{seed}__*.jsonl"), key=lambda p: p.stat().st_mtime) if tdir.exists() else []
+    # THIS run's trajectory is the only jsonl in the isolated dir.
+    cands = sorted(Path(run_out).glob("*.jsonl"), key=lambda p: p.stat().st_mtime)
     if cands:
         try:
             d = json.loads(cands[-1].read_text())
@@ -1187,6 +1193,7 @@ async def _spawn_eval_run(agent: str, task_id: str, seed: int, extra_argv: list[
             }
         except (ValueError, OSError):
             traj = None
+    shutil.rmtree(run_out, ignore_errors=True)  # ephemeral per-run traj dir (screenshots persist separately)
     return {
         "ok": proc.returncode == 0, "agent": agent, "task_id": task_id,
         "seed": seed, "score": score, "success": success,
