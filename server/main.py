@@ -1082,6 +1082,27 @@ class HarnessRunAgentRequest(BaseModel):
 _AGENTS = {"oracle", "llm", "openai", "openai_pixel", "openai_coord", "pixel", "pixel_coord"}
 
 
+def _dotenv_overrides(path: Path) -> dict[str, str]:
+    """Read simple KEY=VALUE lines from a gitignored ``.env`` so a fresh API key
+    (e.g. ANTHROPIC_API_KEY / ANTHROPIC_MODEL) can be dropped in and picked up on
+    the NEXT agent run — no server restart, no key in shell history. .env values
+    override the ambient process env so a fresh key wins over a stale/exhausted
+    one. Returns {} when the file is absent. Never logs the values."""
+    out: dict[str, str] = {}
+    try:
+        for raw in path.read_text().splitlines():
+            line = raw.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            k, _, v = line.partition("=")
+            k = k.strip()
+            if k:
+                out[k] = v.strip().strip('"').strip("'")
+    except OSError:
+        pass
+    return out
+
+
 async def _spawn_eval_run(agent: str, task_id: str, seed: int, extra_argv: list[str], timeout: int = 240) -> dict[str, Any]:
     """Spawn ``eval.run`` against THIS live server, parse the true score, and
     return a lite trajectory view. Shared by run_agent (reset+drive) and
@@ -1093,11 +1114,19 @@ async def _spawn_eval_run(agent: str, task_id: str, seed: int, extra_argv: list[
     import sys
 
     root = Path(__file__).resolve().parent.parent
+    # Merge a gitignored .env (if present) over the process env so LLM agents pick
+    # up a working key without restarting the server.
+    agent_env = {**os.environ, **_dotenv_overrides(root / ".env")}
+    # Run the browser HEADLESS when driving agents for the annotation platform —
+    # the annotator reviews the captured replay (screenshots + tab snapshots) in
+    # the UI, so a real Chromium window must NOT pop up on the reviewer's screen.
+    # (Set GYM_HEADED=1 to watch the browser during local debugging.)
+    headless = [] if agent_env.get("GYM_HEADED") == "1" else ["--headless"]
     proc = await asyncio.create_subprocess_exec(
         sys.executable, "-m", "eval.run",
         "--agent", agent, "--tasks", task_id, "--seeds", str(seed),
-        "--server", "http://localhost:8000", *extra_argv,
-        cwd=str(root), env={**os.environ},
+        "--server", "http://localhost:8000", *headless, *extra_argv,
+        cwd=str(root), env=agent_env,
         stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT,
     )
     try:
