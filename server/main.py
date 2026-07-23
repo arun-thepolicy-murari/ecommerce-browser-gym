@@ -1193,6 +1193,17 @@ async def _spawn_eval_run(agent: str, task_id: str, seed: int, extra_argv: list[
             }
         except (ValueError, OSError):
             traj = None
+        # ARCHIVE the raw run before discarding the isolated dir. Isolation fixed a
+        # concurrency bug but made runs unreconstructible: the only full record of a
+        # run lived in a temp dir that was deleted, so when the annotator DB was
+        # wiped the runs could not be rebuilt. Keep the jsonl next to the screenshots
+        # it references, so a run is always recoverable from disk.
+        try:
+            archive = root / "trajectories" / agent.replace("/", "_")
+            archive.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(cands[-1], archive / cands[-1].name)
+        except OSError:
+            pass  # archiving is best-effort; never fail a run over it
     shutil.rmtree(run_out, ignore_errors=True)  # ephemeral per-run traj dir (screenshots persist separately)
     return {
         "ok": proc.returncode == 0, "agent": agent, "task_id": task_id,
