@@ -143,7 +143,8 @@ async def _run_one(*, agent_kind: str, task_id: str, seed: int,
                    resume_state: dict | None = None,
                    resume_step: int | None = None,
                    resume_url: str | None = None,
-                   brief_override: str | None = None) -> Trajectory:
+                   brief_override: str | None = None,
+                   correction: str = "") -> Trajectory:
     from harness.invalid_episode import INVALID_BROWSER_CRASH, INVALID_RESET
     from harness.runner import image_settings_for_agent
 
@@ -175,6 +176,14 @@ async def _run_one(*, agent_kind: str, task_id: str, seed: int,
         # agent + persisted trajectory record the overridden brief.
         if brief_override:
             reset["task_brief"] = brief_override
+        # A drive-forward CORRECTION is the reviewer's instruction for the agent to
+        # apply as it continues from the corrected step. Inject it into the brief so
+        # the re-run is actually steered by the human's guidance (not a blind re-run).
+        if correction.strip():
+            reset["task_brief"] = (reset.get("task_brief") or "") + (
+                "\n\n[REVIEWER CORRECTION — a human reviewer paused the run at this step "
+                f"and instructs you to: {correction.strip()} Follow this guidance as you continue.]"
+            )
     except Exception as e:
         err = f"{type(e).__name__}: {e}"
         traj = _invalid_stub_traj(
@@ -441,6 +450,7 @@ def main() -> None:
     ap.add_argument("--resume-step", type=int, default=None)
     ap.add_argument("--resume-url", default=None, help="mid-episode URL to navigate to on resume")
     ap.add_argument("--brief-override", default=None, help="drive the agent under a replacement task brief (annotator prompt edit)")
+    ap.add_argument("--correction", default="", help="reviewer's instruction injected into the agent's brief on drive-forward resume")
     args = ap.parse_args()
     ensure_harness_token()
 
@@ -485,6 +495,7 @@ def main() -> None:
                 resume_step=args.resume_step,
                 resume_url=args.resume_url,
                 brief_override=args.brief_override,
+                correction=args.correction,
             ))
             v = traj.verifier_result
             print(f"  -> score={v.get('score', 0):.2f} "

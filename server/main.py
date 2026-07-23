@@ -1222,6 +1222,7 @@ class HarnessResumeRunRequest(BaseModel):
     state: dict = {}
     step: int | None = None
     url: str = "/"
+    correction: str = ""  # reviewer's instruction, injected into the agent's context at resume
 
 
 @app.post("/_harness/resume_run")
@@ -1245,6 +1246,8 @@ async def harness_resume_run(req: HarnessResumeRunRequest) -> dict[str, Any]:
     extra = ["--resume-file", state_path, "--resume-url", req.url or "/"]
     if req.step is not None:
         extra += ["--resume-step", str(req.step)]
+    if req.correction.strip():
+        extra += ["--correction", req.correction.strip()]
     return await _spawn_eval_run(req.agent, req.task_id, req.seed, extra, timeout=300)
 
 
