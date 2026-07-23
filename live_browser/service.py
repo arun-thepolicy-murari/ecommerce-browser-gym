@@ -112,6 +112,9 @@ class LiveSession:
     frame_seq: int = 0
     frame_event: asyncio.Event = field(default_factory=asyncio.Event)
     controller: str | None = None          # ws id currently allowed to send input
+    # Sockets currently attached. A controller lease is only meaningful while its
+    # socket is still here — see the reconnect handling in `stream`.
+    attached: set = field(default_factory=set)
     last_input_id: int = 0
     closed: bool = False
 
@@ -548,21 +551,47 @@ async def health() -> dict:
 # --------------------------------------------------------------------------- ws
 @app.websocket("/live/stream/{sid}")
 async def stream(ws: WebSocket, sid: str, ticket: str = Query(default=""), control: bool = Query(default=True)):
-    s = SESSIONS.get(sid)
-    if s is None or s.closed:
-        await ws.close(code=4404); return
+    # A cross-origin caller is refused WITHOUT completing the handshake — it gets
+    # no diagnostics, which is the point of an origin allow-list.
     if not origin_ok(ws.headers.get("origin")):
         await ws.close(code=4403); return
+
+    # Everything below accepts FIRST and then closes with a code. A browser cannot
+    # observe a close code on a handshake that was never completed — it reports a
+    # generic 1006 — so closing pre-accept meant a legitimate client could not tell
+    # "your ticket expired, stop retrying" from "the network blipped", and it
+    # reconnected forever against a ticket that would never work again.
+    s = SESSIONS.get(sid)
+    if s is None or s.closed:
+        await ws.accept()
+        await ws.close(code=4404); return
     owner = check_ticket(sid, ticket)
     if owner is None or owner != s.owner:
+        await ws.accept()
         await ws.close(code=4401); return
 
     await ws.accept()
+    # A reconnecting client starts its input ids at 1 again, while `last_input_id`
+    # lives on the SESSION and outlives the socket. Without this reset every input
+    # after a reconnect is acked applied:false/"stale" — input that looks delivered
+    # and is not, which is the failure mode the ack channel exists to prevent.
+    s.last_input_id = 0
     ws_id = uuid.uuid4().hex[:8]
     # Exactly one controller: a second controller would interleave input with the
     # first and make the recorded trajectory unattributable.
+    s.attached.add(ws_id)
+    # A lease held by a socket that is no longer attached is nobody's lease.
+    if s.controller is not None and s.controller not in s.attached:
+        s.controller = None
     is_controller = False
     if control and s.controller is None:
+        # A dropped controller's lease is released in the handler's `finally`,
+        # which cannot run until its own socket finishes tearing down. A client
+        # that reconnects promptly therefore arrives while the lease is still held
+        # by the socket it just lost, and gets demoted to a read-only viewer of
+        # its OWN session — with no way back except waiting and reconnecting
+        # again. Claiming a lease whose owner is gone fixes that; a genuine second
+        # viewer still sees a live controller and stays read-only.
         s.controller = ws_id
         is_controller = True
     await ws.send_text(json.dumps({
@@ -622,5 +651,6 @@ async def stream(ws: WebSocket, sid: str, ticket: str = Query(default=""), contr
         pump.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await pump
+        s.attached.discard(ws_id)
         if is_controller and s.controller == ws_id:
             s.controller = None  # release control so the annotator can reconnect

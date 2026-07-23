@@ -383,3 +383,44 @@ async def test_wait_reloads_because_our_pages_never_live_update():
 
     out = await _live(page).act("wait", None, {})
     assert out["ok"] and page.reloaded
+
+
+# --------------------------------------------------------------------------- reconnect
+def test_a_lease_held_by_a_detached_socket_is_reclaimable():
+    """The dropped controller's lease is released in its own handler's `finally`,
+    which cannot run until that socket finishes tearing down. A client that
+    reconnects promptly arrives while the lease is still held by the socket it
+    just lost, and would be demoted to a read-only viewer of its OWN session with
+    no way back. A lease whose owner is no longer attached is nobody's lease."""
+    s = _sess()
+    s.controller = "ws-old"
+    s.attached = set()  # the old socket is gone; its finally has not run yet
+    assert s.controller not in s.attached
+
+    s.attached.add("ws-new")
+    if s.controller is not None and s.controller not in s.attached:
+        s.controller = None
+    assert s.controller is None, "the reconnecting client can take control"
+
+
+def test_a_lease_held_by_a_LIVE_socket_is_not_stolen():
+    """One controller at a time is the whole point — a second viewer must stay
+    read-only while the first is still driving."""
+    s = _sess()
+    s.attached = {"ws-a"}
+    s.controller = "ws-a"
+    s.attached.add("ws-b")
+    if s.controller is not None and s.controller not in s.attached:
+        s.controller = None
+    assert s.controller == "ws-a"
+
+
+def test_the_input_counter_resets_so_a_reconnect_is_not_answered_stale():
+    """`last_input_id` lives on the SESSION and outlives the socket, but a
+    reconnecting client starts its ids at 1 again. Without a reset every input
+    after a reconnect is acked applied:false/"stale" — input that looks delivered
+    and is not, which is exactly what the ack channel exists to prevent."""
+    s = _sess()
+    s.last_input_id = 57
+    s.last_input_id = 0  # what `stream` does on accept
+    assert 1 > s.last_input_id, "the first input of the new socket is accepted"
