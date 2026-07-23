@@ -101,3 +101,144 @@ def test_out_of_range_coordinates_are_clamped_not_thrown():
     s = _sess()
     assert s.to_page_xy(-5.0, -5.0) == (0.0, 0.0)
     assert s.to_page_xy(9.0, 9.0) == (float(service.VIEWPORT_W), float(service.VIEWPORT_H))
+
+
+# --------------------------------------------------------------------------- structured actions
+class FakeLocator:
+    def __init__(self, page, sel, visible=True, count=1):
+        self.page, self.sel, self.visible, self._count = page, sel, visible, count
+
+    async def is_visible(self):
+        return self.visible
+
+    async def count(self):
+        return self._count
+
+    async def scroll_into_view_if_needed(self, timeout=0):
+        return None
+
+    async def click(self, timeout=0):
+        if not self.visible:
+            raise RuntimeError("intercepted")
+        self.page.calls.append(("click", self.sel))
+
+    async def evaluate(self, script):
+        self.page.calls.append(("tag", self.sel))
+
+    @property
+    def first(self):
+        return self
+
+
+class FakePage:
+    """Stands in for a Playwright page: `present` is what the DOM contains, and
+    `visible` decides whether the real click path works or falls through to JS."""
+
+    def __init__(self, present=(), visible=True, url="http://localhost:8000/"):
+        self.present, self.visible, self.url = set(present), visible, url
+        self.calls: list[tuple] = []
+        self.js: list[tuple] = []
+
+    async def evaluate(self, script, arg=None):
+        if isinstance(arg, list) and len(arg) == 3:            # _js_activate
+            sel, kind, val = arg
+            if sel not in self.present:
+                return False
+            self.js.append((kind, sel, val))
+            return True
+        if isinstance(arg, str):                                # querySelector probe
+            return arg in self.present
+        return None
+
+    def locator(self, sel):
+        return FakeLocator(self, sel, visible=self.visible)
+
+    def get_by_role(self, role, name=""):
+        return FakeLocator(self, f"role={role}[{name}]", count=1 if f"role:{role}:{name}" in self.present else 0)
+
+    async def goto(self, url, wait_until="load"):
+        self.url = url
+
+
+def _live(page) -> service.LiveSession:
+    s = _sess()
+    s.page = page
+    return s
+
+
+@pytest.mark.asyncio
+async def test_locator_resolution_prefers_the_most_durable_identifier():
+    page = FakePage(present={'[data-test-id="btn-send"]', "#send", ".btn"})
+    s = _live(page)
+    sel = await s.resolve({"testId": "btn-send", "id": "send", "css": ".btn"})
+    assert sel == '[data-test-id="btn-send"]', "a test id must beat an id or a css path"
+
+
+@pytest.mark.asyncio
+async def test_locator_resolution_falls_back_through_the_candidates():
+    page = FakePage(present={".cart a"})
+    s = _live(page)
+    assert await s.resolve({"testId": "gone", "id": "gone", "css": ".cart a"}) == ".cart a"
+
+
+@pytest.mark.asyncio
+async def test_an_unresolvable_locator_fails_loudly():
+    """A silently-skipped action produces a trajectory that claims to do something
+    it never did — the worst possible outcome for a golden."""
+    s = _live(FakePage(present=set()))
+    out = await s.act("click", {"testId": "nope"})
+    assert out["ok"] is False and "no element matched" in out["error"]
+
+
+@pytest.mark.asyncio
+async def test_click_uses_the_real_interaction_when_the_element_is_visible():
+    page = FakePage(present={"#buy"}, visible=True)
+    out = await _live(page).act("click", {"id": "buy"})
+    assert out["ok"] and ("click", "#buy") in page.calls
+    assert not page.js, "no need for the JS fallback when a real click works"
+
+
+@pytest.mark.asyncio
+async def test_click_falls_back_to_js_activation_instead_of_timing_out():
+    """The harness's own rule: everything is pickable. A collapsed menu or an
+    intercepted element must still activate — never hang."""
+    page = FakePage(present={"#buy"}, visible=False)
+    out = await _live(page).act("click", {"id": "buy"})
+    assert out["ok"] and page.js == [("click", "#buy", None)]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("kind,expected", [
+    ("fill", "fill"), ("type", "fill"), ("select", "select"), ("select_option", "select"), ("check", "check"),
+])
+async def test_the_action_vocabulary_matches_the_agent_harness(kind, expected):
+    """A human-authored golden is replayed by the SAME benchmark that runs agents.
+    If the two dispatch differently, manual trajectories don't reproduce."""
+    page = FakePage(present={"#f"})
+    out = await _live(page).act(kind, {"id": "f"}, {"value": "hello"})
+    assert out["ok"] and page.js[0][0] == expected
+    if expected in ("fill", "select"):
+        assert page.js[0][2] == "hello"
+
+
+@pytest.mark.asyncio
+async def test_navigate_needs_no_locator():
+    page = FakePage()
+    out = await _live(page).act("navigate", None, {"url": "http://localhost:8000/cart"})
+    assert out["ok"] and page.url.endswith("/cart")
+
+
+@pytest.mark.asyncio
+async def test_an_unsupported_action_is_refused_not_guessed():
+    page = FakePage(present={"#x"})
+    out = await _live(page).act("teleport", {"id": "x"})
+    assert out["ok"] is False and "unsupported" in out["error"]
+
+
+@pytest.mark.asyncio
+async def test_the_resolved_selector_is_reported_back():
+    """Recording what actually matched is what makes the step auditable later —
+    re-deriving it at replay time would silently pick a different element."""
+    page = FakePage(present={"#buy"})
+    out = await _live(page).act("click", {"id": "buy"})
+    assert out["resolved"]["selector"] == "#buy"

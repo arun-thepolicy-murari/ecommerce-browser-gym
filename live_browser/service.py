@@ -182,6 +182,141 @@ class LiveSession:
     async def navigate(self, url: str) -> None:
         await self.page.goto(url, wait_until="load")
 
+    # --- structured actions ------------------------------------------------
+    # Raw pointer input is how a HUMAN drives the browser; a committed trajectory
+    # must be replayable without one. These mirror the agent harness's own
+    # vocabulary and its "everything is pickable, no timeouts" strategy — try the
+    # real interaction, fall back to JS activation — so a human-authored golden
+    # reproduces identically when the agent harness replays it. Diverging here
+    # would make manual trajectories unrunnable in the very benchmark they exist
+    # to feed.
+    async def resolve(self, locator: dict) -> str | None:
+        """Turn a semantic locator into a CSS selector that matches RIGHT NOW.
+        Ordered most-durable first; coordinates are not a locator and never
+        appear here."""
+        cands: list[str] = []
+        if locator.get("testId"):
+            cands.append(f"[data-test-id={json.dumps(locator['testId'])}]")
+        if locator.get("id"):
+            cands.append(f"#{locator['id']}")
+        if locator.get("css"):
+            cands.append(locator["css"])
+        if locator.get("name"):
+            cands.append(f"[name={json.dumps(locator['name'])}]")
+        for sel in cands:
+            with contextlib.suppress(Exception):
+                if await self.page.evaluate("(s) => !!document.querySelector(s)", sel):
+                    return sel
+        # role+name is last: it needs a Playwright locator rather than a selector,
+        # so we resolve it to a concrete element and hand back a unique handle.
+        if locator.get("role") and locator.get("name"):
+            with contextlib.suppress(Exception):
+                loc = self.page.get_by_role(locator["role"], name=locator["name"]).first
+                if await loc.count():
+                    await loc.evaluate("(el) => el.setAttribute('data-replay-target', '1')")
+                    return "[data-replay-target='1']"
+        return None
+
+    async def _js_activate(self, selector: str, kind: str, value: str | None = None) -> bool:
+        """Reveal a present-but-hidden element and activate it via JS. Same
+        contract as the agent harness: a genuinely absent element is the ONLY
+        failure — never a timeout."""
+        return bool(await self.page.evaluate(
+            """([sel, kind, val]) => {
+                const el = document.querySelector(sel);
+                if (!el) return false;
+                try { el.scrollIntoView({block: 'center', inline: 'center'}); } catch (e) {}
+                if (kind === 'fill') {
+                    try { el.focus(); } catch (e) {}
+                    const d = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), 'value');
+                    if (d && d.set) d.set.call(el, val); else el.value = val;
+                    el.dispatchEvent(new Event('input', {bubbles: true}));
+                    el.dispatchEvent(new Event('change', {bubbles: true}));
+                } else if (kind === 'select') {
+                    let matched = false;
+                    for (const o of (el.options || [])) {
+                        if (o.value === val || (o.textContent || '').trim() === val) { el.value = o.value; matched = true; break; }
+                    }
+                    if (!matched) el.value = val;
+                    el.dispatchEvent(new Event('input', {bubbles: true}));
+                    el.dispatchEvent(new Event('change', {bubbles: true}));
+                } else if (kind === 'check') {
+                    if (!el.checked) { el.checked = true; el.dispatchEvent(new Event('change', {bubbles: true})); }
+                } else {
+                    el.click();
+                }
+                return true;
+            }""",
+            [selector, kind, value],
+        ))
+
+    async def act(self, kind: str, locator: dict | None = None, args: dict | None = None) -> dict:
+        """Execute ONE structured action. Returns what actually happened —
+        including the selector that matched — so the caller can record the
+        resolved target rather than re-guessing it later."""
+        args = args or {}
+        if kind == "navigate":
+            await self.navigate(args["url"])
+            return {"ok": True, "kind": kind, "resolved": {"url": self.page.url}}
+        if kind == "press":
+            await self.key(args.get("key", "Enter"))
+            return {"ok": True, "kind": kind, "resolved": {}}
+
+        sel = await self.resolve(locator or {})
+        if sel is None:
+            # Fail LOUDLY: a silently-skipped action produces a trajectory that
+            # claims to do something it never did.
+            return {"ok": False, "kind": kind, "error": "no element matched the locator", "resolved": {}}
+
+        value = args.get("value")
+        ok = False
+        if kind == "click":
+            loc = self.page.locator(sel).first
+            with contextlib.suppress(Exception):
+                if await loc.is_visible():
+                    await loc.scroll_into_view_if_needed(timeout=2000)
+                    await loc.click(timeout=5000)
+                    ok = True
+            if not ok:
+                ok = await self._js_activate(sel, "click")
+        elif kind in ("fill", "type"):
+            ok = await self._js_activate(sel, "fill", value)
+        elif kind in ("select", "select_option"):
+            ok = await self._js_activate(sel, "select", value)
+        elif kind == "check":
+            ok = await self._js_activate(sel, "check")
+        else:
+            return {"ok": False, "kind": kind, "error": f"unsupported action {kind!r}", "resolved": {}}
+
+        with contextlib.suppress(Exception):
+            await self.page.evaluate("() => document.querySelectorAll('[data-replay-target]').forEach(e => e.removeAttribute('data-replay-target'))")
+        return {"ok": ok, "kind": kind, "resolved": {"selector": sel, "url": self.page.url},
+                **({} if ok else {"error": "element matched but did not activate"})}
+
+    async def describe(self, nx: float, ny: float) -> dict:
+        """Locator candidates for whatever is at this point, captured BEFORE an
+        action is dispatched — afterwards the element may not exist."""
+        x, y = self.to_page_xy(nx, ny)
+        return await self.page.evaluate(
+            """([x, y]) => {
+                const el = document.elementFromPoint(x, y);
+                if (!el) return {};
+                const t = el.closest('[data-test-id],button,a,input,select,textarea,[role]') || el;
+                return {
+                    testId: t.getAttribute('data-test-id') || '',
+                    id: t.id || '',
+                    name: t.getAttribute('name') || '',
+                    role: t.getAttribute('role') || t.tagName.toLowerCase(),
+                    type: t.getAttribute('type') || '',
+                    autocomplete: t.getAttribute('autocomplete') || '',
+                    label: (t.getAttribute('aria-label') || '').slice(0, 120),
+                    text: (t.textContent || '').trim().slice(0, 120),
+                    tag: t.tagName.toLowerCase(),
+                };
+            }""",
+            [x, y],
+        )
+
     async def info(self) -> dict:
         pages = self.context.pages if self.context else []
         return {
@@ -232,6 +367,43 @@ async def session_info(sid: str) -> dict:
     if not s:
         raise HTTPException(404, "unknown session")
     return await s.info()
+
+
+class ActBody(BaseModel):
+    kind: str
+    locator: dict | None = None
+    args: dict | None = None
+    ticket: str = ""
+
+
+@app.post("/live/sessions/{sid}/act")
+async def session_act(sid: str, body: ActBody) -> dict:
+    """Execute one STRUCTURED action — the replay path. A committed trajectory is
+    replayed through here, never through recorded pixels, so it survives layout
+    change and can be re-run by the agent harness."""
+    s = SESSIONS.get(sid)
+    if not s or s.closed:
+        raise HTTPException(404, "unknown session")
+    if check_ticket(sid, body.ticket) is None:
+        raise HTTPException(403, "invalid or expired ticket")
+    return await s.act(body.kind, body.locator, body.args)
+
+
+class DescribeBody(BaseModel):
+    x: float
+    y: float
+    ticket: str = ""
+
+
+@app.post("/live/sessions/{sid}/describe")
+async def session_describe(sid: str, body: DescribeBody) -> dict:
+    """Locator candidates at a normalized point, read BEFORE dispatch."""
+    s = SESSIONS.get(sid)
+    if not s or s.closed:
+        raise HTTPException(404, "unknown session")
+    if check_ticket(sid, body.ticket) is None:
+        raise HTTPException(403, "invalid or expired ticket")
+    return await s.describe(body.x, body.y)
 
 
 @app.post("/live/sessions/{sid}/close")
