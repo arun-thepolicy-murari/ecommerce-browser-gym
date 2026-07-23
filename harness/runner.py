@@ -474,6 +474,16 @@ class BrowserCtx:
                         if (d && d.set) d.set.call(el, val); else el.value = val;
                         el.dispatchEvent(new Event('input', {bubbles: true}));
                         el.dispatchEvent(new Event('change', {bubbles: true}));
+                    } else if (kind === 'select') {
+                        let matched = false;
+                        for (const o of (el.options || [])) {
+                            if (o.value === val || (o.textContent || '').trim() === val) { el.value = o.value; matched = true; break; }
+                        }
+                        if (!matched) el.value = val;
+                        el.dispatchEvent(new Event('input', {bubbles: true}));
+                        el.dispatchEvent(new Event('change', {bubbles: true}));
+                    } else if (kind === 'check') {
+                        if (!el.checked) { el.checked = true; el.dispatchEvent(new Event('change', {bubbles: true})); }
                     } else {
                         el.click();
                     }
@@ -558,7 +568,19 @@ class BrowserCtx:
         err: str | None = None
         await self._animate_cursor(selector, "SELECT", detail=value)
         try:
-            await self.page.select_option(selector, value=value)
+            loc = self.page.locator(selector).first
+            try:
+                visible = await loc.is_visible()
+            except Exception:
+                visible = False
+            if visible:
+                try:
+                    await loc.select_option(value=value, timeout=5000)
+                    err = None
+                except Exception:
+                    err = await self._js_activate(selector, "select", value)
+            else:
+                err = await self._js_activate(selector, "select", value)
         except Exception as e:
             err = f"{type(e).__name__}: {e}"
         latency_ms = int((time.monotonic() - t0) * 1000)
@@ -572,7 +594,19 @@ class BrowserCtx:
         err: str | None = None
         await self._animate_cursor(selector, "CHECK")
         try:
-            await self.page.check(selector)
+            loc = self.page.locator(selector).first
+            try:
+                visible = await loc.is_visible()
+            except Exception:
+                visible = False
+            if visible:
+                try:
+                    await loc.check(timeout=5000)
+                    err = None
+                except Exception:
+                    err = await self._js_activate(selector, "check")
+            else:
+                err = await self._js_activate(selector, "check")
         except Exception as e:
             err = f"{type(e).__name__}: {e}"
         latency_ms = int((time.monotonic() - t0) * 1000)
