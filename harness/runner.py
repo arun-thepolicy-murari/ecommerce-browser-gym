@@ -170,7 +170,12 @@ class StepRecord:
     screenshot_path: str | None
     milestones_fired_this_step: list[str]
     running_score: float
-    snapshot_after: dict[str, Any]   # /_harness/snapshot
+    snapshot_after: dict[str, Any]   # /_harness/snapshot (a small SUMMARY: counts + ids)
+    # The FULL multi-app world after this step. snapshot_after is only a ~200-byte
+    # summary, so it cannot restore state; correcting step N needs the real world
+    # AT step N, otherwise the resume replays the run's FINAL world (which already
+    # contains the effects of every later step).
+    world_after: dict[str, Any] | None = None
     reasoning: str = ""
     action_error: str | None = None
     action_latency_ms: int = 0
@@ -1021,12 +1026,14 @@ class BrowserCtx:
         # Per-step facts (cross-app tasks only). Best-effort: a faulty
         # extractor must never break the episode.
         facts: dict[str, Any] = {}
-        if self.extract_facts is not None:
+        world_after: dict[str, Any] | None = None
+        try:
+            world_after = self.http.get(f"{self.server_url}/_harness/world").json()
+        except Exception:
+            world_after = None
+        if self.extract_facts is not None and world_after is not None:
             try:
-                world_json = self.http.get(
-                    f"{self.server_url}/_harness/world",
-                ).json()
-                facts = self.extract_facts(world_json, url) or {}
+                facts = self.extract_facts(world_after, url) or {}
             except Exception:
                 facts = {}
 
@@ -1043,6 +1050,7 @@ class BrowserCtx:
             milestones_fired_this_step=newly,
             running_score=running_score,
             snapshot_after=snap,
+            world_after=world_after,
             reasoning=reasoning,
             action_error=error,
             action_latency_ms=latency_ms,

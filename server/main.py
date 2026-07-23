@@ -1187,6 +1187,9 @@ async def _spawn_eval_run(agent: str, task_id: str, seed: int, extra_argv: list[
                         "action_error": s.get("action_error"),
                         "active_tab": s.get("active_tab"),
                         "tab_strip": s.get("tab_strip"),
+                        # the FULL world after this step — lets a correction resume
+                        # from step N's real state instead of the run's final world
+                        "world_after": s.get("world_after"),
                     }
                     for s in d.get("steps", [])
                 ],
