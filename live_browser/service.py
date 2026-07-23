@@ -373,6 +373,34 @@ class LiveSession:
         return {"ok": ok, "kind": kind, "resolved": {"selector": sel, "url": self.page.url},
                 **({} if ok else {"error": "element matched but did not activate"})}
 
+    async def focused(self) -> dict:
+        """Locator candidates for whatever currently has KEYBOARD focus.
+
+        A client cannot infer this. It knows where the human last clicked, but
+        focus also moves by Tab, by Enter submitting and advancing, and by a
+        page's own autofocus — all of which happen inside the remote browser.
+        Attributing keystrokes to the last *clicked* element is how a password
+        typed into a Tab-reached field gets recorded against the email field
+        instead, which silently defeats redaction at record time. Only the page
+        knows, so ask the page.
+        """
+        return await self.page.evaluate(
+            """() => {
+                const el = document.activeElement;
+                if (!el || el === document.body) return {};
+                return {
+                    testId: el.getAttribute('data-test-id') || '',
+                    id: el.id || '',
+                    name: el.getAttribute('name') || '',
+                    role: el.getAttribute('role') || el.tagName.toLowerCase(),
+                    type: el.getAttribute('type') || '',
+                    autocomplete: el.getAttribute('autocomplete') || '',
+                    label: (el.getAttribute('aria-label') || '').slice(0, 120),
+                    tag: el.tagName.toLowerCase(),
+                };
+            }"""
+        )
+
     async def describe(self, nx: float, ny: float) -> dict:
         """Locator candidates for whatever is at this point, captured BEFORE an
         action is dispatched — afterwards the element may not exist."""
@@ -484,6 +512,23 @@ async def session_describe(sid: str, body: DescribeBody) -> dict:
     if check_ticket(sid, body.ticket) is None:
         raise HTTPException(403, "invalid or expired ticket")
     return await s.describe(body.x, body.y)
+
+
+class FocusBody(BaseModel):
+    ticket: str = ""
+
+
+@app.post("/live/sessions/{sid}/focused")
+async def session_focused(sid: str, body: FocusBody) -> dict:
+    """Which element has keyboard focus right now. The client needs this to
+    attribute keystrokes correctly — focus moves by Tab and by autofocus, not
+    only by clicking, and a mis-attributed keystroke defeats redaction."""
+    s = SESSIONS.get(sid)
+    if not s or s.closed:
+        raise HTTPException(404, "unknown session")
+    if check_ticket(sid, body.ticket) is None:
+        raise HTTPException(403, "invalid or expired ticket")
+    return await s.focused()
 
 
 @app.post("/live/sessions/{sid}/close")
