@@ -242,3 +242,144 @@ async def test_the_resolved_selector_is_reported_back():
     page = FakePage(present={"#buy"})
     out = await _live(page).act("click", {"id": "buy"})
     assert out["resolved"]["selector"] == "#buy"
+
+
+# --------------------------------------------------------------------------- vocabulary completeness
+class FakeContext:
+    def __init__(self, pages):
+        self.pages = pages
+        self.opened = []
+
+    async def new_page(self):
+        # A new tab loads the same app, so it sees the same elements — the real
+        # context shares cookies and session, which is why tabs live in one.
+        p = _tabbable(FakePage(present=set(self.pages[0].present) if self.pages else {"#buy"}))
+        self.pages.append(p)
+        self.opened.append(p)
+        return p
+
+
+def _tabbable(p):
+    """A FakePage that can be fronted and closed, like a real tab."""
+    p.fronted = False
+    p.closed = False
+
+    async def bring():
+        p.fronted = True
+
+    async def close():
+        p.closed = True
+
+    async def settle(state, timeout=0):
+        p.settled = True
+
+    p.settled = False
+    p.bring_to_front = bring
+    p.close = close
+    p.wait_for_load_state = settle
+    return p
+
+
+def _multitab(n=2):
+    pages = [_tabbable(FakePage(present={"#buy"}, url=f"http://localhost:8000/tab{i}")) for i in range(n)]
+    s = _sess()
+    s.context = FakeContext(pages)
+    s.page = pages[0]
+    return s, pages
+
+
+@pytest.mark.asyncio
+async def test_submit_is_supported():
+    """Regression from a real replay probe: submit is the SECOND most common
+    action in the archive (46 uses against 110 clicks), so an executor without it
+    cannot replay roughly a fifth of every recorded trajectory."""
+    page = FakePage(present={"#send"}, visible=False)
+
+    async def settle(state, timeout=0):
+        page.settled = True
+    page.wait_for_load_state = settle
+    page.settled = False
+
+    out = await _live(page).act("submit", {"id": "send"})
+    assert out["ok"] and page.js == [("click", "#send", None)]
+    assert page.settled, "a submit navigates; reading the world before it settles reads the OLD world"
+
+
+@pytest.mark.asyncio
+async def test_every_action_kind_in_the_recorded_archive_is_executable():
+    """The vocabulary must be COMPLETE, not merely overlapping with the harness.
+    These eight kinds are what the archive actually contains."""
+    recorded = ["click", "fill", "submit", "navigate", "open_tab", "select", "check", "switch_tab"]
+    s, pages = _multitab()
+    for p in pages:
+        p.present = {"#x"}
+
+    for kind in recorded:
+        args = {"url": "/cart", "value": "v", "tab_index": 0}
+        out = await s.act(kind, {"id": "x"}, args)
+        assert out["ok"] is True, f"{kind} is in the archive but not executable: {out.get('error')}"
+
+
+@pytest.mark.asyncio
+async def test_open_tab_shares_the_browser_context():
+    """Tabs live in ONE context so cookies and session survive — cross-app tasks
+    are the point, and an agent logged out on every new tab could not do them."""
+    s, pages = _multitab(1)
+    out = await s.act("open_tab", None, {"url": "/mail"})
+    assert out["ok"] and len(s.context.pages) == 2
+    assert s.page is s.context.pages[1] and s.page.fronted
+
+
+@pytest.mark.asyncio
+async def test_switch_tab_out_of_range_is_refused_not_clamped():
+    """Clamping would silently act on the WRONG tab — a trajectory that claims to
+    read the mail tab while actually reading the shop one."""
+    s, pages = _multitab(2)
+    assert (await s.act("switch_tab", None, {"tab_index": 1}))["ok"]
+    assert s.page is pages[1]
+    bad = await s.act("switch_tab", None, {"tab_index": 7})
+    assert bad["ok"] is False and "out of range" in bad["error"]
+    assert s.page is pages[1], "a refused switch must not move the active tab"
+
+
+@pytest.mark.asyncio
+async def test_the_last_tab_cannot_be_closed():
+    s, pages = _multitab(1)
+    out = await s.act("close_tab", None, {"tab_index": 0})
+    assert out["ok"] is False and "last remaining" in out["error"]
+
+
+@pytest.mark.asyncio
+async def test_closing_the_active_tab_moves_focus_to_a_survivor():
+    """Otherwise every later action dispatches into a closed page."""
+    s, pages = _multitab(2)
+    await s.act("switch_tab", None, {"tab_index": 1})
+    s.context.pages = [pages[0], pages[1]]
+    out = await s.act("close_tab", None, {"tab_index": 1})
+    assert out["ok"] and pages[1].closed
+    assert s.page is not pages[1]
+
+
+@pytest.mark.asyncio
+async def test_a_relative_path_resolves_against_the_session_origin():
+    """Archived actions carry relative paths ("/account/orders"); resolving them
+    against the wrong origin would navigate somewhere real."""
+    s = _sess()
+    s.url = "http://localhost:8000/some/deep/page"
+    assert s._abs("/account/orders") == "http://localhost:8000/account/orders"
+    assert s._abs("http://elsewhere.test/x") == "http://elsewhere.test/x"
+
+
+@pytest.mark.asyncio
+async def test_wait_reloads_because_our_pages_never_live_update():
+    """The gym's pages are server-rendered. An agent that waits on a frozen page
+    would never see the event it is waiting for."""
+    page = FakePage()
+    page.reloaded = False
+
+    async def reload(wait_until="load"):
+        page.reloaded = True
+    page.reload = reload
+
+    out = await _live(page).act("wait", None, {})
+    assert out["ok"] and page.reloaded

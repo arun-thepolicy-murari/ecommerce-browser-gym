@@ -190,6 +190,17 @@ class LiveSession:
     # reproduces identically when the agent harness replays it. Diverging here
     # would make manual trajectories unrunnable in the very benchmark they exist
     # to feed.
+    def _abs(self, path: str) -> str:
+        """Archived actions carry relative paths ("/account/orders"). Resolve
+        against the session's own origin rather than assuming the caller did."""
+        if str(path).startswith("http"):
+            return str(path)
+        base = self.url.rstrip("/")
+        if "://" in base:
+            scheme, _, rest = base.partition("://")
+            base = scheme + "://" + rest.split("/")[0]
+        return base + ("" if str(path).startswith("/") else "/") + str(path)
+
     async def resolve(self, locator: dict) -> str | None:
         """Turn a semantic locator into a CSS selector that matches RIGHT NOW.
         Ordered most-durable first; coordinates are not a locator and never
@@ -250,17 +261,81 @@ class LiveSession:
             [selector, kind, value],
         ))
 
+    # Tabs live in ONE BrowserContext (shared cookies/session), exactly as the
+    # agent harness arranges them — cross-app tasks are the whole point, and an
+    # agent that lost its session on every new tab could not do them.
+    def _tabs(self) -> list:
+        return list(self.context.pages) if self.context else []
+
+    async def _open_tab(self, url: str) -> dict:
+        page = await self.context.new_page()
+        await page.goto(url, wait_until="load")
+        self.page = page
+        await page.bring_to_front()
+        return {"ok": True, "kind": "open_tab",
+                "resolved": {"url": page.url, "tabIndex": self._tabs().index(page)}}
+
+    async def _switch_tab(self, index: int) -> dict:
+        pages = self._tabs()
+        if not (0 <= index < len(pages)):
+            return {"ok": False, "kind": "switch_tab",
+                    "error": f"tab index {index} out of range (0..{len(pages) - 1})", "resolved": {}}
+        self.page = pages[index]
+        await self.page.bring_to_front()
+        return {"ok": True, "kind": "switch_tab", "resolved": {"url": self.page.url, "tabIndex": index}}
+
+    async def _close_tab(self, index: int) -> dict:
+        pages = self._tabs()
+        if len(pages) <= 1:
+            return {"ok": False, "kind": "close_tab", "error": "cannot close the last remaining tab", "resolved": {}}
+        if not (0 <= index < len(pages)):
+            return {"ok": False, "kind": "close_tab",
+                    "error": f"tab index {index} out of range (0..{len(pages) - 1})", "resolved": {}}
+        closing = pages[index]
+        await closing.close()
+        if self.page is closing:
+            self.page = self._tabs()[0]
+            await self.page.bring_to_front()
+        return {"ok": True, "kind": "close_tab", "resolved": {"url": self.page.url}}
+
     async def act(self, kind: str, locator: dict | None = None, args: dict | None = None) -> dict:
         """Execute ONE structured action. Returns what actually happened —
         including the selector that matched — so the caller can record the
-        resolved target rather than re-guessing it later."""
+        resolved target rather than re-guessing it later.
+
+        The vocabulary is the agent harness's, entirely: click · fill · select ·
+        check · submit · navigate · open_tab · switch_tab · close_tab · scroll ·
+        wait · press. It has to be complete, not merely overlapping. `submit` is
+        the second-most-common action in the recorded archive (46 uses against
+        110 clicks), so an executor missing it cannot replay roughly a fifth of
+        every trajectory the benchmark has ever recorded — measured, after a
+        replay probe failed on exactly that.
+        """
         args = args or {}
         if kind == "navigate":
-            await self.navigate(args["url"])
+            await self.navigate(self._abs(args.get("url", "/")))
             return {"ok": True, "kind": kind, "resolved": {"url": self.page.url}}
         if kind == "press":
             await self.key(args.get("key", "Enter"))
             return {"ok": True, "kind": kind, "resolved": {}}
+        if kind == "open_tab":
+            return await self._open_tab(self._abs(args.get("url", "/")))
+        if kind == "switch_tab":
+            return await self._switch_tab(int(args.get("tab_index", args.get("index", 0))))
+        if kind == "close_tab":
+            return await self._close_tab(int(args.get("tab_index", args.get("index", 0))))
+        if kind == "scroll":
+            await self.scroll(0.5, 0.5, float(args.get("amount_px", args.get("dy", 400)))
+                              * (-1 if str(args.get("direction", "down")) == "up" else 1))
+            return {"ok": True, "kind": kind, "resolved": {"url": self.page.url}}
+        if kind == "wait":
+            # "Let time pass" — the clock is the gym's, not ours, so there is
+            # nothing for the browser to do but re-read the page. Reload, because
+            # our pages are server-rendered and never live-update: an agent that
+            # waited on a frozen page would never see the event it waited for.
+            with contextlib.suppress(Exception):
+                await self.page.reload(wait_until="domcontentloaded")
+            return {"ok": True, "kind": kind, "resolved": {"url": self.page.url}}
 
         sel = await self.resolve(locator or {})
         if sel is None:
@@ -270,7 +345,7 @@ class LiveSession:
 
         value = args.get("value")
         ok = False
-        if kind == "click":
+        if kind in ("click", "submit"):
             loc = self.page.locator(sel).first
             with contextlib.suppress(Exception):
                 if await loc.is_visible():
@@ -279,6 +354,11 @@ class LiveSession:
                     ok = True
             if not ok:
                 ok = await self._js_activate(sel, "click")
+            if ok and kind == "submit":
+                # A submit navigates; settling first means the caller reads the
+                # world the form actually produced, not the one before it posted.
+                with contextlib.suppress(Exception):
+                    await self.page.wait_for_load_state("networkidle", timeout=5000)
         elif kind in ("fill", "type"):
             ok = await self._js_activate(sel, "fill", value)
         elif kind in ("select", "select_option"):
