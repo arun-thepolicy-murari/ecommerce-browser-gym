@@ -1,0 +1,358 @@
+{
+  "episode_id": "228c3522",
+  "task_id": "M43/stale_delivery_date",
+  "seed": 0,
+  "agent_name": "oracle",
+  "started_at": 1784685538.829359,
+  "finished_at": 1784685543.173835,
+  "task_brief": "I've got a package on the way and I want to be home when it's delivered. Can you put a reminder on my calendar for the day it arrives?",
+  "task_difficulty": "hard",
+  "task_category": "M",
+  "initial_url": "http://localhost:8000/",
+  "initial_snapshot": {
+    "task_id": "M43/stale_delivery_date",
+    "step": 0,
+    "finished": false,
+    "current_user_id": "u_alice",
+    "cart_item_count": 0,
+    "orders_count": 1,
+    "returns_count": 0,
+    "subscriptions_count": 0,
+    "applied_promo": null
+  },
+  "steps": [
+    {
+      "step_idx": 0,
+      "action_kind": "navigate",
+      "action_args": {
+        "url": "/account/orders/ORD-5501"
+      },
+      "url_after": "http://localhost:8000/account/orders/ORD-5501",
+      "screenshot_path": "screenshots/oracle/M43_stale_delivery_date__0__228c3522/step_000.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.0,
+      "snapshot_after": {
+        "task_id": "M43/stale_delivery_date",
+        "step": 0,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 1,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Find the package order to check its real status.",
+      "action_error": null,
+      "action_latency_ms": 83,
+      "raw_model_output": "",
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "facts_visible_or_created": {
+        "shop.shipment_out_for_delivery_today": true
+      },
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8000/account/orders/ORD-5501",
+          "title": "ShopGym Browser \u2014 Order ORD-5501",
+          "active": true
+        }
+      ],
+      "screenshot_width": 1280,
+      "screenshot_height": 800,
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "step_idx": 1,
+      "action_kind": "navigate",
+      "action_args": {
+        "url": "/account/orders/ORD-5501/track"
+      },
+      "url_after": "http://localhost:8000/account/orders/ORD-5501/track",
+      "screenshot_path": "screenshots/oracle/M43_stale_delivery_date__0__228c3522/step_001.png",
+      "milestones_fired_this_step": [
+        "checked_tracking"
+      ],
+      "running_score": 0.0,
+      "snapshot_after": {
+        "task_id": "M43/stale_delivery_date",
+        "step": 0,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 1,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Check the LIVE tracking for the real arrival date \u2014 the confirmation email can be stale.",
+      "action_error": null,
+      "action_latency_ms": 79,
+      "raw_model_output": "",
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "facts_visible_or_created": {
+        "shop.shipment_out_for_delivery_today": true,
+        "shop.viewing_tracking": true
+      },
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8000/account/orders/ORD-5501/track",
+          "title": "ShopGym Browser \u2014 Tracking \u2014 ORD-5501",
+          "active": true
+        }
+      ],
+      "screenshot_width": 1280,
+      "screenshot_height": 800,
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "step_idx": 2,
+      "action_kind": "navigate",
+      "action_args": {
+        "url": "/calendar/new"
+      },
+      "url_after": "http://localhost:8000/calendar/new",
+      "screenshot_path": "screenshots/oracle/M43_stale_delivery_date__0__228c3522/step_002.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.0,
+      "snapshot_after": {
+        "task_id": "M43/stale_delivery_date",
+        "step": 1,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 1,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "Add the reminder for the LIVE arrival day (today), not the stale email's tomorrow.",
+      "action_error": null,
+      "action_latency_ms": 82,
+      "raw_model_output": "",
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "facts_visible_or_created": {
+        "shop.shipment_out_for_delivery_today": true
+      },
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8000/calendar/new",
+          "title": "ShopGym Calendar \u2014 New event",
+          "active": true
+        }
+      ],
+      "screenshot_width": 1280,
+      "screenshot_height": 800,
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "step_idx": 3,
+      "action_kind": "fill",
+      "action_args": {
+        "selector": "input[data-test-id='input-event-title']",
+        "value": "Package delivery \u2014 be home (ORD-5501)"
+      },
+      "url_after": "http://localhost:8000/calendar/new",
+      "screenshot_path": "screenshots/oracle/M43_stale_delivery_date__0__228c3522/step_003.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.0,
+      "snapshot_after": {
+        "task_id": "M43/stale_delivery_date",
+        "step": 2,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 1,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "",
+      "action_error": null,
+      "action_latency_ms": 511,
+      "raw_model_output": "",
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "facts_visible_or_created": {
+        "shop.shipment_out_for_delivery_today": true
+      },
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8000/calendar/new",
+          "title": "ShopGym Calendar \u2014 New event",
+          "active": true
+        }
+      ],
+      "screenshot_width": 1280,
+      "screenshot_height": 800,
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "step_idx": 4,
+      "action_kind": "select",
+      "action_args": {
+        "selector": "select[data-test-id='select-event-day']",
+        "value": "2026-05-21"
+      },
+      "url_after": "http://localhost:8000/calendar/new",
+      "screenshot_path": "screenshots/oracle/M43_stale_delivery_date__0__228c3522/step_004.png",
+      "milestones_fired_this_step": [],
+      "running_score": 0.0,
+      "snapshot_after": {
+        "task_id": "M43/stale_delivery_date",
+        "step": 3,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 1,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "",
+      "action_error": null,
+      "action_latency_ms": 465,
+      "raw_model_output": "",
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "facts_visible_or_created": {
+        "shop.shipment_out_for_delivery_today": true
+      },
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8000/calendar/new",
+          "title": "ShopGym Calendar \u2014 New event",
+          "active": true
+        }
+      ],
+      "screenshot_width": 1280,
+      "screenshot_height": 800,
+      "device_pixel_ratio": 1.0
+    },
+    {
+      "step_idx": 5,
+      "action_kind": "click",
+      "action_args": {
+        "selector": "button[data-test-id='btn-save-event']"
+      },
+      "url_after": "http://localhost:8000/calendar",
+      "screenshot_path": "screenshots/oracle/M43_stale_delivery_date__0__228c3522/step_005.png",
+      "milestones_fired_this_step": [
+        "reminder_on_live_day"
+      ],
+      "running_score": 1.0,
+      "snapshot_after": {
+        "task_id": "M43/stale_delivery_date",
+        "step": 4,
+        "finished": false,
+        "current_user_id": "u_alice",
+        "cart_item_count": 0,
+        "orders_count": 1,
+        "returns_count": 0,
+        "subscriptions_count": 0,
+        "applied_promo": null
+      },
+      "reasoning": "",
+      "action_error": null,
+      "action_latency_ms": 594,
+      "raw_model_output": "",
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "facts_visible_or_created": {
+        "shop.shipment_out_for_delivery_today": true
+      },
+      "active_tab": 0,
+      "tab_strip": [
+        {
+          "index": 0,
+          "url": "http://localhost:8000/calendar",
+          "title": "ShopGym Calendar \u2014 Agenda",
+          "active": true
+        }
+      ],
+      "screenshot_width": 1280,
+      "screenshot_height": 800,
+      "device_pixel_ratio": 1.0
+    }
+  ],
+  "final_url": "http://localhost:8000/calendar",
+  "final_snapshot": {
+    "task_id": "M43/stale_delivery_date",
+    "step": 5,
+    "finished": false,
+    "current_user_id": "u_alice",
+    "cart_item_count": 0,
+    "orders_count": 1,
+    "returns_count": 0,
+    "subscriptions_count": 0,
+    "applied_promo": null
+  },
+  "verifier_result": {
+    "score": 1.0,
+    "success": true,
+    "newly_fired": [],
+    "missed_milestones": [
+      "reminder_on_stale_day"
+    ],
+    "all_milestones": [
+      {
+        "name": "reminder_on_live_day",
+        "weight": 1.0,
+        "fired_at_step": 5,
+        "required": true,
+        "forbidden": false
+      },
+      {
+        "name": "reminder_on_stale_day",
+        "weight": 0.0,
+        "fired_at_step": -1,
+        "required": false,
+        "forbidden": true
+      },
+      {
+        "name": "checked_tracking",
+        "weight": 0.0,
+        "fired_at_step": 1,
+        "required": false,
+        "forbidden": false
+      }
+    ]
+  },
+  "agent_failure_class": null,
+  "vein": "source-anchoring",
+  "specific_failure": null,
+  "ui_variant": "normal",
+  "video_path": "/Users/dhiren/Deccan AI/E Commerce Broswer Gym/videos/oracle/page@af002e5c015d9856eb99846685b7d402.webm",
+  "error": null,
+  "image_settings": {
+    "viewport": {
+      "width": 1280,
+      "height": 800
+    },
+    "device_scale_factor": 1.0,
+    "screenshot_format": "png",
+    "full_page": false,
+    "provider_profile": "oracle",
+    "provider": {
+      "api": null,
+      "format": "png",
+      "detail": null,
+      "detail_field": null,
+      "note": "oracle does not send screenshots to a VLM"
+    }
+  },
+  "invalid_reason": null,
+  "invalid_detail": null
+}
