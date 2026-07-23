@@ -8,10 +8,10 @@ Each failure carries TWO layers: a broad `failure_class` (reusable taxonomy labe
 
 ## Recurring failure modes (by signature, most frequent first)
 
-### `missed:engaged+surfaced_conflict_emailed`  —  1/1 (100%)
+### `missed:surfaced_conflict_emailed`  —  1/1 (100%)
 
-- **dominant failure_class**: `never_reached_checkout`  (breakdown: {'never_reached_checkout': 1})
-- **missed required milestones**: ['engaged', 'surfaced_conflict_emailed']
-- **app path**: (none)
+- **dominant failure_class**: `goal_incomplete_no_order`  (breakdown: {'goal_incomplete_no_order': 1})
+- **missed required milestones**: ['surfaced_conflict_emailed']
+- **app path**: shop
 - **fact gap (required facts never observed)**: none
-- **representative episode**: `960461d2` (seed 2, stalled at step -1, 0 steps)
+- **representative episode**: `f4cb655c` (seed 2, stalled at step 1, 11 steps)

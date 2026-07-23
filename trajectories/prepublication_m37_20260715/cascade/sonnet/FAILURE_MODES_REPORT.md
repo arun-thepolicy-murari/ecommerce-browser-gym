@@ -12,6 +12,6 @@ Each failure carries TWO layers: a broad `failure_class` (reusable taxonomy labe
 
 - **dominant failure_class**: `never_reached_checkout`  (breakdown: {'never_reached_checkout': 1})
 - **missed required milestones**: ['verified_the_claim']
-- **app path**: (none)
-- **fact gap (required facts never observed)**: ['mail.coupon_expired_present']
-- **representative episode**: `dd41b9ca` (seed 2, stalled at step -1, 0 steps)
+- **app path**: mail
+- **fact gap (required facts never observed)**: none
+- **representative episode**: `f8aecc1f` (seed 2, stalled at step 0, 11 steps)
