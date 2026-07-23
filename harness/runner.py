@@ -456,16 +456,67 @@ class BrowserCtx:
             error=err, latency_ms=latency_ms,
         )
 
+    async def _js_activate(self, selector: str, kind: str, value: str | None = None) -> str | None:
+        """Reveal a present-but-hidden element and activate it via JS — click (fires
+        the handler / follows an <a href> even inside a collapsed menu) or fill (sets
+        the value + dispatches input/change so framework bindings update). Returns
+        None on success, or a short error only if the element isn't in the DOM. This
+        is the harness's 'everything is pickable, no timeouts' fallback."""
+        try:
+            ok = await self.page.evaluate(
+                """([sel, kind, val]) => {
+                    const el = document.querySelector(sel);
+                    if (!el) return false;
+                    try { el.scrollIntoView({block: 'center', inline: 'center'}); } catch (e) {}
+                    if (kind === 'fill') {
+                        try { el.focus(); } catch (e) {}
+                        const d = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), 'value');
+                        if (d && d.set) d.set.call(el, val); else el.value = val;
+                        el.dispatchEvent(new Event('input', {bubbles: true}));
+                        el.dispatchEvent(new Event('change', {bubbles: true}));
+                    } else {
+                        el.click();
+                    }
+                    return true;
+                }""",
+                [selector, kind, value],
+            )
+            return None if ok else f"no element matched {selector}"
+        except Exception as e:
+            return f"{type(e).__name__}: {e}"
+
+    async def _click_robust(self, selector: str) -> str | None:
+        """Click that never hangs: normal click if the element is visible, else
+        reveal + JS-click (collapsed menus, transiently-unready targets). Only a
+        genuinely absent element returns an error."""
+        loc = self.page.locator(selector).first
+        try:
+            visible = await loc.is_visible()  # instant, no wait
+        except Exception:
+            visible = False
+        if visible:
+            try:
+                await loc.scroll_into_view_if_needed(timeout=2000)
+                await loc.click(timeout=5000)
+                return None
+            except Exception:
+                pass  # intercepted / went stale → fall through to JS
+        return await self._js_activate(selector, "click")
+
     async def click(self, selector: str, reasoning: str = "") -> StepRecord:
         t0 = time.monotonic()
         err: str | None = None
         await self._animate_cursor(selector, "CLICK")
         try:
-            await self.page.click(selector)
-            # window.open popups may race the opener's load; sync first so
-            # wait_for_load_state runs on the popup when one was created.
-            await self._sync_context_pages()
-            await self.page.wait_for_load_state("load")
+            err = await self._click_robust(selector)
+            if err is None:
+                # window.open popups may race the opener's load; sync first so
+                # wait_for_load_state runs on the popup when one was created.
+                await self._sync_context_pages()
+                try:
+                    await self.page.wait_for_load_state("load", timeout=5000)
+                except Exception:
+                    pass
         except Exception as e:
             err = f"{type(e).__name__}: {e}"
         latency_ms = int((time.monotonic() - t0) * 1000)
@@ -480,7 +531,19 @@ class BrowserCtx:
         err: str | None = None
         await self._animate_cursor(selector, "FILL", detail=value)
         try:
-            await self.page.fill(selector, value)
+            loc = self.page.locator(selector).first
+            try:
+                visible = await loc.is_visible()
+            except Exception:
+                visible = False
+            if visible:
+                try:
+                    await loc.fill(value, timeout=5000)
+                    err = None
+                except Exception:
+                    err = await self._js_activate(selector, "fill", value)  # intercepted → JS
+            else:
+                err = await self._js_activate(selector, "fill", value)  # hidden/absent → reveal + JS
         except Exception as e:
             err = f"{type(e).__name__}: {e}"
         latency_ms = int((time.monotonic() - t0) * 1000)
@@ -525,11 +588,12 @@ class BrowserCtx:
         err: str | None = None
         await self._animate_cursor(selector, "SUBMIT")
         try:
-            await self.page.click(selector)
-            try:
-                await self.page.wait_for_load_state("networkidle", timeout=5000)
-            except Exception:
-                pass
+            err = await self._click_robust(selector)
+            if err is None:
+                try:
+                    await self.page.wait_for_load_state("networkidle", timeout=5000)
+                except Exception:
+                    pass
         except Exception as e:
             err = f"{type(e).__name__}: {e}"
         latency_ms = int((time.monotonic() - t0) * 1000)
@@ -1008,6 +1072,11 @@ async def open_browser(
         ctx_kwargs["record_video_dir"] = str(videos_dir)
         ctx_kwargs["record_video_size"] = ctx_kwargs["viewport"]
     context = await browser.new_context(**ctx_kwargs)
+    # No 30s hangs anywhere: cap every action's implicit wait. Interactions also
+    # self-heal via a JS fallback (BrowserCtx.click/fill/submit), so an element
+    # behind a collapsed menu is revealed + activated instead of timing out — the
+    # agent can pick anything, and no run stalls 30s on a single click.
+    context.set_default_timeout(6000)
 
     # Inject the ghost cursor on EVERY page load (incl. after redirects).
     if inject_cursor and _AGENT_CURSOR_JS_PATH.exists():
