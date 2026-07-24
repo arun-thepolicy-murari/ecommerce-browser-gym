@@ -12,7 +12,7 @@ parse args, call a mutation, and return its result.
 
 from __future__ import annotations
 
-import secrets
+import hashlib
 import uuid
 from dataclasses import asdict
 from datetime import datetime, timedelta, timezone
@@ -35,12 +35,57 @@ GIFT_WRAP_FEE = 4.99
 # Helpers
 # --------------------------------------------------------------------------- #
 
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+# The determinism contract, stated where it is enforced.
+#
+# The whole project rests on a byte-reproducible reset: fork-before-step-N,
+# replay validation and the golden export all compare world hashes, and every one
+# of them fails if the same actions from the same seed produce a different world.
+# `secrets.token_hex` and `datetime.now()` broke that by construction — an id
+# minted here lands in the order record, the confirmation email body, the tracking
+# URL and the cross-app event payload, so ONE random id makes every world from
+# that action onward differ. Measured across the archive: the step at which a
+# run's first random id appears predicted its replay coverage exactly, five for
+# five (M57 17 steps/first id at 4 -> 4 worlds; M70 14/13 -> 13).
+#
+# Both are now derived from state the gym already restores: the task, the seed and
+# the deterministic step clock, plus a counter that distinguishes several mints
+# within one step. Nothing is stored that a checkpoint would have to carry —
+# `apply_snapshot` overlays only the mutable slice, so a stored counter would come
+# back as zero and remint ids that already exist.
+_EPOCH = datetime(2026, 1, 1, tzinfo=timezone.utc)
 
 
-def _new_id(prefix: str) -> str:
-    return f"{prefix}_{secrets.token_hex(4)}"
+def _mint_seq(state: GymState, key: str) -> int:
+    """A counter scoped to (step, key), so two orders placed in one step differ
+    while a replay of that step reproduces both."""
+    counts = state.mint_counts
+    slot = (state.step, key)
+    n = counts.get(slot, 0)
+    counts[slot] = n + 1
+    return n
+
+
+def _now(state: GymState) -> str:
+    """A timestamp derived from the deterministic clock.
+
+    Only ORDERING is ever read off these (verifiers sort by `placed_at`), so a
+    monotonic derived time serves every real use while a wall-clock reading
+    breaks every hash comparison — two replays of one action differed by
+    microseconds, which is all it takes.
+    """
+    offset = timedelta(seconds=state.step * 60 + _mint_seq(state, "@clock"))
+    return (_EPOCH + offset).isoformat()
+
+
+def _new_id(state: GymState, prefix: str) -> str:
+    """A stable id for a newly created entity.
+
+    Derived, not random, so replaying the same action from the same state mints
+    the same id. Distinct from every seeded fixture id, which use a readable
+    suffix (`pay_visa`, `addr_home`) or a hyphen (`ORD-5290`).
+    """
+    seed_material = f"{state.task_id}|{state.seed}|{prefix}|{state.step}|{_mint_seq(state, prefix)}"
+    return f"{prefix}_{hashlib.blake2s(seed_material.encode(), digest_size=4).hexdigest()}"
 
 
 def _require_login(state: GymState) -> str | None:
@@ -114,7 +159,7 @@ def add_address(state: GymState, label: str, full_name: str, line1: str,
         flash(state, "error", "Please fill in every required field.")
         log_action(state, "add_address_failed", reason="missing fields")
         return {"ok": False, "error": "missing fields"}
-    addr_id = _new_id("addr")
+    addr_id = _new_id(state, "addr")
     new_addr = Address(
         id=addr_id, label=label, full_name=full_name,
         line1=line1, line2=line2, city=city, state=st, zip=zip_,
@@ -158,7 +203,7 @@ def add_payment_method(state: GymState, label: str, kind: str,
         log_action(state, "add_payment_failed", reason="missing card fields")
         return {"ok": False, "error": "missing card fields"}
     last4 = (card_number[-4:] if card_number else "0000")
-    pay_id = _new_id("pay")
+    pay_id = _new_id(state, "pay")
     pm = PaymentMethod(
         id=pay_id,
         label=label or f"{kind.title()} ****{last4}",
@@ -210,8 +255,8 @@ def enable_two_fa(state: GymState, code: str) -> dict[str, Any]:
 # Cart
 # --------------------------------------------------------------------------- #
 
-def _line_id() -> str:
-    return _new_id("ln")
+def _line_id(state: GymState) -> str:
+    return _new_id(state, "ln")
 
 
 def add_to_cart(state: GymState, product_id: str, quantity: int,
@@ -247,7 +292,7 @@ def add_to_cart(state: GymState, product_id: str, quantity: int,
             return {"ok": False, "error": "out of stock"}
 
     item = CartItem(
-        id=_line_id(), product_id=product_id, variant_id=variant_id,
+        id=_line_id(state), product_id=product_id, variant_id=variant_id,
         quantity=quantity,
     )
     state.cart.items.append(item)
@@ -460,12 +505,15 @@ def place_order(state: GymState, payment_id: str,
     for oi in items_resolved:
         by_addr.setdefault(oi.ship_to_address_id, []).append(oi.id)
 
-    order_id = _new_id("ord").upper()
+    order_id = _new_id(state, "ord").upper()
     shipments: list[Shipment] = []
     for addr_id, item_ids in by_addr.items():
         sh = Shipment(
-            id=_new_id("sh"),
-            tracking_number=f"1Z{secrets.token_hex(6).upper()}",
+            id=_new_id(state, "sh"),
+            # Also derived: a tracking number is embedded in the shipment record
+            # AND rendered into the confirmation email body, so a random one
+            # diverges the world twice over.
+            tracking_number=f"1Z{_new_id(state, 'trk').split('_', 1)[1].upper()}{_mint_seq(state, 'trk#'):04X}",
             carrier="USPS",
             item_ids=item_ids,
             status="confirmed",
@@ -473,7 +521,7 @@ def place_order(state: GymState, payment_id: str,
                 datetime.now(timezone.utc) + timedelta(days=3)
             ).date().isoformat(),
             events=[ShipmentEvent(
-                timestamp=_now(),
+                timestamp=_now(state),
                 status="label_created",
                 detail="Shipping label created.",
             )],
@@ -481,7 +529,7 @@ def place_order(state: GymState, payment_id: str,
         shipments.append(sh)
 
     order = Order(
-        id=order_id, user_id=uid, placed_at=_now(),
+        id=order_id, user_id=uid, placed_at=_now(state),
         items=items_resolved,
         subtotal=subtotal, discount=discount, tax=tax,
         shipping=shipping, total=total,
@@ -528,14 +576,14 @@ def initiate_return(state: GymState, order_id: str,
     if refund_method not in ("original_payment", "store_credit"):
         return {"ok": False, "error": "invalid refund_method"}
 
-    ret_id = _new_id("ret").upper()
+    ret_id = _new_id(state, "ret").upper()
     state.returns[ret_id] = ReturnRequest(
         id=ret_id, order_id=order_id, user_id=uid,
         item_ids=list(item_ids),
         reason=reason,
         refund_method=refund_method,
         status="initiated",
-        created_at=_now(),
+        created_at=_now(state),
         notes=notes,
     )
     log_action(state, "initiate_return",
@@ -593,7 +641,7 @@ def create_subscription(state: GymState, product_id: str,
         else 0.05 if user.loyalty_tier == "silver"
         else 0.0
     )
-    sub_id = _new_id("sub").upper()
+    sub_id = _new_id(state, "sub").upper()
     state.subscriptions[sub_id] = Subscription(
         id=sub_id, user_id=uid,
         product_id=product_id, variant_id=variant_id, quantity=quantity,

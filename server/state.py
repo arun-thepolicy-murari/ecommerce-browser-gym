@@ -295,6 +295,25 @@ class GymState:
     action_log: list[dict[str, Any]] = field(default_factory=list)
     flash_messages: list[dict[str, str]] = field(default_factory=list)
 
+    @property
+    def mint_counts(self) -> dict[tuple[int, str], int]:
+        """Per-(step, prefix) counter behind the deterministic ids in mutations.py.
+
+        Deliberately NOT a dataclass field. It is bookkeeping, not world state, and
+        a field would ride along in `asdict(world)` — which the checkout-parity
+        test reads to assert that a checkout changes NOTHING outside the cart, the
+        orders and the mail. That test caught exactly this and was right to.
+
+        It also does not need to survive a restore: `apply_snapshot` overlays only
+        the mutable slice, and the STEP CLOCK it does restore is what keeps the
+        next mint from colliding with one made before the checkpoint.
+        """
+        counts = getattr(self, "_mint_counts", None)
+        if counts is None:
+            counts = {}
+            object.__setattr__(self, "_mint_counts", counts)
+        return counts
+
     def to_json(self) -> dict[str, Any]:
         """Compact JSON snapshot for verifier inspection. The UI does its
         own targeted fetches; this is the verifier's omniscient view."""
