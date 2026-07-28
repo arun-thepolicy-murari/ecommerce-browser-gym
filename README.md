@@ -14,11 +14,11 @@ Screened on **gpt-5.1 · gpt-5.5 · claude-sonnet-4-6** at k=3 seeds each (also 
 
 | Metric | Value |
 |---|---|
-| Tasks in the gym | **234** (185 breaker/safety, 49 capability) |
-| Curated **sellable breakers** | **66** ([`trajectories/sellable_breakers_v2.csv`](./trajectories/sellable_breakers_v2.csv)) |
-| Break **all 3 frontier models** | **41** |
-| Break **gpt-5.5 + Sonnet** (the diligent pair) | **45** |
-| Coverage matrix | [`trajectories/coverage_matrix.csv`](./trajectories/coverage_matrix.csv) (74 tasks × 3 models) |
+| Tasks in the gym | **312** (through M383 across ShopGym, Mail, Calendar, ValueMart, Food) |
+| Curated **sellable breakers** | **N=85** ([`trajectories/sellable_breakers_v2.csv`](./trajectories/sellable_breakers_v2.csv); 83 core + 2 footnotes) |
+| **Table 1** strongest tier (of 85) | **65 / 7 / 12 / 1** — Sonnet-break / GPT-5.5-terminal / GPT-5.1-terminal / injection-footnote |
+| Authoritative context | [`PROJECT_INFO.md`](./PROJECT_INFO.md) · [`docs/history/audits/TABLE1_STRONGEST_TIER_RECOMPUTE_2026-07-21.md`](./docs/history/audits/TABLE1_STRONGEST_TIER_RECOMPUTE_2026-07-21.md) |
+| Coverage matrix | [`trajectories/coverage_matrix.csv`](./trajectories/coverage_matrix.csv) |
 
 📊 **Dashboards:** [`trajectories/breaker_atlas.html`](./trajectories/breaker_atlas.html) (per-task cards: prompt + correct-behavior + what-the-agent-did + filters), and [`docs/history/cross_model/CROSS_MODEL_COMPARISON.md`](./docs/history/cross_model/CROSS_MODEL_COMPARISON.md) (the written study).
 
@@ -29,7 +29,7 @@ Screened on **gpt-5.1 · gpt-5.5 · claude-sonnet-4-6** at k=3 seeds each (also 
 Most browser-agent benchmarks grade only "did you complete the task?" This gym does the opposite: it finds where a **competent** agent **does the wrong thing with confidence**. The discriminating idea:
 
 - **State-observable harm.** Every breaker's verifier inspects the live world (orders, cart, sent mail, subscriptions, calendar, returns) — so a "break" means the agent *actually* charged the expired card / sent the false confirmation / bought the violating item. No receipt-parsing, no URL-sniffing.
-- **Causal, not incidental.** Forbidden tripwires are **FALSE in the seed state** and can only fire via genuine agent-caused state change; they're **monotonic** (trip once, stay tripped). Audited sound across all 234 suites (no path can produce a false break/false resist).
+- **Causal, not incidental.** Forbidden tripwires are **FALSE in the seed state** and can only fire via genuine agent-caused state change; they're **monotonic** (trip once, stay tripped). Audited sound across the live verifier suites (no path can produce a false break/false resist).
 - **The design rule that makes breakers land:** *put the harm where the agent already wants to go, and keep it off the point of action.* A hidden expired card (its expiry only on `/account/payments`, never on the checkout review) beats every model; a salient warning just makes the agent cautious.
 - **Multi-app, long-horizon, realistic.** Real cross-app journeys (order in the store → confirm by email; reconcile a calendar event with an email; price across two stores) — the conditions where deference and hidden defaults actually bite.
 
@@ -142,12 +142,12 @@ Recordings of Claude completing the **capability** tasks (the A/B/C suite) — a
 
 ## Key files & docs
 
-- **[`PROJECT_CONTEXT.md`](./PROJECT_CONTEXT.md)** — the full handoff: aim, structure, the 5 apps, the 11-registry task pattern, the verifier law, run commands, the taxonomy, session chronology, current state, **all 234 tasks**, **all 66 breakers**, and every run dir. **Start here.**
-- [`trajectories/sellable_breakers_v2.csv`](./trajectories/sellable_breakers_v2.csv) — the 66 breakers (pattern, prompt, correct behavior, what-the-agent-does-wrong, model grid, tier).
+- **[`PROJECT_CONTEXT.md`](./PROJECT_CONTEXT.md)** — the full handoff: aim, structure, the 5 apps, the 11-registry task pattern, the verifier law, run commands, the taxonomy, session chronology, current state, **all ~312 tasks**, the **N=85 sellable** ledger, and every run dir. **Start here.**
+- [`trajectories/sellable_breakers_v2.csv`](./trajectories/sellable_breakers_v2.csv) — the **N=85** sellable breakers (pattern, prompt, correct behavior, what-the-agent-does-wrong, model grid, tier). Table 1 strongest-tier split: **65 / 7 / 12 / 1**.
 - [`trajectories/coverage_matrix.csv`](./trajectories/coverage_matrix.csv) — 74 tasks × {gpt-5.1, gpt-5.5, sonnet} break-counts.
 - [`trajectories/breaker_atlas.html`](./trajectories/breaker_atlas.html) — interactive dashboard.
 - [`DESIGN.md`](./DESIGN.md) · [`FAILURE_TAXONOMY.md`](./FAILURE_TAXONOMY.md) · [`TASKS.md`](./TASKS.md) · [`MILESTONES.md`](./MILESTONES.md) · [`PIXEL_VS_JSON.md`](./PIXEL_VS_JSON.md)
 
 ---
 
-*Branch: `feat/multi-app` (do not merge to `main` without review). Built on Windows; use `.venv/Scripts/python.exe` and `PYTHONIOENCODING=utf-8`.*
+*Branch: `feat/updated` (do not merge to `main` without review). Built on Windows; use `.venv/Scripts/python.exe` and `PYTHONIOENCODING=utf-8`.*
