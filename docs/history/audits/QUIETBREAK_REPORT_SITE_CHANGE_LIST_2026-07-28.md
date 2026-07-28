@@ -1,6 +1,6 @@
 # QuietBreak report-site change list — 2026-07-28
 
-Planning + Section 4 lock. **§1 funnel numbers are locked and reflected in `Report.dc.html`.** Remaining items (Sol/Opus move, Task Explorer cuts, sanitize) are not yet implemented. Sources: `docs/report-site/Report.dc.html`, `Task Explorer.dc.html`, `data/tasks6.json`, `trajectories/sellable_breakers_v2.csv`, `TABLE1_STRONGEST_TIER_RECOMPUTE_20260721.json`, `docs/history/plans/CURRENT_WORK_2026-07-21.md`, `PROJECT_INFO.md`, `docs/history/forensics/sol_opus/*`, and the 2026-07-28 best-effort 312-task break census.
+Planning + Section 4 lock. **§1 funnel numbers are locked (corrected): 78 / 70 / 65 among N=85 sellable — retracts 112/82/65.** Remaining items (Sol/Opus move, Task Explorer cuts, sanitize) are not yet implemented. Sources: `docs/report-site/Report.dc.html`, `Task Explorer.dc.html`, `data/tasks6.json`, `trajectories/sellable_breakers_v2.csv`, `TABLE1_STRONGEST_TIER_RECOMPUTE_20260721.json`, `docs/history/plans/CURRENT_WORK_2026-07-21.md`, `PROJECT_INFO.md`, `docs/history/forensics/sol_opus/*`, and the 2026-07-28 best-effort 312-task break census.
 
 ---
 
@@ -12,7 +12,7 @@ Planning + Section 4 lock. **§1 funnel numbers are locked and reflected in `Rep
 | 02 | `#why` | Why QuietBreak |
 | 03 | `#environment` + apps | Multi-app world |
 | 03b | `#taxonomy` | Mechanism families on 83+2 |
-| **04** | `#leaderboard` | **LOCKED graphic: 112 / 82 / 65** (no Qwen; see §1) |
+| **04** | `#leaderboard` | **LOCKED: 78 / 70 / 65 of 85, from ~250 screened** (no Qwen; see §1) |
 | **05** | `#comparison` | **Sol vs Opus N=75** (after screening) |
 | 06 | `#methodology` | Reset → classify + gates |
 | — | (cta) | Task explorer promo (six samples) |
@@ -26,45 +26,58 @@ Task Explorer: six episodes in `data/tasks6.json` — M95, M312, M213 (Sonnet 4.
 
 ### Locked graphic (ship these)
 
-**Drop Qwen.** Three bars only:
+**One universe. Drop Qwen.** Coherent nested sellable story:
 
-| Bar | N | Meaning |
+| Step | Number | Meaning |
 |---|---:|---|
-| GPT-5.1 | **112** | Best-effort independent ≥2/3 BREAK across registry evidence (2026-07-28 census) |
-| GPT-5.5 | **82** | Same census, best-effort ≥2/3 |
-| Claude Sonnet 4.6 | **65** | Sellable Sonnet-break (Table 1 / release ledger) — **not** the census Sonnet count (83) |
+| Denom | **~250** | Adversarially screened subset (graphic round of exact **N=269**) |
+| Ledger | **85** | Validated replicated breakers (sellable / release ledger) |
+| GPT-5.1 | **78** | Independent ≥2/3 among the **85** (TABLE1 `g51`) |
+| GPT-5.5 | **70** | Independent ≥2/3 among the **85** (TABLE1 `g55`) |
+| Sonnet | **65** | Sellable Sonnet-break among the **85** (TABLE1 `gson`) — **never use census 83** |
 
-**Population mix (print briefly on-site / keep explicit here):** 112 and 82 are registry-wide best-effort counts among tasks with retained evidence; 65 is the frozen sellable Sonnet-break tier. Bars are **not** a nested sellable cascade and **not** strongest-or-deeper.
+**Same population for 78 / 70 / 65.** No Qwen bar.
 
-**Supersedes** prior proposals for this graphic: strongest-or-deeper **85 / 84 / 72 / 65**, nested-sellable **85 / 78 / 70 / 65**, and five-step **~250 → 85 → 78 → 70 → 65**.
+On-site presentations (either OK):
 
-### What the site showed before this lock
+- **(A)** Bars **78 / 70 / 65** with caption *“of 85 sellable breakers, from ~250 screened”* ← **what `Report.dc.html` ships**
+- **(B)** Full funnel **~250 → 85 → 78 → 70 → 65**
 
-Section 04 bars were labeled **“Out of the 85 validated breakers”** with **85 / 84 / 72 / 65** (Qwen → 5.1 → 5.5 → Sonnet) and a strongest-tier-or-deeper footnote. That presentation is retired.
+**Caption:**
 
-### Archive — nested sellable story (not the locked graphic)
+> Of ~250 adversarially screened tasks (exact pool N=269), 85 sellable breakers. Among those 85, independent ≥2/3 panels still break GPT-5.1 on 78, GPT-5.5 on 70, and Sonnet 4.6 on 65. Nested on the sellable library — not strongest-tier-or-deeper, and not a full-registry prevalence estimate.
 
-Independent ≥2/3 BREAK among the **85** ledger rows (TABLE1 — **not** strongest-or-deeper; retained for methods / appendix):
+### RETRACTED — why 112 / 82 ≠ same universe as 65
+
+A prior incorrect lock briefly paired **GPT-5.1 = 112** and **GPT-5.5 = 82** (2026-07-28 **best-effort ≥2/3 across the full 312-task registry** wherever evidence exists) with **Sonnet = 65** (sellable ledger only). **That mix is incoherent and must not ship:**
+
+- **112 / 82** are registry-wide prevalence-style counts with model-specific missingness; they are **not** nested inside the 85 sellables and **not** conditioned on the ~250 screening denom the same way.
+- **65** is the **sellable** Sonnet-break tier among the **85** release rows.
+- Putting them on one strip implies a single funnel that does not exist. Census Sonnet **83** is also wrong for the graphic (still a different universe from sellable 65).
+
+**Do not revive 112 / 82 / 65.** Keep 71 / 112 / 82 / 83 only in methods/appendix census tables.
+
+Also retired: strongest-or-deeper **85 / 84 / 72 / 65** (old site with Qwen).
+
+### Nested sellable mid-bars (authoritative)
 
 | Model | N of 85 | Source |
 |---|---:|---|
 | GPT-5.1 | **78** | `TABLE1_STRONGEST_TIER_RECOMPUTE_20260721.json` independent `g51` |
 | GPT-5.5 | **70** | independent `g55` |
 | Sonnet | **65** | independent `gson` / Table 1 Sonnet-break |
-| Qwen (measured) | **31 broke / 34 with evidence** | `models_broken` on CSV — **51 sellables have no Qwen panel** |
+| Qwen (measured) | **31 broke / 34 with evidence** | CSV — **51 sellables have no Qwen panel** → **omit from graphic** |
 
-### Archive — ~250 denominator (screening context; not a §4 bar)
+### ~250 denominator
 
 | Exact N | Label | Source |
 |---:|---|---|
 | **269** | Adversarially break-screened (strict) | `CURRENT_WORK_2026-07-21.md` / Table 1 denom crib |
 | **203** | cascade_v2 latest-wins matrix bookkeeping | same |
 | **312** | Live registry (pre-Sheets) | `server.tasks.TASKS` / PROJECT_INFO |
-| **~250** | Round of **269** | Customer-facing “adversarially screened” phrasing if needed elsewhere |
+| **~250** | **Graphic round** of **269** | Customer-facing “adversarially screened” denom |
 
-### Best-effort independent breaks on all 312 (census source for 112 / 82)
-
-From the 2026-07-28 authority-first census (both repos; no imputation):
+### Best-effort independent breaks on all 312 (appendix only — **not** §4)
 
 | Model | Broke ≥2/3 | Have evidence | No evidence |
 |---|---:|---:|---:|
@@ -73,17 +86,12 @@ From the 2026-07-28 authority-first census (both repos; no imputation):
 | GPT-5.5 | **82** | 129 | 183 |
 | Sonnet | **83** | 124 | 188 |
 
-Qwen is **omitted** from the locked graphic (sparse sellable coverage + not selected for the customer strip). Census Sonnet **83** is **not** used; the bar is sellable **65**.
-
-**Caption direction for the locked graphic:**
-
-> Best-effort ≥2/3 breaks on registry evidence: GPT-5.1 = 112, GPT-5.5 = 82. Sonnet bar = 65 sellable Sonnet-breaks (release ledger), not the full-registry Sonnet census.
+These **do not descend** (5.1 > Qwen) and **Sonnet ≠ 65**. Unfit as the §4 funnel.
 
 ### Evidence gaps (must stay visible to authors; soften for customers)
 
-- Locked graphic **intentionally mixes** registry best-effort (112 / 82) with sellable Sonnet (65) — never imply one nested population.
-- Qwen missing on **~51/85** sellables → never claim “85 broke Qwen” without an asterisk (and Qwen is dropped from §4 anyway).
-- 65 Sonnet-break ≠ 83 Sonnet≥2/3 across all 312 (many non-sellable / non-release Sonnet breaks).
+- Qwen missing on **~51/85** sellables → never claim “85 broke Qwen” (Qwen dropped from §4).
+- 65 Sonnet-break ≠ 83 Sonnet≥2/3 across all 312.
 - cascade_v2 alone only shows **30** Sonnet≥2/3 in the 203-row stop table; most of the 65 live in **v1-heavy** ledger history.
 - Do not revive “~1/3 survive to strongest” for 65/85 (that is 76.5%). The ~1/3 figure is **85/269 ≈ 31.6%** (sellables among adversarially screened).
 
@@ -183,7 +191,7 @@ Suggested new numbering:
 
 1. … taxonomy …
 2. **Controlled comparison — Sol vs Opus (N=75)** ← first model results readers see
-3. **Model break strip (112 / 82 / 65; no Qwen)**
+3. **Cascade screening funnel (~250 → 85 → 78 → 70 → 65; no Qwen)**
 4. Methodology …
 5. Task explorer CTA …
 
@@ -212,8 +220,8 @@ Nav + section index digits must renumber accordingly.
 
 ## 5. Ordered implementation checklist
 
-1. **Lock funnel numbers** — **DONE:** ship **112 / 82 / 65**, **drop Qwen**. (112/82 = registry best-effort ≥2/3; 65 = sellable Sonnet-break.) Prior ~250→85→78→70→65 proposal retired for this graphic.
-2. **Rewrite Section 04** bars + caption — **DONE:** 112 / 82 / 65, Qwen dropped; mix noted in footnote.
+1. **Lock funnel numbers** — **DONE:** ship **~250 → 85 → 78 → 70 → 65**, **drop Qwen**. Same sellable universe for 78/70/65. **Retracted** incoherent 112/82/65 mix (312 best-effort ≠ sellable 65). Exact denom 269 in methods.
+2. **Rewrite Section 04** bars + caption — **DONE:** funnel ~250/85/78/70/65; strongest-or-deeper 85/84/72/65 deleted.
 3. **Move Sol/Opus block above Section 04**; renumber section labels / sticky nav.
 4. **Rewrite Sol/Opus copy** per §4 (appeal first; fairness rejects demoted).
 5. **Cut Task Explorer to 4:** keep M95, M213, M76, M312; cut M47, M142 (or swap if a clean GPT sycophancy asset appears).
@@ -235,7 +243,7 @@ Nav + section index digits must renumber accordingly.
 | 312 registry; 85 ledger | `PROJECT_INFO.md` |
 | Sol/Opus 40/30/25/15/5 on 75 | `PROJECT_INFO.md` §2A; `SOL_OPUS_SELLABLE_VENN.md` |
 | Qwen sparse on sellables | CSV `models_broken` (34 present / 31 ≥2/3) |
-| 312 best-effort 71/112/82/83 | 2026-07-28 census; **112/82 locked on §4**; Qwen 71 omitted; Sonnet bar uses sellable **65** not 83 |
+| 312 best-effort 71/112/82/83 | 2026-07-28 census; **archived — not §4**. §4 locks **78/70/65** among 85 sellable (TABLE1) |
 | Current §4 / §5 order | `docs/report-site/Report.dc.html` `#leaderboard` then `#comparison` |
 
 *End of change list.*
