@@ -1,4 +1,4 @@
-# Multi-Tab Bench report site
+# QuietBreak report site
 
 Open `index.html` (redirects to `Report.dc.html`) or run:
 
