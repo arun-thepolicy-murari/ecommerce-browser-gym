@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- pages-cache-bust: 2026-07-28T22:15:00Z force QuietBreak §4 85/78/70/65 -->
+<!-- pages-cache-bust: 2026-07-28T22:45:00Z QuietBreak copy cleanup + Sol/Opus above cascade + 4 explorer demos -->
 <html>
 <head>
 <meta charset="utf-8">
@@ -30,7 +30,8 @@ html{scroll-behavior:smooth}
       <a href="#why" style="color:#a3a3a3">Why multi-tab</a>
       <a href="#environment" style="color:#a3a3a3">Environment</a>
       <a href="#taxonomy" style="color:#a3a3a3">Failure modes</a>
-      <a href="#leaderboard" style="color:#a3a3a3">Model results</a>
+      <a href="#comparison" style="color:#a3a3a3">Sol / Opus</a>
+      <a href="#leaderboard" style="color:#a3a3a3">Cascade</a>
       <a href="#methodology" style="color:#a3a3a3">Method</a>
       <a href="TaskExplorer.dc.html" style="padding:10px 14px;background:#2864ff;color:#fff">Task explorer ↗</a>
     </nav>
@@ -78,7 +79,7 @@ html{scroll-behavior:smooth}
     </div>
 
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
-      <article style="background:#fff;border:1px solid #dcdcd6;padding:24px"><span style="font:500 9px/1 'DM Mono',monospace;text-transform:uppercase;letter-spacing:.08em;color:#2864ff">Shared state</span><h3 style="font-size:17px;font-weight:600;margin:16px 0 8px">Not mocked context</h3><p style="font-size:13.5px;line-height:1.7;color:#6b6b6b;margin:0">All five applications read and write one <code style="font-family:'DM Mono',monospace;background:#f0f0ec;padding:1px 4px">WorldState</code> behind an event bus. An order placed in the store is visible to mail and to the verifier in the same episode.</p></article>
+      <article style="background:#fff;border:1px solid #dcdcd6;padding:24px"><span style="font:500 9px/1 'DM Mono',monospace;text-transform:uppercase;letter-spacing:.08em;color:#2864ff">Shared state</span><h3 style="font-size:17px;font-weight:600;margin:16px 0 8px">Not mocked context</h3><p style="font-size:13.5px;line-height:1.7;color:#6b6b6b;margin:0">All five applications read and write one shared application state. An order placed in the store is visible to mail and to the verifier in the same episode.</p></article>
       <article style="background:#fff;border:1px solid #dcdcd6;padding:24px"><span style="font:500 9px/1 'DM Mono',monospace;text-transform:uppercase;letter-spacing:.08em;color:#2864ff">Async</span><h3 style="font-size:17px;font-weight:600;margin:16px 0 8px">The world moves</h3><p style="font-size:13.5px;line-height:1.7;color:#6b6b6b;margin:0">A scheduler ticks at each turn: new mail arrives, prices drop, deliveries advance. Evidence read in one tab can go stale while the agent is working in another.</p></article>
       <article style="background:#fff;border:1px solid #dcdcd6;padding:24px"><span style="font:500 9px/1 'DM Mono',monospace;text-transform:uppercase;letter-spacing:.08em;color:#2864ff">Real tabs</span><h3 style="font-size:17px;font-weight:600;margin:16px 0 8px">Tab actions are first-class</h3><p style="font-size:13.5px;line-height:1.7;color:#6b6b6b;margin:0">Agents open, switch and close tabs through the same action space as clicks and typing; every step records the active tab and the full tab strip.</p></article>
     </div>
@@ -116,7 +117,7 @@ html{scroll-behavior:smooth}
           <small style="font:500 11px/1 'DM Mono',monospace;color:#6b6b6b;text-align:right">27 · 9%</small>
         </div>
         </div>
-        <div style="padding:16px 26px;border-top:1px solid #dcdcd6;font:500 11px/1.7 'DM Mono',monospace;color:#6b6b6b">Method: each task’s hand-coded gold solution is read for the applications it actually has to open. A task counts for an application when the safe path goes there, so counts overlap and do not sum to 312 — 178 tasks stay inside the store and 134 leave it. Recomputed across all 312 live tasks.</div>
+        <div style="padding:16px 26px;border-top:1px solid #dcdcd6;font:500 11px/1.7 'DM Mono',monospace;color:#6b6b6b">Each task’s safe completion path is read for the applications it actually opens. Counts overlap and do not sum to 312 — 178 tasks stay inside the store and 134 leave it.</div>
       </div>
     </div>
 
@@ -131,12 +132,12 @@ html{scroll-behavior:smooth}
       <div style="font:500 11px/1 'DM Mono',monospace;color:#5e5e5e;margin-bottom:26px">02</div>
       <div style="display:grid;grid-template-columns:1.25fr .75fr;gap:56px;align-items:end;margin-bottom:32px">
         <div><span style="font:500 10px/1 'DM Mono',monospace;text-transform:uppercase;letter-spacing:.13em;color:#77a0ff">The environment</span><h2 style="font-size:34px;line-height:1.15;letter-spacing:-.032em;font-weight:500;margin:12px 0 0">Five realistic, stateful applications in one deterministic world.</h2></div>
-        <p style="font-size:15.5px;line-height:1.7;color:#9d9d9d;margin:0">Agents interact through rendered Chromium using screenshots and Set-of-Mark annotations. Store orders, sent mail, calendar events, marketplace purchases and food orders persist across tabs and influence later actions.</p>
+        <p style="font-size:15.5px;line-height:1.7;color:#9d9d9d;margin:0">Agents interact through rendered Chromium using screenshots and annotated UI elements. Store orders, sent mail, calendar events, marketplace purchases and food orders persist across tabs and influence later actions.</p>
       </div>
       <div style="display:grid;grid-template-columns:repeat(5,1fr);border:1px solid #292929">
         <article style="padding:24px 20px;border-right:1px solid #292929"><span style="font:500 10px/1 'DM Mono',monospace;color:#77a0ff">shop</span><h3 style="font-size:18px;font-weight:600;margin:22px 0 10px">ShopGym</h3><p style="font-size:13px;line-height:1.7;color:#9d9d9d;margin:0">Search, product, cart, three-step checkout, and account: orders, addresses, payments, subscriptions, returns, security.</p></article>
         <article style="padding:24px 20px;border-right:1px solid #292929"><span style="font:500 10px/1 'DM Mono',monospace;color:#77a0ff">mail</span><h3 style="font-size:18px;font-weight:600;margin:22px 0 10px">ShopMail</h3><p style="font-size:13px;line-height:1.7;color:#9d9d9d;margin:0">Inbox and compose. The claim-of-success surface: confirmations, refund requests, recipient exposure.</p></article>
-        <article style="padding:24px 20px;border-right:1px solid #292929"><span style="font:500 10px/1 'DM Mono',monospace;color:#77a0ff">calendar</span><h3 style="font-size:18px;font-weight:600;margin:22px 0 10px">Calendar</h3><p style="font-size:13px;line-height:1.7;color:#9d9d9d;margin:0">Month and day views. <code style="font-family:'DM Mono',monospace">update_event</code> has no overlap guard, unlike <code style="font-family:'DM Mono',monospace">create_event</code> — a real create/update asymmetry.</p></article>
+        <article style="padding:24px 20px;border-right:1px solid #292929"><span style="font:500 10px/1 'DM Mono',monospace;color:#77a0ff">calendar</span><h3 style="font-size:18px;font-weight:600;margin:22px 0 10px">Calendar</h3><p style="font-size:13px;line-height:1.7;color:#9d9d9d;margin:0">Month and day views for meetings and delivery windows that later steps depend on.</p></article>
         <article style="padding:24px 20px;border-right:1px solid #292929"><span style="font:500 10px/1 'DM Mono',monospace;color:#77a0ff">market</span><h3 style="font-size:18px;font-weight:600;margin:22px 0 10px">ValueMart</h3><p style="font-size:13px;line-height:1.7;color:#9d9d9d;margin:0">A second store with its own coupon and a delivery fee keyed off the pre-discount subtotal, so the cheaper store can flip.</p></article>
         <article style="padding:24px 20px"><span style="font:500 10px/1 'DM Mono',monospace;color:#77a0ff">food</span><h3 style="font-size:18px;font-weight:600;margin:22px 0 10px">Food delivery</h3><p style="font-size:13px;line-height:1.7;color:#9d9d9d;margin:0">Restaurants and menus with dietary, ETA and budget constraints, plus per-order delivery instructions.</p></article>
       </div>
@@ -147,12 +148,12 @@ html{scroll-behavior:smooth}
     <div style="font:500 11px/1 'DM Mono',monospace;color:#9a9a9a;margin-bottom:26px">03</div>
     <div style="display:grid;grid-template-columns:1.25fr .75fr;gap:56px;align-items:end;margin-bottom:32px">
       <div><span style="font:500 10px/1 'DM Mono',monospace;text-transform:uppercase;letter-spacing:.13em;color:#2864ff">Failure taxonomy</span><h2 style="font-size:34px;line-height:1.15;letter-spacing:-.032em;font-weight:500;margin:12px 0 0">The 85 validated breakers expose recurring mechanisms, not isolated mistakes.</h2></div>
-      <p style="font-size:15.5px;line-height:1.7;color:#6b6b6b;margin:0">Every ledger row is classified by exactly one canonical mechanism family, reproducibly and not by hand. The same weakness can then be tested across different interfaces, products and instructions.</p>
+      <p style="font-size:15.5px;line-height:1.7;color:#6b6b6b;margin:0">Each validated breaker is classified by exactly one mechanism family, reproducibly and not by hand. The same weakness can then be tested across different interfaces, products and instructions.</p>
     </div>
     <div style="border:1px solid #dcdcd6;background:#fff">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:24px;padding:22px 26px;border-bottom:1px solid #dcdcd6">
         <div><span style="font:500 9px/1 'DM Mono',monospace;text-transform:uppercase;letter-spacing:.08em;color:#2864ff">Validated evaluation set</span><h3 style="font-size:19px;font-weight:600;margin:7px 0 0">Mechanism families ranked</h3></div>
-        <span style="font:500 10px/1.5 'DM Mono',monospace;color:#6b6b6b;text-align:right">core n = 83<br>+ 2 footnotes</span>
+        <span style="font:500 10px/1.5 'DM Mono',monospace;color:#6b6b6b;text-align:right">n = 83<br>core families</span>
       </div>
       <div style="padding:24px 26px;display:grid;gap:12px">
         <div style="display:grid;grid-template-columns:250px 1fr 88px;gap:16px;align-items:center"><span style="display:flex;justify-content:space-between;gap:12px;font-size:14px">Stacked defaults <b style="font:500 12px 'DM Mono',monospace;color:#6b6b6b">21.7%</b></span><span style="display:block;height:11px;background:#ecece8"><i style="display:block;height:100%;width:100%;background:#2864ff"></i></span><small style="font:500 11px/1 'DM Mono',monospace;color:#6b6b6b;text-align:right">18</small></div>
@@ -165,10 +166,15 @@ html{scroll-behavior:smooth}
         <div style="display:grid;grid-template-columns:250px 1fr 88px;gap:16px;align-items:center"><span style="display:flex;justify-content:space-between;gap:12px;font-size:14px">Self-contradiction <b style="font:500 12px 'DM Mono',monospace;color:#6b6b6b">6.0%</b></span><span style="display:block;height:11px;background:#ecece8"><i style="display:block;height:100%;width:27.8%;background:#2864ff"></i></span><small style="font:500 11px/1 'DM Mono',monospace;color:#6b6b6b;text-align:right">5</small></div>
         <div style="display:grid;grid-template-columns:250px 1fr 88px;gap:16px;align-items:center"><span style="display:flex;justify-content:space-between;gap:12px;font-size:14px">Implicit constraint <b style="font:500 12px 'DM Mono',monospace;color:#6b6b6b">4.8%</b></span><span style="display:block;height:11px;background:#ecece8"><i style="display:block;height:100%;width:22.2%;background:#2864ff"></i></span><small style="font:500 11px/1 'DM Mono',monospace;color:#6b6b6b;text-align:right">4</small></div>
         <div style="display:grid;grid-template-columns:250px 1fr 88px;gap:16px;align-items:center"><span style="display:flex;justify-content:space-between;gap:12px;font-size:14px">Structural / conditional <b style="font:500 12px 'DM Mono',monospace;color:#6b6b6b">3.6%</b></span><span style="display:block;height:11px;background:#ecece8"><i style="display:block;height:100%;width:16.7%;background:#2864ff"></i></span><small style="font:500 11px/1 'DM Mono',monospace;color:#6b6b6b;text-align:right">3</small></div>
-        <div style="display:grid;grid-template-columns:250px 1fr 88px;gap:16px;align-items:center"><span style="display:flex;justify-content:space-between;gap:12px;font-size:14px;color:#6b6b6b">Injection <span style="font:500 12px 'DM Mono',monospace">footnote</span></span><span style="display:block;height:11px;background:#ecece8"><i style="display:block;height:100%;width:5.6%;background:#c9c9c2"></i></span><small style="font:500 11px/1 'DM Mono',monospace;color:#6b6b6b;text-align:right">1</small></div>
-        <div style="display:grid;grid-template-columns:250px 1fr 88px;gap:16px;align-items:center"><span style="display:flex;justify-content:space-between;gap:12px;font-size:14px;color:#6b6b6b">Source anchoring <span style="font:500 12px 'DM Mono',monospace">footnote</span></span><span style="display:block;height:11px;background:#ecece8"><i style="display:block;height:100%;width:5.6%;background:#c9c9c2"></i></span><small style="font:500 11px/1 'DM Mono',monospace;color:#6b6b6b;text-align:right">1</small></div>
       </div>
-      <div style="padding:16px 26px;border-top:1px solid #dcdcd6;font:500 11px/1.7 'DM Mono',monospace;color:#6b6b6b">Percentages are of the 83-row core distribution. Injection and source-anchoring are reported separately as footnotes rather than as core families, so core plus footnotes sums to the 85-row ledger.</div>
+      <div style="padding:18px 26px;border-top:1px solid #dcdcd6;display:grid;gap:10px">
+        <span style="font:500 9px/1 'DM Mono',monospace;text-transform:uppercase;letter-spacing:.08em;color:#8a8a84">Also tested · resistance under specialized pressure</span>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div style="border:1px solid #eaeae6;padding:14px 16px"><b style="font-size:14px">Injection</b><span style="float:right;font:500 12px 'DM Mono',monospace;color:#6b6b6b">1</span><p style="font-size:12.5px;line-height:1.65;color:#6b6b6b;margin:8px 0 0">Planted instructions in the interface — does the agent follow them over the user’s request?</p></div>
+          <div style="border:1px solid #eaeae6;padding:14px 16px"><b style="font-size:14px">Source anchoring</b><span style="float:right;font:500 12px 'DM Mono',monospace;color:#6b6b6b">1</span><p style="font-size:12.5px;line-height:1.65;color:#6b6b6b;margin:8px 0 0">A claim from the wrong place — does the agent trust the authoritative source?</p></div>
+        </div>
+        <p style="font:500 11px/1.7 'DM Mono',monospace;color:#6b6b6b;margin:0">Percentages above are among the 83 core families. These two specialized cases complete the 85-task validated set.</p>
+      </div>
     </div>
     <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:#dcdcd6;border:1px solid #dcdcd6;margin-top:12px">
       <article style="background:#fff;padding:20px"><b style="font-size:14px">Stacked defaults</b><p style="font-size:13px;line-height:1.65;color:#6b6b6b;margin:6px 0 0">Two or more hidden defaults combine in one execution path, such as a wrong destination plus an invalid payment instrument.</p></article>
@@ -184,11 +190,33 @@ html{scroll-behavior:smooth}
     </div>
   </section>
 
+  <section id="comparison" style="background:#2864ff;color:#fff;margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw);padding:80px calc(50vw - 50%)">
+    <div style="width:min(100%,1240px);margin:0 auto">
+      <div style="font:500 11px/1 'DM Mono',monospace;color:#dce6ff;margin-bottom:26px">04</div>
+      <div style="display:grid;grid-template-columns:1.25fr .75fr;gap:56px;align-items:end;margin-bottom:32px">
+        <div><span style="font:500 10px/1 'DM Mono',monospace;text-transform:uppercase;letter-spacing:.13em;color:#dce6ff">Controlled comparison</span><h2 style="font-size:34px;line-height:1.15;letter-spacing:-.032em;font-weight:500;margin:12px 0 0">Sol and Opus on the same fixed 75 tasks.</h2></div>
+        <p style="font-size:15px;line-height:1.75;color:#dce6ff;margin:0"><b>GPT-5.6 Sol</b> and <b>Opus 4.8</b> ran the identical protocol on one shared set of 75 mechanism-diverse tasks. Same tasks, same seeds, same verifier — so the counts are directly comparable. QuietBreak already stresses the newest flagship systems, not only the cascade ladder below.</p>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 96px 1fr">
+        <article style="background:#fff;color:#0f0f0f;padding:40px"><span style="font:500 10px/1 'DM Mono',monospace;letter-spacing:.12em;color:#2864ff">GPT-5.6 SOL</span><strong style="display:block;font-size:76px;letter-spacing:-.06em;line-height:.95;font-weight:500;margin:24px 0 8px">40</strong><b style="font-size:17px;font-weight:600">verifier-confirmed breaks</b><p style="font-size:14px;line-height:1.7;color:#6b6b6b;margin:8px 0 0">40 of 75 tasks, at ≥2 of 3 seeds.</p><div style="height:9px;background:#e9e9e5;margin:28px 0 10px"><i style="display:block;height:100%;width:53.3%;background:#2864ff"></i></div><small style="font:500 11px/1 'DM Mono',monospace;color:#747474">53.3% of the fixed 75</small></article>
+        <div style="display:grid;place-items:center;text-align:center;background:#0b0b0b;color:#fff;font:500 10px/1.6 'DM Mono',monospace">SOL<br>VS<br>OPUS</div>
+        <article style="background:#fff;color:#0f0f0f;padding:40px"><span style="font:500 10px/1 'DM Mono',monospace;letter-spacing:.12em;color:#2864ff">OPUS 4.8</span><strong style="display:block;font-size:76px;letter-spacing:-.06em;line-height:.95;font-weight:500;margin:24px 0 8px">30</strong><b style="font-size:17px;font-weight:600">verifier-confirmed breaks</b><p style="font-size:14px;line-height:1.7;color:#6b6b6b;margin:8px 0 0">30 of the same fixed 75 tasks.</p><div style="height:9px;background:#e9e9e5;margin:28px 0 10px"><i style="display:block;height:100%;width:40%;background:#2864ff"></i></div><small style="font:500 11px/1 'DM Mono',monospace;color:#747474">40.0% of the fixed 75</small></article>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px">
+        <div style="background:rgba(255,255,255,.13);padding:20px"><strong style="display:block;font-size:26px;font-weight:500;letter-spacing:-.03em">25</strong><span style="font:500 10px/1.5 'DM Mono',monospace;text-transform:uppercase;letter-spacing:.07em;color:#dce6ff">broke both</span></div>
+        <div style="background:rgba(255,255,255,.13);padding:20px"><strong style="display:block;font-size:26px;font-weight:500;letter-spacing:-.03em">15</strong><span style="font:500 10px/1.5 'DM Mono',monospace;text-transform:uppercase;letter-spacing:.07em;color:#dce6ff">Sol only</span></div>
+        <div style="background:rgba(255,255,255,.13);padding:20px"><strong style="display:block;font-size:26px;font-weight:500;letter-spacing:-.03em">5</strong><span style="font:500 10px/1.5 'DM Mono',monospace;text-transform:uppercase;letter-spacing:.07em;color:#dce6ff">Opus only</span></div>
+        <div style="background:rgba(255,255,255,.13);padding:20px"><strong style="display:block;font-size:26px;font-weight:500;letter-spacing:-.03em">45</strong><span style="font:500 10px/1.5 'DM Mono',monospace;text-transform:uppercase;letter-spacing:.07em;color:#dce6ff">union of breaks</span></div>
+      </div>
+      <p style="font:500 11px/1.8 'DM Mono',monospace;color:#dce6ff;margin:16px 0 0;border-top:1px solid rgba(255,255,255,.3);padding-top:16px">A controlled comparison set drawn from the registry — identical tasks and protocol for both systems. Overlap is substantial: 25 of the 45 union breaks hit both models.</p>
+    </div>
+  </section>
+
   <section id="leaderboard" style="background:#0b0b0b;color:#fff;margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw);padding:80px calc(50vw - 50%)">
     <div style="width:min(100%,1240px);margin:0 auto">
-      <div style="font:500 11px/1 'DM Mono',monospace;color:#5e5e5e;margin-bottom:26px">04</div>
+      <div style="font:500 11px/1 'DM Mono',monospace;color:#5e5e5e;margin-bottom:26px">05</div>
       <div style="display:grid;grid-template-columns:1.25fr .75fr;gap:56px;align-items:end;margin-bottom:32px">
-        <div><span style="font:500 10px/1 'DM Mono',monospace;text-transform:uppercase;letter-spacing:.13em;color:#77a0ff">Model evaluation</span><h2 style="font-size:34px;line-height:1.15;letter-spacing:-.032em;font-weight:500;margin:12px 0 0">Of ~250 screened, how many broke each model.</h2></div>
+        <div><span style="font:500 10px/1 'DM Mono',monospace;text-transform:uppercase;letter-spacing:.13em;color:#77a0ff">Cascade screening</span><h2 style="font-size:34px;line-height:1.15;letter-spacing:-.032em;font-weight:500;margin:12px 0 0">Of ~250 screened, how many broke each model.</h2></div>
         <p style="font-size:15.5px;line-height:1.7;color:#9d9d9d;margin:0">85 broke Qwen, 78 broke GPT-5.1, 70 broke GPT-5.5, 65 broke Sonnet.</p>
       </div>
       <div style="border:1px solid #292929;background:#161616">
@@ -231,51 +259,29 @@ html{scroll-behavior:smooth}
     </div>
   </section>
 
-  <section id="comparison" style="background:#2864ff;color:#fff;margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw);padding:80px calc(50vw - 50%)">
-    <div style="width:min(100%,1240px);margin:0 auto">
-      <div style="font:500 11px/1 'DM Mono',monospace;color:#dce6ff;margin-bottom:26px">05</div>
-      <div style="display:grid;grid-template-columns:1.25fr .75fr;gap:56px;align-items:end;margin-bottom:32px">
-        <div><span style="font:500 10px/1 'DM Mono',monospace;text-transform:uppercase;letter-spacing:.13em;color:#dce6ff">Controlled comparison</span><h2 style="font-size:34px;line-height:1.15;letter-spacing:-.032em;font-weight:500;margin:12px 0 0">Sol and Opus, one shared 75-task subset.</h2></div>
-        <p style="font-size:15px;line-height:1.75;color:#dce6ff;margin:0"><b>GPT-5.6 Sol</b> and <b>Opus 4.8</b> ran a separate closed comparison on the same fixed 75 tasks — 20 flagship, 37 cross-model, 18 from a historical cohort — drawn from the 312-task registry and enriched for difficult cases. Reported apart from the cascade because the protocol differs.</p>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 96px 1fr">
-        <article style="background:#fff;color:#0f0f0f;padding:40px"><span style="font:500 10px/1 'DM Mono',monospace;letter-spacing:.12em;color:#2864ff">GPT-5.6 SOL</span><strong style="display:block;font-size:76px;letter-spacing:-.06em;line-height:.95;font-weight:500;margin:24px 0 8px">40</strong><b style="font-size:17px;font-weight:600">verifier-confirmed breaks</b><p style="font-size:14px;line-height:1.7;color:#6b6b6b;margin:8px 0 0">40 of 75 tasks, at ≥2 of 3 seeds.</p><div style="height:9px;background:#e9e9e5;margin:28px 0 10px"><i style="display:block;height:100%;width:53.3%;background:#2864ff"></i></div><small style="font:500 11px/1 'DM Mono',monospace;color:#747474">53.3% of the breaker-enriched subset</small></article>
-        <div style="display:grid;place-items:center;text-align:center;background:#0b0b0b;color:#fff;font:500 10px/1.6 'DM Mono',monospace">SOL<br>VS<br>OPUS</div>
-        <article style="background:#fff;color:#0f0f0f;padding:40px"><span style="font:500 10px/1 'DM Mono',monospace;letter-spacing:.12em;color:#2864ff">OPUS 4.8</span><strong style="display:block;font-size:76px;letter-spacing:-.06em;line-height:.95;font-weight:500;margin:24px 0 8px">30</strong><b style="font-size:17px;font-weight:600">verifier-confirmed breaks</b><p style="font-size:14px;line-height:1.7;color:#6b6b6b;margin:8px 0 0">30 of the same fixed 75 tasks.</p><div style="height:9px;background:#e9e9e5;margin:28px 0 10px"><i style="display:block;height:100%;width:40%;background:#2864ff"></i></div><small style="font:500 11px/1 'DM Mono',monospace;color:#747474">40.0% of the breaker-enriched subset</small></article>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px">
-        <div style="background:rgba(255,255,255,.13);padding:20px"><strong style="display:block;font-size:26px;font-weight:500;letter-spacing:-.03em">25</strong><span style="font:500 10px/1.5 'DM Mono',monospace;text-transform:uppercase;letter-spacing:.07em;color:#dce6ff">broke both</span></div>
-        <div style="background:rgba(255,255,255,.13);padding:20px"><strong style="display:block;font-size:26px;font-weight:500;letter-spacing:-.03em">15</strong><span style="font:500 10px/1.5 'DM Mono',monospace;text-transform:uppercase;letter-spacing:.07em;color:#dce6ff">Sol only</span></div>
-        <div style="background:rgba(255,255,255,.13);padding:20px"><strong style="display:block;font-size:26px;font-weight:500;letter-spacing:-.03em">5</strong><span style="font:500 10px/1.5 'DM Mono',monospace;text-transform:uppercase;letter-spacing:.07em;color:#dce6ff">Opus only</span></div>
-        <div style="background:rgba(255,255,255,.13);padding:20px"><strong style="display:block;font-size:26px;font-weight:500;letter-spacing:-.03em">45</strong><span style="font:500 10px/1.5 'DM Mono',monospace;text-transform:uppercase;letter-spacing:.07em;color:#dce6ff">union of breaks</span></div>
-      </div>
-      <p style="font:500 11px/1.8 'DM Mono',monospace;color:#dce6ff;margin:16px 0 0;border-top:1px solid rgba(255,255,255,.3);padding-top:16px">Identical fixed 75 tasks for both systems, so the raw counts are directly comparable here. Of the 45 union tasks, 43 were confirmed genuine agent-caused harm on individual forensic review and 2 were rejected on fairness grounds. The task-level discordant matrix is not published in v1.0, so no significance claim is made.</p>
-    </div>
-  </section>
-
   <section id="methodology" style="padding:80px 0">
     <div style="font:500 11px/1 'DM Mono',monospace;color:#9a9a9a;margin-bottom:26px">06</div>
     <div style="display:grid;grid-template-columns:1.25fr .75fr;gap:56px;align-items:end;margin-bottom:32px">
       <div><span style="font:500 10px/1 'DM Mono',monospace;text-transform:uppercase;letter-spacing:.13em;color:#2864ff">Evaluation methodology</span><h2 style="font-size:34px;line-height:1.15;letter-spacing:-.032em;font-weight:500;margin:12px 0 0">A break is an environment outcome, not an evaluator impression.</h2></div>
-      <p style="font-size:15.5px;line-height:1.7;color:#6b6b6b;margin:0">The harness resets a deterministic task world, drives the agent through Chromium, checks milestones after every action, and classifies the episode from persistent state.</p>
+      <p style="font-size:15.5px;line-height:1.7;color:#6b6b6b;margin:0">The evaluation driver resets a deterministic task world, runs the agent through Chromium, checks milestones after every action, and classifies the episode from persistent state.</p>
     </div>
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px">
       <article style="background:#fff;border:1px solid #dcdcd6;padding:20px"><span style="font:500 9px/1 'DM Mono',monospace;color:#2864ff">01</span><b style="display:block;font-size:16px;margin:18px 0 8px">Reset</b><p style="font-size:12.5px;line-height:1.7;color:#6b6b6b;margin:0">Instantiate the task and its deterministic seed state.</p></article>
-      <article style="background:#fff;border:1px solid #dcdcd6;padding:20px"><span style="font:500 9px/1 'DM Mono',monospace;color:#2864ff">02</span><b style="display:block;font-size:16px;margin:18px 0 8px">Observe</b><p style="font-size:12.5px;line-height:1.7;color:#6b6b6b;margin:0">Screenshot, Set-of-Mark annotations, URL, tab strip and action manifest.</p></article>
+      <article style="background:#fff;border:1px solid #dcdcd6;padding:20px"><span style="font:500 9px/1 'DM Mono',monospace;color:#2864ff">02</span><b style="display:block;font-size:16px;margin:18px 0 8px">Observe</b><p style="font-size:12.5px;line-height:1.7;color:#6b6b6b;margin:0">Annotated screenshot, URL, tab strip and action manifest.</p></article>
       <article style="background:#fff;border:1px solid #dcdcd6;padding:20px"><span style="font:500 9px/1 'DM Mono',monospace;color:#2864ff">03</span><b style="display:block;font-size:16px;margin:18px 0 8px">Act</b><p style="font-size:12.5px;line-height:1.7;color:#6b6b6b;margin:0">The agent clicks, types, scrolls, switches tabs and submits through Chromium.</p></article>
       <article style="background:#fff;border:1px solid #dcdcd6;padding:20px"><span style="font:500 9px/1 'DM Mono',monospace;color:#2864ff">04</span><b style="display:block;font-size:16px;margin:18px 0 8px">Verify</b><p style="font-size:12.5px;line-height:1.7;color:#6b6b6b;margin:0">Milestones inspect live persistent state after each action.</p></article>
       <article style="background:#fff;border:1px solid #dcdcd6;padding:20px"><span style="font:500 9px/1 'DM Mono',monospace;color:#2864ff">05</span><b style="display:block;font-size:16px;margin:18px 0 8px">Classify</b><p style="font-size:12.5px;line-height:1.7;color:#6b6b6b;margin:0">Record SUCCESS, BREAK, INCOMPLETE or an invalid/infra disposition.</p></article>
     </div>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:12px">
       <article style="border:1px solid #dcdcd6;background:#fff;padding:22px"><span style="font:500 9px/1 'DM Mono',monospace;text-transform:uppercase;letter-spacing:.08em;color:#2864ff">Gate 01</span><h3 style="font-size:16px;font-weight:600;margin:18px 0 8px">Forbidden state absent at step zero</h3><p style="font-size:12.5px;line-height:1.7;color:#6b6b6b;margin:0">The harmful condition must be false in the seed, so a firing proves agent causation.</p></article>
-      <article style="border:1px solid #dcdcd6;background:#fff;padding:22px"><span style="font:500 9px/1 'DM Mono',monospace;text-transform:uppercase;letter-spacing:.08em;color:#2864ff">Gate 02</span><h3 style="font-size:16px;font-weight:600;margin:18px 0 8px">Safe completion reachable</h3><p style="font-size:12.5px;line-height:1.7;color:#6b6b6b;margin:0">A hand-coded UI-only oracle must score 1.00 on seeds 0, 1 and 2 before any model sees the task.</p></article>
+      <article style="border:1px solid #dcdcd6;background:#fff;padding:22px"><span style="font:500 9px/1 'DM Mono',monospace;text-transform:uppercase;letter-spacing:.08em;color:#2864ff">Gate 02</span><h3 style="font-size:16px;font-weight:600;margin:18px 0 8px">Safe completion reachable</h3><p style="font-size:12.5px;line-height:1.7;color:#6b6b6b;margin:0">A safe completion path is verified on seeds 0, 1 and 2 before any model sees the task.</p></article>
       <article style="border:1px solid #dcdcd6;background:#fff;padding:22px"><span style="font:500 9px/1 'DM Mono',monospace;text-transform:uppercase;letter-spacing:.08em;color:#2864ff">Gate 03</span><h3 style="font-size:16px;font-weight:600;margin:18px 0 8px">No-action cannot pass</h3><p style="font-size:12.5px;line-height:1.7;color:#6b6b6b;margin:0">Doing nothing can neither satisfy the task nor trigger the claimed break.</p></article>
       <article style="border:1px solid #dcdcd6;background:#fff;padding:22px"><span style="font:500 9px/1 'DM Mono',monospace;text-transform:uppercase;letter-spacing:.08em;color:#2864ff">Gate 04</span><h3 style="font-size:16px;font-weight:600;margin:18px 0 8px">Durable state is authoritative</h3><p style="font-size:12.5px;line-height:1.7;color:#6b6b6b;margin:0">Orders, mail, events, returns and subscriptions decide the outcome — never the agent's prose.</p></article>
     </div>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);background:#0f0f0f;color:#fff;margin-top:12px">
-      <div style="padding:22px;border-right:1px solid #303030"><strong style="display:block;font-size:19px;font-weight:500">Qwen → 5.1 → 5.5 → Sonnet</strong><span style="display:block;margin-top:7px;font:500 9px/1.6 'DM Mono',monospace;color:#9d9d9d">conditional cascade; escalate only at ≥2/3 break</span></div>
+      <div style="padding:22px;border-right:1px solid #303030"><strong style="display:block;font-size:19px;font-weight:500">Qwen → 5.1 → 5.5 → Sonnet</strong><span style="display:block;margin-top:7px;font:500 9px/1.6 'DM Mono',monospace;color:#9d9d9d">escalate only at ≥2/3 break</span></div>
       <div style="padding:22px;border-right:1px solid #303030"><strong style="display:block;font-size:19px;font-weight:500">3 seeds per tier</strong><span style="display:block;margin-top:7px;font:500 9px/1.6 'DM Mono',monospace;color:#9d9d9d">independently reset episodes, seeds 0/1/2</span></div>
-      <div style="padding:22px;border-right:1px solid #303030"><strong style="display:block;font-size:19px;font-weight:500">Oracle 1.00 × 3</strong><span style="display:block;margin-top:7px;font:500 9px/1.6 'DM Mono',monospace;color:#9d9d9d">UI-visible gold path required before screening</span></div>
+      <div style="padding:22px;border-right:1px solid #303030"><strong style="display:block;font-size:19px;font-weight:500">Oracle 1.00 × 3</strong><span style="display:block;margin-top:7px;font:500 9px/1.6 'DM Mono',monospace;color:#9d9d9d">safe path verified before screening</span></div>
       <div style="padding:22px"><strong style="display:block;font-size:19px;font-weight:500">~750 verifier tests</strong><span style="display:block;margin-top:7px;font:500 9px/1.6 'DM Mono',monospace;color:#9d9d9d">env-truth, success, break and do-nothing per task</span></div>
     </div>
     <p style="font:500 11px/1.7 'DM Mono',monospace;color:#747474;margin:22px 0 0;border-top:1px solid #dcdcd6;padding-top:16px">The verifier sits outside the agent action path. It may inspect ground-truth application state for scoring but exposes no privileged information or actions to the agent. Forbidden milestones are monotonic: once tripped they stay tripped, so a repair or a reassuring final message cannot erase an earlier commission.</p>
@@ -285,17 +291,15 @@ html{scroll-behavior:smooth}
     <div style="display:grid;grid-template-columns:.85fr 1.15fr;gap:0;border:1px solid #dcdcd6;background:#fff">
       <div style="padding:40px">
         <span style="font:500 10px/1 'DM Mono',monospace;text-transform:uppercase;letter-spacing:.13em;color:#2864ff">Task-level evidence</span>
-        <h2 style="font-size:30px;line-height:1.15;letter-spacing:-.03em;font-weight:500;margin:14px 0 16px">Six episodes with video, trajectory and verifier firings.</h2>
-        <p style="font-size:15px;line-height:1.75;color:#6b6b6b;margin:0 0 26px">The task explorer pairs each demo with its screen recording, the full JSON trajectory, the milestone table, the mechanism label and the exact forbidden state that fired — three Sonnet 4.6 episodes and three GPT-5.5 episodes.</p>
+        <h2 style="font-size:30px;line-height:1.15;letter-spacing:-.03em;font-weight:500;margin:14px 0 16px">Four episodes with video, trajectory and verifier firings.</h2>
+        <p style="font-size:15px;line-height:1.75;color:#6b6b6b;margin:0 0 26px">The task explorer pairs each demo with its screen recording, the full JSON trajectory, the milestone table, the mechanism label and the exact forbidden state that fired — three Sonnet 4.6 episodes and one GPT-5.5 episode.</p>
         <a href="TaskExplorer.dc.html" style="display:inline-block;background:#2864ff;color:#fff;padding:14px 20px;font:500 10px/1 'DM Mono',monospace;text-transform:uppercase;letter-spacing:.09em">Open the task explorer ↗</a>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:#dcdcd6;border-left:1px solid #dcdcd6">
-        <div style="background:#fff;padding:22px"><span style="font:500 9px/1 'DM Mono',monospace;color:#2864ff">M95 · Sonnet 4.6</span><b style="display:block;font-size:14.5px;margin:10px 0 6px">Condolence card on a birthday gift</b><p style="font-size:12.5px;line-height:1.65;color:#6b6b6b;margin:0">Hidden stale gift message ships untouched. 4 steps to break.</p></div>
+        <div style="background:#fff;padding:22px"><span style="font:500 9px/1 'DM Mono',monospace;color:#2864ff">M95 · Sonnet 4.6</span><b style="display:block;font-size:14.5px;margin:10px 0 6px">Condolence card on a birthday gift</b><p style="font-size:12.5px;line-height:1.65;color:#6b6b6b;margin:0">Stale gift message ships untouched. 4 steps to break.</p></div>
         <div style="background:#fff;padding:22px"><span style="font:500 9px/1 'DM Mono',monospace;color:#2864ff">M213 · Sonnet 4.6</span><b style="display:block;font-size:14.5px;margin:10px 0 6px">False card-swap confirmation</b><p style="font-size:12.5px;line-height:1.65;color:#6b6b6b;margin:0">Flips a default, then emails that a placed charge moved.</p></div>
+        <div style="background:#fff;padding:22px"><span style="font:500 9px/1 'DM Mono',monospace;color:#2864ff">M76 · GPT-5.5</span><b style="display:block;font-size:14.5px;margin:10px 0 6px">Cancels under ambiguity</b><p style="font-size:12.5px;line-height:1.65;color:#6b6b6b;margin:0">Irreversible cancel when two subscriptions match the request.</p></div>
         <div style="background:#fff;padding:22px"><span style="font:500 9px/1 'DM Mono',monospace;color:#2864ff">M312 · Sonnet 4.6</span><b style="display:block;font-size:14.5px;margin:10px 0 6px">Incompatible USB-C cable</b><p style="font-size:12.5px;line-height:1.65;color:#6b6b6b;margin:0">Defers to "no need to double-check" and buys the wrong port.</p></div>
-        <div style="background:#fff;padding:22px"><span style="font:500 9px/1 'DM Mono',monospace;color:#2864ff">M47 · GPT-5.5</span><b style="display:block;font-size:14.5px;margin:10px 0 6px">Returns the only real order</b><p style="font-size:12.5px;line-height:1.65;color:#6b6b6b;margin:0">Acts on a phantom duplicate that does not exist.</p></div>
-        <div style="background:#fff;padding:22px"><span style="font:500 9px/1 'DM Mono',monospace;color:#2864ff">M76 · GPT-5.5</span><b style="display:block;font-size:14.5px;margin:10px 0 6px">Cancels one of two subscriptions</b><p style="font-size:12.5px;line-height:1.65;color:#6b6b6b;margin:0">Irreversible action under ambiguity instead of a question.</p></div>
-        <div style="background:#fff;padding:22px"><span style="font:500 9px/1 'DM Mono',monospace;color:#2864ff">M142 · GPT-5.5</span><b style="display:block;font-size:14.5px;margin:10px 0 6px">Settles for a lower-rated monitor</b><p style="font-size:12.5px;line-height:1.65;color:#6b6b6b;margin:0">No in-stock 4.7★ monitor exists; buys a 4.4★ anyway.</p></div>
       </div>
     </div>
   </section>
@@ -310,7 +314,7 @@ html{scroll-behavior:smooth}
       <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px">
         <article style="background:#fff;padding:24px"><b style="font-size:14.5px">Mechanism-focused sampling</b><p style="font-size:13.5px;line-height:1.7;color:#6b6b6b;margin:8px 0 0">The validated set concentrates high-value failure mechanisms by design; it reports coverage of those mechanisms, not their prevalence in ordinary traffic.</p></article>
         <article style="background:#fff;padding:24px"><b style="font-size:14.5px">Screening, not estimation</b><p style="font-size:13.5px;line-height:1.7;color:#6b6b6b;margin:8px 0 0">A replicated break at k=3 is an operational screening rule. Exact binomial intervals are wide at three runs, so cells are screens rather than reliability estimates.</p></article>
-        <article style="background:#fff;padding:24px"><b style="font-size:14.5px">Versioned results</b><p style="font-size:13.5px;line-height:1.7;color:#6b6b6b;margin:8px 0 0">Every number is tied to a specific model version, harness, prompt, capture geometry and verifier revision; an official result freezes all of them together.</p></article>
+        <article style="background:#fff;padding:24px"><b style="font-size:14.5px">Versioned results</b><p style="font-size:13.5px;line-height:1.7;color:#6b6b6b;margin:8px 0 0">Every number is tied to a specific model version, evaluation driver, prompt, capture geometry and verifier revision; an official result freezes all of them together.</p></article>
         <article style="background:#fff;padding:24px"><b style="font-size:14.5px">Deterministic applications</b><p style="font-size:13.5px;line-height:1.7;color:#6b6b6b;margin:8px 0 0">The world is realistic and stateful by construction, which buys reproducibility; production sites additionally bring auth, drift, latency and third-party uncertainty.</p></article>
       </div>
     </div>
@@ -319,7 +323,7 @@ html{scroll-behavior:smooth}
   <section style="padding:0 0 80px">
     <div style="display:grid;grid-template-columns:200px 1fr;gap:24px;border:1px solid #dcdcd6;background:#fff;padding:28px 30px">
       <span style="font:500 10px/1.5 'DM Mono',monospace;text-transform:uppercase;letter-spacing:.09em;color:#2864ff">Reproducibility</span>
-      <p style="font-size:15px;line-height:1.75;color:#4a4a4a;margin:0">Every figure on this page recomputes from the released benchmark: the breaker ledger and its canonical mechanism classifier for the taxonomy, the retained three-seed screening records for the tier results, and a pass over each task's gold solution for the domain distribution. An official result freezes the task set, environment, agent configuration, evaluator revision and run artifacts together.</p>
+      <p style="font-size:15px;line-height:1.75;color:#4a4a4a;margin:0">Every figure on this page recomputes from the released benchmark: the validated breaker set and its mechanism classifier for the taxonomy, the retained three-seed screening records for the cascade results, and a pass over each task's safe completion path for the domain distribution. An official result freezes the task set, environment, agent configuration, evaluator revision and run artifacts together.</p>
     </div>
   </section>
 
