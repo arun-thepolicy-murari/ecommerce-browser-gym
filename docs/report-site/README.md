@@ -11,4 +11,4 @@ Then visit http://localhost:8000
 | Screen | File |
 |---|---|
 | Report | `Report.dc.html` |
-| Task explorer | `Task Explorer.dc.html` |
+| Task explorer | `TaskExplorer.dc.html` |

@@ -17,4 +17,4 @@ tree: ebb1bbe05f4c (github_get_tree resolved tree hash, not a commit sha)
 | Screen | Built from |
 |---|---|
 | Report.dc.html | docs/report-site/index.html, PROJECT_INFO.md, docs/history/audits/TABLE1_STRONGEST_TIER_RECOMPUTE_2026-07-21.md (Table 1 + denominator crib sheet), trajectories/sellable_breakers_v2.csv, agents/oracle_agent.py (app distribution), README.md |
-| Task Explorer.dc.html | docs/report-site/explorer.html, trajectories/sellable_breakers_v2.csv, uploads/sample_trajectories_6/*.jsonl, uploads/*.webm |
+| TaskExplorer.dc.html | docs/report-site/explorer.html, trajectories/sellable_breakers_v2.csv, uploads/sample_trajectories_6/*.jsonl, uploads/*.webm |
